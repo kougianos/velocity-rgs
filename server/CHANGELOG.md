@@ -4,6 +4,45 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+### Milestone 5 — Slot Game API & End-to-End Wiring
+
+- Added Flyway migrations per A.9:
+  - `V5__game_round.sql` — per-spin audit row with `round_id` UNIQUE, monetary `bet_amount`/`total_win` (NUMERIC(19,4)) mirrored to `BIGINT` minor units, `final_grid JSONB`, `rng_draws JSONB`, `win_lines JSONB`, `reason_codes JSONB`, `bet_transaction_id` / `win_transaction_id`, `power_bet_active`, plus `(session_id, created_at)` and `(player_id, created_at)` indexes.
+  - `V6__feature_purchase_event.sql` — immutable bonus-buy ledger with `(player_id, transaction_id)` UNIQUE, `buy_type`, `cost_minor`, `target_state`, `initial_feature_payload JSONB`, indexes on `session_id` and `(player_id, created_at)`.
+  - `V7__pick_collect_snapshot.sql` — Pick & Collect feature snapshot keyed by `(session_id, round_id)`, `board JSONB`, `opened_positions JSONB`, `board_seed`, monetary `final_win` mirrored to `BIGINT` minor units, `status`.
+- Implemented JPA entities + Spring Data repositories per Task 5.3:
+  - `game.persistence.GameRound` + `GameRoundRepository` (`findByRoundId`, `findBySessionIdOrderByCreatedAtDesc`).
+  - `game.persistence.FeaturePurchaseEvent` + `FeaturePurchaseEventRepository` (`findByPlayerIdAndTransactionId`).
+  - `game.persistence.PickCollectSnapshot` + `PickCollectSnapshotRepository` (`findFirstBySessionIdOrderByCreatedAtDesc`).
+- Implemented `game.feature.pickcollect.PickCollectEngine` (`@Component`) per Task 5.5:
+  - `PickCollectTile(type, value)` record + `PickCollectState` mutable holder + `PickCollectFeatureView` projection.
+  - `startFeature(config, betSize, rng, initialRemainingPicks)` builds the immutable tile board by weighted RNG draws (`CREDITS` / `MULTIPLIER` / `COLLECT` / `BLANK` / `END`); CREDITS/MULTIPLIER values are rolled inside the config's `valueRange`.
+  - `applyPick(state, position, config)` enforces position bounds and no-duplicate-pick (`VALIDATION_ERROR`), `ILLEGAL_STATE_TRANSITION` when already completed or out of picks; CREDITS adds to `currentCollected`, MULTIPLIER multiplies `currentCollected`, COLLECT banks `currentCollected → totalFeatureWin` and resets, BLANK is a no-op, END terminates immediately. Returns `PickResolution(resolvedTileType, resolvedValue, reasonCodes)`.
+  - `finalizeFeature(state, config, currency)` returns `FinalizationResult(finalWin, reasonCodes)` = `(totalFeatureWin + currentCollected) * betSize`, capped at `betSize * maxFeatureWinMultiplier` (`MAX_WIN_CAPPED` reason code), normalised to the currency's minor-unit scale.
+  - Completion rules: `FIXED_PICKS`, `END_TILE`, `COLLECT_THRESHOLD`.
+- Implemented `game.feature.bonusbuy.BonusBuyPolicyService` (`@Service`) per Task 5.6:
+  - `requireOption(math, buyType, session, balance, betSize, jurisdiction)` enforces the global kill-switch and jurisdiction allow-list (`BONUS_BUY_DISABLED`), BASE_GAME-only precondition (`ILLEGAL_STATE_TRANSITION`), upfront balance check against `betSize × costMultiplier` (`INSUFFICIENT_FUNDS`).
+  - `BonusBuyPolicyProperties` bound at `rgs.bonus-buy.*` (`enabled` defaults to true, `allowedJurisdictions` empty = unrestricted, `minimumBalance` 0).
+- Implemented Slot Game public DTOs (records) under `game.api.*` per A.7: `SlotInitRequest/Response`, `SpinRequest/Response` (with nested `FeaturesTriggered` and `SessionStateView` records), `FeatureStartRequest/Response`, `FeatureBuyRequest/Response`, `FeaturePickRequest/Response`. All mutating requests carry validation constraints; all responses are `@Builder` records with `@JsonInclude(NON_NULL)`.
+- Implemented `game.service.SlotEngineService` (`@Service`, `@Transactional` per method) per Task 5.8 — the single orchestrator behind every public Slot endpoint:
+  - `init` — resumes the player's latest matching session or creates a fresh `BASE_GAME` one with a generated `ses-…` id; checks wallet eligibility and returns the canonical session snapshot + `availableActions` + feature flags + active Pick & Collect view (if any).
+  - `spin` — acquires `PlayerActionLock`, loads + version-checks the session, runs the FSM `SpinCommand`, then `GridGenerationEngine` + `ReelEvaluator` with a per-round `SecureRandomNumberGenerator`, debits the bet (`{roundId}:bet` txId) and credits any payout (`{roundId}:win` txId), enforces free-spin `betLockedToTriggerBet` semantics, detects SCATTER triggers and transitions to `FREE_SPINS_AWAITING` with `freeSpinsAwarded`, decrements free-spin counter inside the loop and credits accumulated free-spin winnings on termination, persists the `GameRound` row, saves the session and releases the lock.
+  - `startFeature` — atomic AWAITING→LOOP transition for both FREE_SPINS and PICK_COLLECT; bootstraps `PickCollectState` from the BUY/SCATTER initial payload and serialises it back into `active_feature_payload` JSONB.
+  - `buyFeature` — bonus-buy entry point: delegates jurisdiction/balance/state checks to `BonusBuyPolicyService`, debits cost via wallet (`{roundId}:bonus-buy` txId), persists `FeaturePurchaseEvent`, and transitions session to the option's `targetState`.
+  - `pickFeature` — single Pick & Collect interaction: runs `PickCollectEngine.applyPick`, on completion calls `finalizeFeature`, credits the feature win to wallet (`pick-{sessionId}-{ts}` txId), persists / updates the `PickCollectSnapshot`, and returns `BASE_GAME`.
+  - All wallet effects use deterministic `transactionId`s derived from `roundId` so a client retry naturally collides on the wallet's `DUPLICATE_TRANSACTION` guard; idempotency replays are short-circuited upstream by `IdempotencyAspect` before the service is ever entered.
+- Implemented `game.api.SlotGameController` (`@RestController`, `/api/v1/slot/*`) per Task 5.9 — five `POST` endpoints:
+  - `POST /init` (no idempotency key required; resumable).
+  - `POST /spin`, `POST /feature/start`, `POST /feature/buy`, `POST /feature/pick` — all carry `@Idempotent` with `slot:<action>:{playerId}` scope and a 24h TTL; authenticated player is taken from `PlayerContext` (`AUTH_FAILED` if absent).
+- Implemented `game.service.RtpSimulator` (`@Component` under `simulator` profile) per Task 5.7 — a `CommandLineRunner` that executes `rgs.simulator.spins` base spins plus `spins/50` bonus-buy rounds against the real engine pipeline, then prints `BASE_GAME_RTP`, `BONUS_BUY_RTP`, and `OVERALL_RTP` percentages. Useful for math-tuning validation outside the live API.
+- Fixed a Pick & Collect monetary-scale bug: when serialising `PickCollectSnapshot.finalWinMinor`, the running `currentCollected` may carry the engine's intermediate scale (4) after a MULTIPLIER tile, which combined with `betSize` overflowed the currency's minor-unit scale (2 for EUR/USD) and tripped `Money.of`'s scale guard. The snapshot writer now normalises to `Money.minorUnitScale(currency)` with HALF_UP rounding before constructing the `Money` value.
+
+### Tests (Milestone 5)
+
+- `PickCollectEngineTest` (4 pure unit cases): startFeature produces an immutable board of the requested size, duplicate pick on the same position raises `VALIDATION_ERROR`, CREDITS+MULTIPLIER+COLLECT math accumulates correctly with deterministic RNG draws, completion flips status to `COMPLETED` and rejects further picks.
+- `BonusBuyPolicyServiceTest` (5 unit cases, loads real `aztec-fire/v1` math): globally-disabled kill-switch raises `BONUS_BUY_DISABLED`, jurisdiction-not-in-allowlist raises `BONUS_BUY_DISABLED`, non-`BASE_GAME` session raises `ILLEGAL_STATE_TRANSITION`, balance below `betSize × costMultiplier` raises `INSUFFICIENT_FUNDS`, all-checks-pass returns the matching `BonusBuyOption` with the expected `targetState` and `costMultiplier`.
+- `SlotGameControllerIntegrationTest` (`@RgsIntegrationTest`, full Testcontainers Postgres + Redis, 7 end-to-end cases): `/init` creates a fresh `BASE_GAME` session with `availableActions` + feature flags + seeded demo balance; `/init` is resumable (second call returns the same `sessionId`); `/spin` debits the bet and persists a `GameRound` row plus the wallet `:bet` ledger entry; replayed `/spin` with the same `Idempotency-Key` returns the byte-identical cached body with `Idempotent-Replay: true` and creates exactly one round; `/feature/buy` debits the bonus-buy cost, persists a `FeaturePurchaseEvent`, and advances state to `FREE_SPINS_AWAITING`; full Pick & Collect journey (`/feature/buy` PICK_COLLECT_BUY → `/feature/start` PICK_COLLECT → repeated `/feature/pick`) completes back to `BASE_GAME` and writes a `COMPLETED` `PickCollectSnapshot`; missing `Idempotency-Key` on `/spin` returns `400 VALIDATION_ERROR`.
+
 ### Milestone 4 — Session FSM & Persistence
 
 - Added Flyway migration `V4__game_session.sql` per A.9: `game_session` table with `session_id` UNIQUE, `current_state`, monetary `current_bet`/`accumulated_free_spins_win` (NUMERIC(19,4)), `active_feature_payload JSONB`, `next_action_allowed`, `session_version BIGINT` for JPA optimistic locking, and `(player_id, updated_at)` + `(player_id, game_id)` indexes.

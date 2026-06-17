@@ -10,7 +10,7 @@ Your objective is to build a robust, modular, and enterprise-grade Slot RGS Foun
 ## Architectural Principles & Strict Constraints
 
 1. **Pure Determinism:** The backend must never trust the client. A spin request accepts only configuration inputs (e.g., base bet, feature toggles like Power Bet). The engine calculates the random stops, constructs the grid matrix, evaluates wins, and updates state.
-2. **Strict State Isolation:** A player’s session state determines what actions are legal. If a user has remaining Free Spins, the standard `SPIN` endpoint must be blocked, and only a `FREE_SPIN` action can advance the state machine.
+2. **Strict State Isolation:** A player’s session state determines which command is legal at any moment. The `SPIN` command is reused across `BASE_GAME` and `FREE_SPINS_LOOP` but its semantics differ: in `BASE_GAME` it debits the wallet; in `FREE_SPINS_LOOP` it is a free-spin iteration and MUST NOT debit. In `*_AWAITING` states only the matching `START_FREE_SPINS` / `START_PICK_COLLECT` command is legal. Any command not present in `availableActions` for the current state MUST be rejected with `ILLEGAL_STATE_TRANSITION` (409).
 3. **Thread Safety & Stateful Persistence:** Game services must be stateless at the application layer. Persistent and cache boundaries must prevent concurrency issues such as race-condition double-dipping.
 4. **Math Model Separation (Data-Driven):** Reel strips, paytables, and feature weights must **never** be hardcoded into evaluation loops. They must be loaded dynamically via configuration classes (JSON blueprints) to allow easy RTP tuning without changing code.
 5. **iGaming-Grade Randomness:** Use `java.security.SecureRandom` for all RNG components to emulate cryptographic security standards required by GLI-19 compliance.
@@ -75,21 +75,22 @@ Required Redis use cases:
 
 ## Idempotency Policy (Authoritative)
 
-Apply to all state-mutating endpoints.
+Apply to all state-mutating endpoints. The idempotency key is always supplied via the `Idempotency-Key` HTTP header (per A.6) and stored in `idempotency_record` with a composite primary key `(scope, key)`. The `scope` is a stable string derived from the endpoint and `playerId`.
 
-| Endpoint | Scope Key | Uniqueness Window | Replay Behavior |
+| Endpoint | `scope` Value | Uniqueness Window | Replay Behavior |
 |---|---|---|---|
-| `/api/v1/slot/spin` | `playerId + idempotencyKey` | 24h | Return original response, no new state mutation |
-| `/api/v1/slot/feature/buy` | `playerId + idempotencyKey` | 24h | Return original response, no extra debit |
-| `/api/v1/slot/feature/pick` | `playerId + idempotencyKey` | 24h | Return original response, no extra pick resolution |
-| `/api/v1/wallet/debit` | `playerId + transactionId + idempotencyKey` | 48h | Return original transaction outcome |
-| `/api/v1/wallet/credit` | `playerId + transactionId + idempotencyKey` | 48h | Return original transaction outcome |
-| `/api/v1/wallet/rollback` | `playerId + originalTransactionId + idempotencyKey` | 48h | Return original rollback outcome |
+| `POST /api/v1/slot/spin` | `slot:spin:{playerId}` | 24h | Return original response, no new state mutation |
+| `POST /api/v1/slot/feature/start` | `slot:feature-start:{playerId}` | 24h | Return original response, no extra transition |
+| `POST /api/v1/slot/feature/buy` | `slot:feature-buy:{playerId}` | 24h | Return original response, no extra debit |
+| `POST /api/v1/slot/feature/pick` | `slot:feature-pick:{playerId}` | 24h | Return original response, no extra pick resolution |
+| `POST /api/v1/wallet/debit` | `wallet:debit:{playerId}:{transactionId}` | 48h | Return original transaction outcome |
+| `POST /api/v1/wallet/credit` | `wallet:credit:{playerId}:{transactionId}` | 48h | Return original transaction outcome |
+| `POST /api/v1/wallet/rollback` | `wallet:rollback:{playerId}:{originalTransactionId}` | 48h | Return original rollback outcome |
 
 Additional rules:
 * Idempotency records are durable in Postgres; Redis cache is optional acceleration only.
-* Same key with different payload must fail (`409`) and include mismatch reason.
-* Replay responses must include original `timestamp` and `transactionId`.
+* Same key with different payload hash MUST fail with `IDEMPOTENCY_KEY_CONFLICT` (409) and include the mismatch reason in `details`.
+* Replay responses MUST be byte-identical to the original (including `timestamp` and `transactionId`) and the response header `Idempotent-Replay: true` MUST be set.
 
 ---
 
@@ -100,12 +101,11 @@ Additional rules:
 * POC model (current scope): implement wallet in the same server in a dedicated package namespace, while preserving the exact operator-style API contract and call sequence.
 * RGS must call wallet through API-oriented interfaces (gateway/adapter abstraction), not by bypassing wallet business rules.
 * POC default integration mode is in-process gateway invocation (no loopback HTTP requirement). Wallet REST endpoints still exist as contract mirror and test surface.
-* Every monetary mutation must include:
+* Every monetary mutation MUST include the following body fields, plus the `Idempotency-Key` HTTP header (per A.6 — the key is NEVER in the body):
   * `playerId`
   * `sessionId`
   * `roundId`
   * `transactionId`
-  * `idempotencyKey`
   * `amount`
   * `currency`
   * `transactionType`
@@ -126,8 +126,8 @@ POC Package and Design Rules:
 * Use a clear package boundary such as `...wallet.api`, `...wallet.service`, `...wallet.domain`, `...wallet.persistence`.
 * Implement an RGS-facing `WalletGateway` interface and keep RGS unaware of wallet storage details.
 * Provide two gateway implementations strategy-ready:
-  * `InternalWalletGateway` (active in POC profile)
-  * `OperatorWalletGateway` (stub/interface-ready for future external API integration)
+  * `InternalWalletGateway` (active in `demo` and `wallet-internal` profiles)
+  * `OperatorWalletGateway` (active in `wallet-operator` profile, full implementation in Milestone 6)
 * Enforce idempotency for `debit`, `credit`, and `rollback` by unique key constraints and deterministic replay responses.
 * Keep wallet ledger immutable; corrections must be done through compensating transactions (`rollback`), never by in-place updates.
 
@@ -146,14 +146,13 @@ Common error contract:
 }
 ```
 
-Wallet debit request:
+Wallet debit request (HTTP header `Idempotency-Key: idem-5001`):
 ```json
 {
   "playerId": "p-1001",
   "sessionId": "s-2001",
   "roundId": "r-3001",
   "transactionId": "t-4001",
-  "idempotencyKey": "idem-5001",
   "amount": 1.50,
   "currency": "EUR",
   "transactionType": "BET"
@@ -173,15 +172,14 @@ Wallet debit response:
 }
 ```
 
-Wallet credit request/response follows the same shape with `transactionType` in `WIN`, `FEATURE_WIN`, `ADJUSTMENT`.
+Wallet credit request/response follows the same shape with `transactionType` in `WIN`, `FEATURE_WIN`.
 
-Wallet rollback request:
+Wallet rollback request (HTTP header `Idempotency-Key: idem-rollback-7001`):
 ```json
 {
   "playerId": "p-1001",
   "originalTransactionId": "t-4001",
   "transactionId": "t-rollback-7001",
-  "idempotencyKey": "idem-rollback-7001",
   "rollbackReason": "DOWNSTREAM_FAILURE"
 }
 ```
@@ -203,6 +201,8 @@ Canonical enums (must be reused consistently):
 * `RollbackReason`: `DOWNSTREAM_FAILURE`, `TECHNICAL_ERROR`, `OPERATOR_CANCEL`
 * `GameState`: `BASE_GAME`, `FREE_SPINS_AWAITING`, `FREE_SPINS_LOOP`, `PICK_COLLECT_AWAITING`, `PICK_COLLECT_LOOP`
 * `GameCommand`: `SPIN`, `START_FREE_SPINS`, `BUY_FEATURE`, `START_PICK_COLLECT`, `PICK`
+  * `SPIN` is the only command whose semantics depend on current state (debits in `BASE_GAME`, free iteration in `FREE_SPINS_LOOP`).
+  * `START_FREE_SPINS` and `START_PICK_COLLECT` are dispatched by the unified `/api/v1/slot/feature/start` endpoint (see A.7).
 
 Mandatory wallet error codes:
 * `AUTH_FAILED`
@@ -215,15 +215,17 @@ Mandatory wallet error codes:
 
 Required RGS -> Wallet Call Sequence:
 * Game init/resume:
-  * `authenticate` -> `balance`
-* Base spin:
+  * `authenticate` -> `balance` (in `demo` profile `authenticate` validates the JWT and is otherwise a no-op).
+* Base spin (`SPIN` in `BASE_GAME`):
   * `debit` (bet) -> spin evaluation -> `credit` (if win > 0)
+* Free spin iteration (`SPIN` in `FREE_SPINS_LOOP`):
+  * no `debit` -> spin evaluation -> running total accumulates in session; no per-iteration `credit`.
 * Bonus Buy:
   * `debit` (buy cost) -> feature entry
-* Feature settlement (Free Spins / Pick & Collect):
-  * `credit` (final accumulated feature payout)
-* Failure handling:
-  * call `rollback` for the relevant `transactionId` when a downstream step fails after a successful debit/credit.
+* Feature settlement (Free Spins / Pick & Collect completion):
+  * single `credit` of the final accumulated feature payout, then return to `BASE_GAME`.
+* Failure handling (saga, not 2PC):
+  * after a successful `debit`, if any downstream step fails the engine MUST call `rollback` with the original `transactionId` and a `RollbackReason`. Within the `demo` profile this still uses the gateway; the in-process implementation makes it effectively atomic. The `wallet-operator` profile MUST tolerate eventual-consistency windows.
 
 ### 1. Base Game Configuration ($3 \times 5$ Grid)
 * A standard slot matrix consisting of 3 rows and 5 columns.
@@ -250,11 +252,14 @@ Required RGS -> Wallet Call Sequence:
   * `bonusBuyEnabled` global game flag
   * jurisdiction/profile allowlist (market-level compliance toggle)
   * minimum player balance check and responsible-gaming lock checks
-* Bonus Buy must not bypass wallet consistency rules:
-  * Validate affordability first
-  * Deduct buy cost atomically
-  * Enter target feature state in the same transaction
-* RTP and contribution accounting must be separated by channel:
+* Bonus Buy must not bypass wallet consistency rules. The engine MUST execute a saga in this order:
+  1. Validate eligibility (state, policy flags, jurisdiction).
+  2. Validate affordability against `balance`.
+  3. `debit` buy cost through the wallet gateway.
+  4. Transition session to the configured target awaiting state and persist (single Postgres transaction).
+  5. On any failure of step 4 after a successful step 3, invoke `rollback` with `RollbackReason.TECHNICAL_ERROR`.
+  In the `demo` profile steps 3 and 4 share a JVM-local transaction and are effectively atomic; in `wallet-operator` they are a saga.
+* RTP and contribution accounting are produced by the `simulator` profile only (see Testing #6) and reported in three channels:
   * `BASE_GAME_RTP`
   * `BONUS_BUY_RTP`
   * `OVERALL_RTP`
@@ -263,7 +268,7 @@ Implementation Notes:
 * Add `bonusBuyOptions` into math/config JSON with: `buyType`, `costMultiplier`, `targetState`, `initialFeaturePayload`.
 * Add server-side `BonusBuyPolicyService` for eligibility checks (jurisdiction, feature toggles, session state legality).
 * Extend session engine with command `BUY_FEATURE` and strict transition validation.
-* Persist a `FeaturePurchaseEvent` record containing `playerId`, `sessionId`, `buyType`, `cost`, `currency`, `timestamp`, `idempotencyKey`, and resulting `state`.
+* Persist a `FeaturePurchaseEvent` record containing `playerId`, `sessionId`, `buyType`, `cost`, `currency`, `timestamp`, the request's `Idempotency-Key` header value, and the resulting `state`.
 
 ### 5. Pick & Collect Feature
 * A server-driven deterministic bonus round where players reveal hidden picks on a board and accumulate instant or progressive rewards.
@@ -286,8 +291,9 @@ Implementation Notes:
   * Action must satisfy `nextActionAllowed`
 
 Implementation Notes:
-* Introduce immutable feature payload in session: `PickCollectState` with `boardSeed`, `hiddenTiles`, `openedPositions`, `currentCollected`, `totalFeatureWin`, `remainingPicks`, `status`.
-* Use deterministic board generation based on secure RNG output captured at feature start; persist seed and resolved board snapshot for replay/audit.
+* Introduce immutable feature payload in session: `PickCollectState` with `tiles` (full server-side board, never serialized to clients), `openedPositions`, `currentCollected`, `totalFeatureWin`, `remainingPicks`, `status`.
+* Board generation uses the standard `SecureRandomNumberGenerator` and the resulting `RngDraw` sequence is appended to the round's `rng_draws` (per A.11). The resolved board is persisted verbatim in `pick_collect_snapshot.board` JSONB at feature start; this snapshot is the replay artifact (no seed-replay is used — see A.11).
+* `PickCollectState` is exposed to the client only via `activeFeatureView`, which contains `openedPositions`, revealed tile values, `currentCollected`, `remainingPicks`, `status` — NEVER unrevealed tile contents.
 * Add evaluation component `PickCollectEngine`:
   * `startFeature(config, rng)` -> initializes board/state
   * `applyPick(state, position)` -> validates pick, resolves tile, updates totals and completion status
@@ -309,90 +315,164 @@ Operating mode matrix (authoritative):
 | Failure Policy | Deterministic simulation failures | Real wallet error propagation + rollback |
 | Compliance Logging | Basic technical logging | Full operational audit and reconciliation |
 
-Production-grade wallet behavior is planned in **Milestone 4A** and **Milestone 5**.
+Production-grade wallet behavior is delivered by **Milestone 3** (in-process internal wallet with full contract parity) and hardened by **Milestone 6** (operator gateway, reconciliation, replay).
 
 ## Implementation Roadmap & Milestone Breakdowns
 
-Execute this implementation sequentially. Do not move to the next milestone until the current milestone's logic and its corresponding tests are fully complete and stable.
+Execute this implementation sequentially. Each milestone is self-contained, ends with a green `mvn -B verify`, satisfies Appendix A.17 Definition of Done, and produces a stable foundation that the next milestone builds upon. **Do not move forward** until the current milestone's logic and its corresponding tests are complete and stable.
 
-### Milestone 1: Mathematical Domain Models & JSON Engine Configurations
-Define the immutable data objects and configuration structures that govern the slot's behavior.
+Milestone dependency graph (strict):
 
-* **Task 1.1:** Create domain objects or records for `Symbol` (ID, Name, Type: STANDARD, WILD, SCATTER), `Payline` (coordinate paths across the 5 columns), and `PayTable` (payout mappings for $3\times$, $4\times$, $5\times$ matches per symbol).
-* **Task 1.2:** Implement a `SlotMathConfiguration` class. This must load from a JSON layout representing:
-    * Base Game Reel Strips (Arrays of Symbol IDs per column).
-    * Power Bet Reel Strips (Alternative arrays with boosted Scatter distribution).
-    * Free Spins Reel Strips.
-* **Task 1.3:** Build a `ReelEvaluator` component. Given a static 2D array matrix of symbols, it must cleanly parse paylines, match left-to-right sequences, account for Wild substitutions, and compute total credit payouts based on the active bet.
+```
+M0 (Bootstrap & Cross-Cutting)
+   └── M1 (Math)
+         └── M2 (RNG & Grid)
+               └── M3 (Wallet)
+                     └── M4 (Session FSM & Persistence)
+                           └── M5 (Slot Game API — end-to-end wiring)
+                                 └── M6 (Audit, Replay & Reconciliation)
+```
 
-### Milestone 2: Cryptographic RNG Engine & Grid Generator
-Build the core generation mechanics.
+### Milestone 0: Project Bootstrap & Cross-Cutting Foundation
+Establish the skeleton every later milestone depends on. No game logic in this milestone.
 
-* **Task 2.1:** Implement a `SecureRandomNumberGenerator` component wrapping `java.security.SecureRandom`. It should accept an array length (the reel strip size) and return an integer index.
-* **Task 2.2:** Implement a `GridGenerationEngine`. It must accept the selected game state's reel strips, fetch random stop positions from the RNG component, and build the final $3 \times 5$ symbol matrix using a wrapping index strategy (if a reel runs off the end of the array, wrap back around to index 0).
+* **Task 0.1:** Initialize Maven project per A.1 (`pom.xml` with pinned dependencies, Java 21 toolchain, Spring Boot 3.3.x, Lombok, MapStruct, springdoc, Micrometer Prometheus, Testcontainers).
+* **Task 0.2:** Create the empty package skeleton per A.2 (a `package-info.java` per leaf package is acceptable).
+* **Task 0.3:** Configure Spring profiles per A.3 (`application.yml`, `application-demo.yml`, `application-wallet-internal.yml`, `application-wallet-operator.yml`, `application-test.yml`, `application-simulator.yml`).
+* **Task 0.4:** Implement `common/money`: `Money` value object backed by `BigDecimal`, currency validation (EUR/USD only), `HALF_UP` rounding helper, minor-units converter.
+* **Task 0.5:** Implement `common/error`: `ErrorCode` enum (all values from A.8), `ApiError` record, `GlobalExceptionHandler` (`@RestControllerAdvice`) that maps every `ErrorCode` to the correct HTTP status per A.8 and logs at the declared level. Map `MethodArgumentNotValidException` and `ConstraintViolationException` to `VALIDATION_ERROR` with populated `details`.
+* **Task 0.6:** Implement `common/idempotency`: `idempotency_record` Flyway migration `V1__idempotency_record.sql`, `IdempotencyRecord` entity, `IdempotencyStore` service (write-through Postgres, optional Redis cache per A.10), `@Idempotent` aspect that reads `Idempotency-Key` HTTP header, computes payload SHA-256, returns stored response on hit, throws `IDEMPOTENCY_KEY_CONFLICT` on hash mismatch, and sets response header `Idempotent-Replay: true` on replay.
+* **Task 0.7:** Implement `observability/MdcCorrelationFilter` (servlet filter): extracts/generates `X-Trace-Id`, populates MDC with `traceId` (and later `playerId`, `sessionId`, `roundId`, `gameId`), clears in `finally`.
+* **Task 0.8:** Implement JWT auth filter per A.6 (HS256, claims `sub`, `sid`, `cur`, `exp`, optional `roles`). Failed auth → `AUTH_FAILED`. Authenticated principal exposed via a `PlayerContext` request-scoped bean.
+* **Task 0.9:** Configure Logback JSON appender (`logstash-logback-encoder`) and Micrometer Prometheus registry. Expose only `/actuator/health`, `/actuator/prometheus`, `/actuator/info`.
+* **Task 0.10:** Configure springdoc-openapi and the `springdoc-openapi-maven-plugin` to write `docs/openapi.yaml` during `verify`, plus a CI drift check.
 
-### Milestone 3: Finite State Machine (RGS Session Engine)
-Implement the core workflow engine tracking user state transitions.
+Tests for M0:
+* `@SpringBootTest` boots in `default` profile against Testcontainers Postgres + Redis.
+* Idempotency aspect tested end-to-end with a throwaway `@RestController` test fixture: hit-miss-replay-conflict scenarios.
+* `GlobalExceptionHandler` mapping table fully covered.
+* JWT filter: valid, expired, malformed, missing → expected status codes.
+* `MdcCorrelationFilter`: trace id echo on response, MDC cleared after request.
 
-* **Task 3.1:** Create a `GameSession` entity tracking: `playerId`, current state (`BASE_GAME`, `FREE_SPINS_AWAITING`, `FREE_SPINS_LOOP`, `PICK_COLLECT_AWAITING`, `PICK_COLLECT_LOOP`), `currentBet`, `remainingFreeSpins`, `accumulatedFreeSpinsWin`, `activeFeaturePayload`, and `nextActionAllowed`.
-* **Task 3.2:** Write a state transition engine using Java 21 pattern matching over an algebraic/sealed state command sequence. 
-    * If a normal spin hits 3 scatters, state shifts from `BASE_GAME` to `FREE_SPINS_AWAITING`.
-    * The next valid command must be a `START_FREE_SPINS` request or a free spin iteration which shifts state to `FREE_SPINS_LOOP`.
-    * If a spin triggers Pick & Collect, state shifts from `BASE_GAME` or `FREE_SPINS_LOOP` to `PICK_COLLECT_AWAITING`, then to `PICK_COLLECT_LOOP` on start.
-    * If a `BUY_FEATURE` command is valid, state shifts directly to the configured target awaiting/loop state based on buy type.
-    * When `remainingFreeSpins == 0`, transition back to `BASE_GAME` and flush accumulated wins to the main wallet balance.
-    * When Pick & Collect completion condition is met, transition back to `BASE_GAME` and flush feature win atomically.
+Foundation guarantee for M1+: every later module can throw a domain exception and trust the response shape, can annotate any mutating endpoint with `@Idempotent`, can rely on JWT-populated `PlayerContext`.
 
-### Milestone 4: Spring Boot API Controllers & Service Facade
-Expose the state engine through optimized REST API endpoints.
+### Milestone 1: Math Domain & JSON Configuration
+Define the immutable data objects and configuration structures that govern the slot's behavior. No persistence, no HTTP.
 
-* **Task 4.1:** Develop a `SlotEngineService` facade that encapsulates the database/session fetch, feeds parameters into the grid engine, processes payouts via the `ReelEvaluator`, modifies session state based on features, and persists changes atomically.
-* **Task 4.2:** Construct `SlotGameController` with two distinct endpoints:
-    * `POST /api/v1/slot/init` - Initializes or fetches the current state of a player session (critical for browser reloads/disconnections).
-    * `POST /api/v1/slot/spin` - Accepts a `SpinRequest` containing `betSize` and `powerBetActive` flag. Returns an immutable `SpinResponse` payload.
-* **Task 4.3:** Add feature command endpoints:
-    * `POST /api/v1/slot/feature/buy` - Accepts `BonusBuyRequest` (`buyType`, `betSize`, `idempotencyKey`). Returns updated session state and feature bootstrap payload.
-    * `POST /api/v1/slot/feature/pick` - Accepts `PickRequest` (`position`, `idempotencyKey`). Returns resolved tile result, updated Pick & Collect state, and interim/final win impact.
-* **Task 4.4:** Add idempotency support on mutable endpoints (`/spin`, `/feature/buy`, `/feature/pick`) to safely handle retries without duplicate financial or state transitions.
-* **Task 4.5:** Structure the `SpinResponse` JSON output to match frontend rendering timelines:
-    ```json
-    {
-      "matrix": [[2,5,1,8,9],[3,12,1,1,4],[7,8,2,3,11]],
-      "stopPositions": [14, 82, 4, 119, 43],
-      "winLines": [
-        { "lineId": 3, "symbolId": 1, "count": 4, "payout": 150.0 }
-      ],
-      "featuresTriggered": {
-        "freeSpinsAwarded": 10,
-        "isPowerBetActive": true,
-        "pickCollectTriggered": false,
-        "bonusBuyExecuted": false
-      },
-      "sessionState": {
-        "currentState": "FREE_SPINS_AWAITING",
-        "remainingSpins": 10,
-        "totalAccumulatedWin": 150.0
-      }
-    }
-    ```
+* **Task 1.1:** Create Java records for `Symbol` (`id`, `name`, `type` ∈ `STANDARD`/`WILD`/`SCATTER`, optional `substitutes`), `Payline` (`id`, `coords: List<int[]>` with `[row, col]` zero-indexed), `PayTable` (`Map<Integer, Map<Integer, BigDecimal>>` keyed by `symbolId` then match count), `ReelStrip` (`int[]` of symbol ids).
+* **Task 1.2:** Implement `SlotMathConfiguration` and `SlotMathLoader` that reads `src/main/resources/math/<gameId>/<mathVersion>.json` per A.4. Strict Jackson validation (unknown fields = fail-fast). The loader is invoked at startup for every entry in the Game Catalog (A.5).
+* **Task 1.3:** Build `ReelEvaluator`: given a 3×5 `int[][]` matrix and a `BigDecimal` bet, returns `EvaluationResult(totalWin, List<WinLine>)`. Implements left-to-right matching, `WILD` substitution for `STANDARD` symbols only, and applies the active payline set. Cap by `limits.maxWinPerRoundMultiplier` and emit reason code `MAX_WIN_CAPPED` when triggered.
+* **Task 1.4:** Ship the reference math JSON `src/main/resources/math/aztec-fire/v1.json` with a complete, deterministic small set (e.g. 20 paylines, 5 reel strips of length ≥ 30 each per strip set). This is the test fixture for every subsequent milestone.
 
-* **Task 4.6:** Add dedicated response contracts:
-    * `BonusBuyResponse` including `buyType`, `cost`, `enteredState`, `featureInitPayload`.
-    * `PickResponse` including `position`, `resolvedTileType`, `resolvedValue`, `currentCollected`, `remainingPicks`, `featureCompleted`, `featureTotalWin`.
+Tests for M1:
+* JSON loader: malformed/missing fields → fail at startup with clear message.
+* `ReelEvaluator` unit tests with hand-crafted matrices: pure 5-of-a-kind, wild substitution, partial line, scatter ignored on lines, max-win cap.
+* All evaluator math uses `BigDecimal` with scale 2 on final values; no `double`.
 
-### Milestone 4A: Wallet API and Gateway Layer (POC-Ready, Production-Shaped)
-* **Task 4A.1:** Implement wallet controller endpoints for `authenticate`, `balance`, `debit`, `credit`, `rollback` under `/api/v1/wallet`.
-* **Task 4A.2:** Add `WalletGateway` abstraction and route all RGS financial operations through it.
-* **Task 4A.3:** Implement internal wallet service and persistence in dedicated `wallet` package with immutable transaction ledger.
-* **Task 4A.4:** Add idempotency middleware/policy for financial endpoints and include consistent replay response semantics.
-* **Task 4A.5:** Add error model mapping for wallet failures (insufficient funds, duplicate transaction, original transaction not found, currency mismatch, authentication failure).
+Foundation guarantee for M2+: deterministic, pure functions over a stable math model.
 
-### Milestone 5: Wallet, Ledger, and Auditability Hardening
-* **Task 5.1:** Implement atomic wallet operations with transaction boundaries around bet/buy debits and win credits.
-* **Task 5.2:** Introduce immutable ledger tables/events for: spin debit, bonus buy debit, spin win credit, feature win credit, rollback reason codes.
-* **Task 5.3:** Add replay support endpoint (internal/admin) to reconstruct a session from persisted RNG seeds, board snapshots, and action events for dispute handling.
-* **Task 5.4:** Add reconciliation report job comparing RGS game rounds against wallet ledger entries to detect orphan credits/debits.
-* **Task 5.5:** Add profile-based switch configuration so internal wallet can be replaced by external operator wallet gateway without changing RGS core logic.
+### Milestone 2: RNG Engine & Grid Generator
+Build the core generation mechanics. No persistence, no HTTP.
+
+* **Task 2.1:** Implement `SecureRandomNumberGenerator` wrapping `java.security.SecureRandom`. Method `int nextIndex(int boundExclusive)`. Every draw is recorded as `RngDraw(int boundExclusive, int value, long sequence)` on the caller-supplied `RngDrawSink` (the round-scoped audit list).
+* **Task 2.2:** Implement `DeterministicReplayRng` implementing the same interface but popping values from a pre-recorded `List<RngDraw>` (per A.11). Used by `ReplayService` in M6 and by unit tests in all milestones.
+* **Task 2.3:** Implement `GridGenerationEngine`: takes a `ReelStripSet` selector (`BASE` / `POWER_BET` / `FREE_SPINS`), uses the RNG to choose a stop index per reel, and builds the 3×5 matrix using wrapping indexing.
+
+Tests for M2:
+* `SecureRandomNumberGenerator`: bounds respected, audit list populated.
+* `DeterministicReplayRng`: replays a recorded sequence exactly; throws if drained.
+* `GridGenerationEngine`: with a stubbed `[0,0,0,0,0]` RNG, the output matrix equals the first three rows of each reel strip; wrap-around tested with stop near end of strip.
+
+Foundation guarantee for M3+: every reel pull is reproducible from `rng_draws` JSON.
+
+### Milestone 3: Wallet API, Gateway & Ledger
+Build the wallet subsystem in isolation. It is fully exercisable via REST before the game engine exists.
+
+* **Task 3.1:** Flyway migrations `V2__wallet_balance.sql` and `V3__wallet_transaction.sql` per A.9. Indexes per A.9.
+* **Task 3.2:** Implement entities `WalletBalance` (optimistic `@Version`) and `WalletTransaction` (insert-only).
+* **Task 3.3:** Implement `InternalWalletService` (transactional) supporting `authenticate`, `balance`, `debit`, `credit`, `rollback`. Atomic balance update + ledger insert in a single `@Transactional` boundary. Enforce currency match against the player's `WalletBalance` row and JWT `cur` claim.
+* **Task 3.4:** Implement `WalletGateway` interface plus `InternalWalletGateway` (delegates to `InternalWalletService`, active in `demo` and `wallet-internal` profiles) and `OperatorWalletGateway` skeleton (active in `wallet-operator`, throws `INTERNAL_ERROR` with explicit "not implemented" message — full implementation deferred to M6).
+* **Task 3.5:** Implement `WalletController` exposing all five endpoints under `/api/v1/wallet`. Apply `@Idempotent` per A.6/A.8.
+* **Task 3.6:** Wire all wallet error codes per A.8 (insufficient funds, duplicate transaction, original transaction not found, currency mismatch, auth failure).
+* **Task 3.7:** Seed mechanism for demo balances: a `WalletDemoSeeder` (`@Profile("demo")`) that creates a `WalletBalance` row on first `authenticate` for an unknown player with a configurable starting balance (default 10,000 minor units).
+
+Tests for M3:
+* Full Testcontainers integration test of each endpoint.
+* Idempotent retries of `debit`/`credit`/`rollback` produce a single ledger row.
+* Insufficient funds, currency mismatch, duplicate transaction, original-not-found scenarios.
+* Concurrent debit on the same `WalletBalance` row: one succeeds, the other retries via optimistic lock.
+
+Foundation guarantee for M4+: the slot engine can call wallet operations through `WalletGateway` and trust durable, idempotent, audited behavior.
+
+### Milestone 4: Session FSM & Persistence
+Build the session state machine and persistence layer. No game endpoints yet; the FSM is exercised through service-level tests.
+
+* **Task 4.1:** Flyway migration `V4__game_session.sql` per A.9.
+* **Task 4.2:** Implement `GameSession` JPA entity with `@Version` on `session_version`, JSONB `active_feature_payload`.
+* **Task 4.3:** Define sealed types: `sealed interface SessionState permits BaseGame, FreeSpinsAwaiting, FreeSpinsLoop, PickCollectAwaiting, PickCollectLoop` and `sealed interface SessionCommand permits SpinCommand, StartFreeSpinsCommand, BuyFeatureCommand, StartPickCollectCommand, PickCommand`. Use Java 21 pattern matching for transitions.
+* **Task 4.4:** Implement `SessionStateMachine` (pure function `(SessionState, SessionCommand, TransitionContext) -> TransitionResult`). The machine MUST NOT call wallet or persistence directly — it returns a `TransitionResult` describing the new state, generated reason codes, and any `MonetaryEffect` (debit/credit instructions) for the caller to execute.
+* **Task 4.5:** Implement `GameSessionRepository` (JPA) and `SessionCache` (Redis, JSON-serialized, keys + TTL per A.10).
+* **Task 4.6:** Implement `SessionStore` facade: reads from Redis first, falls back to Postgres on miss, always writes through Postgres then refreshes Redis. On Redis/Postgres disagreement, Postgres wins (per Concurrency Rules).
+* **Task 4.7:** Implement `PlayerActionLock` (Redis `SET NX PX 3000` with caller UUID, Lua-released).
+
+Tests for M4:
+* Full transition coverage matrix with parameterized tests (every legal combination of `SessionState` × `SessionCommand`).
+* Illegal commands raise `ILLEGAL_STATE_TRANSITION`.
+* Stale `sessionVersion` raises `SESSION_VERSION_CONFLICT` via `OptimisticLockingFailureException`.
+* Redis cache hit/miss/eviction; cache rebuilt from Postgres on miss.
+* `PlayerActionLock` acquired/released; contention test rejects second concurrent action.
+
+Foundation guarantee for M5+: callers can submit a command and receive a deterministic transition plus a list of `MonetaryEffect`s ready to execute against the wallet gateway.
+
+### Milestone 5: Slot Game API & End-to-End Wiring
+Wire M1+M2+M3+M4 into the public game API. This is the first milestone that produces a playable demo.
+
+* **Task 5.1:** Flyway migrations `V5__game_round.sql`, `V6__feature_purchase_event.sql`, `V7__pick_collect_snapshot.sql` per A.9.
+* **Task 5.2:** Implement `SlotEngineService` facade. For each command:
+  1. Acquire `PlayerActionLock`.
+  2. Load session via `SessionStore`.
+  3. Validate `gameId`, `sessionVersion`, JWT `playerId` match.
+  4. Build `TransitionContext` (math config, RNG draw sink, current bet).
+  5. Invoke `SessionStateMachine` to get the new state and `MonetaryEffect`s.
+  6. Execute monetary effects via `WalletGateway` (saga: on credit failure after debit success → rollback per Section 0.1).
+  7. Persist `GameSession`, `GameRound`, and feature artifacts in a single Postgres transaction.
+  8. Refresh Redis session, release lock, return response.
+* **Task 5.3:** Implement `SlotGameController` with the endpoints fixed by A.7:
+  * `POST /api/v1/slot/init`
+  * `POST /api/v1/slot/spin`
+  * `POST /api/v1/slot/feature/start` (accepts `featureType` ∈ `FREE_SPINS` / `PICK_COLLECT`; dispatches `START_FREE_SPINS` or `START_PICK_COLLECT`)
+  * `POST /api/v1/slot/feature/buy`
+  * `POST /api/v1/slot/feature/pick`
+* **Task 5.4:** Apply `@Idempotent` to every mutating endpoint with the scope strings from the Idempotency Policy table.
+* **Task 5.5:** Implement DTOs as Java records exactly matching A.7 (Lombok `@Builder` only when constructor has 5+ fields, per A.1).
+* **Task 5.6:** Implement Bonus Buy saga (Section 4 → Implementation Notes) and `BonusBuyPolicyService` (jurisdiction allowlist, feature flags, balance floor).
+* **Task 5.7:** Implement `PickCollectEngine` (`startFeature` / `applyPick` / `finalizeFeature`) and the `activeFeatureView` projection that strips hidden tiles.
+* **Task 5.8:** Implement reason code emission (`TRIGGERED_BY_SCATTER`, `ENTERED_VIA_BUY`, `RETRIGGERED_FREE_SPINS`, `MAX_WIN_CAPPED`, `PICK_COMPLETED`, etc.) and persist in `game_round.reason_codes` / `feature_purchase_event.resulting_state`.
+* **Task 5.9:** Implement the RTP simulator harness (`@Profile("simulator")`) per Testing #6. Output the three RTP channels (`BASE_GAME_RTP`, `BONUS_BUY_RTP`, `OVERALL_RTP`).
+
+Tests for M5:
+* Full end-to-end player journey integration test using `@SpringBootTest` against Testcontainers: `init → spin → spin (free-spin trigger) → feature/start → loop spins → feature settlement credit → bonus buy → pick & collect → settlement → balance reconciled`.
+* All A.7 contract examples reproduced byte-identical (excluding volatile fields).
+* Saga test: induced credit failure triggers rollback and leaves wallet balance unchanged.
+* All Testing & Validation Requirements (#1–#7) pass.
+
+Foundation guarantee for M6: every spin and feature outcome is persisted with full RNG draw audit, ready for replay and reconciliation.
+
+### Milestone 6: Audit, Replay & Reconciliation Hardening
+Add operational hardening. Game gameplay is feature-frozen at M5.
+
+* **Task 6.1:** Flyway migration `V8__audit_reconciliation_finding.sql`.
+* **Task 6.2:** Implement `POST /api/v1/admin/replay/{roundId}` per A.16. Guarded by JWT `roles` claim containing `ADMIN`. Reconstructs the round using `DeterministicReplayRng` fed from `game_round.rng_draws`; asserts the reconstructed matrix equals the stored matrix and returns the full reconstruction.
+* **Task 6.3:** Implement `ReconciliationJob` (`@Scheduled(cron = "0 5 * * * *")`) per A.16. Per-player hourly buckets compare bet/win totals to wallet ledger; discrepancies written to `audit_reconciliation_finding` and counter `rgs.reconciliation.discrepancy` incremented.
+* **Task 6.4:** Complete `OperatorWalletGateway`: WebClient-based caller, profile-switched configuration, no game-engine changes required (per Product Guardrail #6). Contract tests via WireMock.
+* **Task 6.5:** Per-pick audit emission (Section 5 Implementation Notes: before/after state hashes) persisted as application events.
+
+Tests for M6:
+* Replay endpoint reproduces every stored round identically over a large random sample.
+* Reconciliation job: inject deliberate ledger discrepancy → exactly one finding row + one metric increment.
+* Operator gateway WireMock contract test passes; profile switch leaves `SlotEngineService` source code untouched.
+
+Foundation guarantee for production: replay is bit-exact, reconciliation catches drift, operator wallet swap is a configuration change.
 
 ---
 
@@ -651,7 +731,7 @@ Request:
 }
 ```
 
-Response: as in Task 4.5, extended with required fields:
+Response: structure is canonical per A.7. The wire format MUST be exactly:
 ```json
 {
   "sessionId": "s-2001",
@@ -664,18 +744,48 @@ Response: as in Task 4.5, extended with required fields:
   "stopPositions": [14, 82, 4, 119, 43],
   "winLines": [{ "lineId": 3, "symbolId": 1, "count": 4, "payout": 150.0 }],
   "featuresTriggered": {
-    "freeSpinsAwarded": 10, "isPowerBetActive": false,
-    "pickCollectTriggered": false, "bonusBuyExecuted": false,
+    "freeSpinsAwarded": 10,
+    "isPowerBetActive": false,
+    "pickCollectTriggered": false,
+    "bonusBuyExecuted": false,
     "reasonCodes": ["TRIGGERED_BY_SCATTER"]
   },
   "sessionState": {
     "currentState": "FREE_SPINS_AWAITING",
-    "remainingSpins": 10,
-    "totalAccumulatedWin": 150.0
+    "remainingFreeSpins": 10,
+    "accumulatedFreeSpinsWin": 150.0
   },
   "availableActions": ["START_FREE_SPINS"]
 }
 ```
+
+**`POST /api/v1/slot/feature/start`**
+
+Dispatcher for the `START_FREE_SPINS` and `START_PICK_COLLECT` commands. Must be called when the session is in `FREE_SPINS_AWAITING` or `PICK_COLLECT_AWAITING` respectively.
+
+Request:
+```json
+{
+  "gameId": "aztec-fire",
+  "sessionId": "s-2001",
+  "sessionVersion": 8,
+  "featureType": "FREE_SPINS"
+}
+```
+
+Response:
+```json
+{
+  "sessionId": "s-2001",
+  "sessionVersion": 9,
+  "currentState": "FREE_SPINS_LOOP",
+  "remainingFreeSpins": 10,
+  "activeFeatureView": null,
+  "availableActions": ["SPIN"]
+}
+```
+
+For `featureType: "PICK_COLLECT"` the response contains `currentState: "PICK_COLLECT_LOOP"`, the player-visible `activeFeatureView` (board size, opened positions = empty, remaining picks), and `availableActions: ["PICK"]`.
 
 **`POST /api/v1/slot/feature/buy`**
 

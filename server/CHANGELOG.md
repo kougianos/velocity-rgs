@@ -4,6 +4,34 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+### Milestone 4 — Session FSM & Persistence
+
+- Added Flyway migration `V4__game_session.sql` per A.9: `game_session` table with `session_id` UNIQUE, `current_state`, monetary `current_bet`/`accumulated_free_spins_win` (NUMERIC(19,4)), `active_feature_payload JSONB`, `next_action_allowed`, `session_version BIGINT` for JPA optimistic locking, and `(player_id, updated_at)` + `(player_id, game_id)` indexes.
+- Added canonical `session.domain.GameCommand` enum (A.0.1: SPIN / START_FREE_SPINS / BUY_FEATURE / START_PICK_COLLECT / PICK).
+- Implemented `session.domain.GameSession` JPA entity with `@Version` on `session_version` and `@JdbcTypeCode(SqlTypes.JSON)` on `activeFeaturePayload` (string-backed JSONB).
+- Implemented sealed types per Task 4.3:
+  - `session.fsm.SessionState` permits `BaseGame`, `FreeSpinsAwaiting(remainingFreeSpins, triggerBet)`, `FreeSpinsLoop(remainingFreeSpins, accumulatedWin, triggerBet)`, `PickCollectAwaiting(initialPayload)`, `PickCollectLoop(featurePayload)`; each variant exposes `gameState()` to project back to the persistent enum.
+  - `session.fsm.SessionCommand` permits `SpinCommand(betSize, powerBetActive)`, `StartFreeSpinsCommand`, `BuyFeatureCommand(buyType, betSize)`, `StartPickCollectCommand`, `PickCommand(position)`.
+- Implemented `session.fsm.MonetaryEffect` sealed hierarchy (`Debit` / `Credit` / `None`) carrying the `Money` amount and `WalletTransactionType` — wallet I/O is reserved for `SlotEngineService` (M5).
+- Implemented `session.fsm.SessionStateMachine` (`@Component`) as the pure transition function `(SessionState, SessionCommand, TransitionContext) -> TransitionResult` per Task 4.4. Java 21 pattern-matching `switch` over the sealed hierarchy; no I/O, no wallet calls. Behaviour:
+  - `BASE_GAME` + `SPIN` -> stays in `BASE_GAME` with a `Debit(bet, BET)` effect; `availableActions` reflects whether the catalog offers bonus buys.
+  - `BASE_GAME` + `BUY_FEATURE` -> resolves the matching `BonusBuyOption`, emits `Debit(bet * costMultiplier, BONUS_BUY)`, transitions to the option's `targetState` (`FREE_SPINS_AWAITING` seeds `remainingFreeSpins` from `initialFeaturePayload.freeSpinsAwarded`; `PICK_COLLECT_AWAITING` carries the bootstrap payload), reason code `ENTERED_VIA_BUY`. Missing buy option -> `BONUS_BUY_DISABLED` (A.8).
+  - `FREE_SPINS_AWAITING` + `START_FREE_SPINS` -> `FREE_SPINS_LOOP`, no effect.
+  - `FREE_SPINS_LOOP` + `SPIN` -> stays in loop, no effect; enforces `freeSpins.betLockedToTriggerBet` and `freeSpins.powerBetPersists` per A.13 (mismatch -> `VALIDATION_ERROR`).
+  - `PICK_COLLECT_AWAITING` + `START_PICK_COLLECT` -> `PICK_COLLECT_LOOP`, no effect.
+  - `PICK_COLLECT_LOOP` + `PICK` -> stays in loop, no effect (per-pick resolution is the M5 `PickCollectEngine`).
+  - Any other (state, command) pair -> `ILLEGAL_STATE_TRANSITION` (A.8, 409).
+- Implemented `session.persistence.GameSessionRepository` (`JpaRepository`) with `findBySessionId(...)` and `findFirstByPlayerIdOrderByUpdatedAtDesc(...)`.
+- Implemented `session.persistence.SessionCache` — Redis-backed JSON cache keyed by `rgs:session:{playerId}` with the A.10 default 30-minute TTL. Read/write failures fall back transparently to Postgres (per Persistence Rules).
+- Implemented `session.service.SessionStore` façade per Task 4.6: reads check Redis first and rehydrate on miss; writes go through Postgres (`saveAndFlush`) then refresh Redis. Exposes `requireByPlayerId` / `requireBySessionId` raising `SESSION_NOT_FOUND` when absent.
+- Implemented `session.service.PlayerActionLock` per Task 4.7 / A.10: per-player short-lived lock via Redis `SET NX PX <ttl>` keyed by `rgs:lock:player:{playerId}` (default 3s TTL). Owner-safe release via a Lua compare-and-delete script (`DefaultRedisScript`), opaque caller-owned token in `LockHandle`. `acquire(...)` raises `SESSION_VERSION_CONFLICT` (A.8, 409) when the key is already held; `tryAcquire(...)` returns an `Optional` for callers that want to back off non-fatally.
+
+### Tests (Milestone 4)
+
+- `SessionStateMachineTest` (pure unit, 31 cases): full legal-transition coverage (BASE_GAME spin debit + power-bet flag, BASE_GAME bonus buy → FREE_SPINS_AWAITING with `freeSpinsAwarded`-seeded remaining count and `Money.of("80.00","EUR")` debit, BASE_GAME bonus buy → PICK_COLLECT_AWAITING with `Money.of("120.00","EUR")` debit, START_FREE_SPINS, FREE_SPINS_LOOP spin with no effect, START_PICK_COLLECT, PICK_COLLECT_LOOP pick), guard rules (free-spin bet-locked mismatch and Power Bet during free spins → `VALIDATION_ERROR`), parameterized illegal-transition matrix across all 5 states × 5 commands → `ILLEGAL_STATE_TRANSITION`, `availableActions` reflects an empty bonus-buy catalog, unknown buy type → `BONUS_BUY_DISABLED`, `gameState()` projections.
+- `SessionStoreIntegrationTest` (`@RgsIntegrationTest`, Testcontainers Postgres + Redis): `save(...)` writes Postgres and populates the cache; `findByPlayerId` hits cache before Postgres (verified by deleting the DB row and still serving from cache); cache-miss rehydrates from Postgres and repopulates Redis; `evict(...)` clears the cache but keeps the DB record; stale `session_version` write raises `OptimisticLockingFailureException` (mapped by `GlobalExceptionHandler` to `SESSION_VERSION_CONFLICT`).
+- `PlayerActionLockIntegrationTest` (`@RgsIntegrationTest`, Testcontainers Redis): acquire writes a token at `rgs:lock:player:{playerId}` and release clears it; second `acquire` while the first holds raises `SESSION_VERSION_CONFLICT` and `tryAcquire` returns empty; release with a foreign token does not delete the key (Lua compare-and-delete); short-TTL lock expires and can be re-acquired.
+
 ### Milestone 3 — Wallet API, Gateway & Ledger
 
 - Added Flyway migrations `V2__wallet_balance.sql` (per-player current balance with `version` for JPA optimistic locking) and `V3__wallet_transaction.sql` (immutable ledger with unique `transaction_id`, player/created and original-tx indexes per A.9).

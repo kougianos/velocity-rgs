@@ -30,6 +30,7 @@
         <logstash-logback.version>8.0</logstash-logback.version>
         <testcontainers-redis.version>2.2.2</testcontainers-redis.version>
         <jjwt.version>0.12.6</jjwt.version>
+        <wiremock.version>3.9.2</wiremock.version>
         <skip.openapi.gen>true</skip.openapi.gen>
     </properties>
 
@@ -50,6 +51,12 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-aop</artifactId>
+        </dependency>
+
+        <!-- WebClient (Operator Wallet Gateway) -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-webflux</artifactId>
         </dependency>
 
         <!-- Persistence -->
@@ -163,6 +170,12 @@
         <dependency>
             <groupId>org.assertj</groupId>
             <artifactId>assertj-core</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.wiremock</groupId>
+            <artifactId>wiremock-standalone</artifactId>
+            <version>${wiremock.version}</version>
             <scope>test</scope>
         </dependency>
     </dependencies>

@@ -1,6 +1,8 @@
 spring:
   application:
     name: velocity-rgs
+  main:
+    web-application-type: servlet
   profiles:
     default: demo
   threads:

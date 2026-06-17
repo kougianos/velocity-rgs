@@ -5,6 +5,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.velocity.rgs.common.error.ErrorCode;
 import com.velocity.rgs.common.error.RgsException;
 import com.velocity.rgs.common.money.Money;
+import com.velocity.rgs.audit.pickaudit.PickAuditEvent;
+import com.velocity.rgs.audit.pickaudit.PickCollectStateHasher;
 import com.velocity.rgs.game.api.FeatureBuyRequest;
 import com.velocity.rgs.game.api.FeatureBuyResponse;
 import com.velocity.rgs.game.api.FeaturePickRequest;
@@ -64,6 +66,7 @@ import com.velocity.rgs.wallet.domain.WalletTransactionType;
 import com.velocity.rgs.wallet.gateway.WalletGateway;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -106,6 +109,7 @@ public class SlotEngineService {
     private final FeaturePurchaseEventRepository featurePurchaseRepository;
     private final PickCollectSnapshotRepository pickCollectRepository;
     private final ObjectMapper objectMapper;
+    private final ApplicationEventPublisher eventPublisher;
 
     // ---------------------------------------------------------------- /init
 
@@ -375,6 +379,11 @@ public class SlotEngineService {
 
             PickCollectState pcState = loadPickCollectState(session, math, session.getCurrentBet());
 
+            String beforeHash = PickCollectStateHasher.hash(pcState);
+            BigDecimal collectedBefore = pcState.currentCollected();
+            BigDecimal totalBefore = pcState.totalFeatureWin();
+            int picksBefore = pcState.remainingPicks();
+
             PickCollectEngine.PickResolution resolution = pickCollectEngine.applyPick(
                     pcState, request.position(), math.pickCollect());
 
@@ -402,6 +411,17 @@ public class SlotEngineService {
             applyStateToSession(session, newState, session.getCurrentBet(), false);
             session.setUpdatedAt(Instant.now());
             GameSession saved = sessionStore.save(session);
+
+            String afterHash = PickCollectStateHasher.hash(pcState);
+            eventPublisher.publishEvent(new PickAuditEvent(
+                    playerId, saved.getSessionId(), request.position(),
+                    resolution.resolvedTileType(), resolution.resolvedValue(),
+                    beforeHash, afterHash,
+                    collectedBefore, pcState.currentCollected(),
+                    totalBefore, pcState.totalFeatureWin(),
+                    picksBefore, pcState.remainingPicks(),
+                    completed, Instant.now()
+            ));
 
             return FeaturePickResponse.builder()
                     .sessionId(saved.getSessionId())

@@ -57,6 +57,40 @@ Required Redis use cases:
 * Wallet balance mutations are committed in Postgres transaction boundaries; Redis may only mirror derived session-facing balance snapshots.
 * On session resume, reconstruct canonical state from Postgres, then hydrate Redis cache/session entries.
 
+### Concurrency and Session Consistency Rules (Authoritative)
+* Every mutable session record must carry a monotonic `sessionVersion` used for optimistic concurrency control.
+* Every game action must include expected `sessionVersion`; stale writes must fail with conflict error (`409`).
+* Redis session entries must have TTL (default 30 minutes inactivity) and be refreshed on successful action.
+* Conflict resolution rule: if Redis and Postgres differ, Postgres canonical snapshot wins and Redis is rehydrated.
+* Per-player action lock in Redis must be short-lived (default 3 seconds) and used only as a contention guard, not as source of truth.
+
+## Monetary and Currency Rules (Authoritative)
+
+* Use `BigDecimal` for all monetary math.
+* Enforce currency precision by ISO minor units (`EUR`/`USD` scale 2 unless configured otherwise).
+* Rounding mode for payout and wallet operations: `HALF_UP`.
+* Cross-currency operations are forbidden in a single session/round.
+* Any amount received with invalid scale must be rejected by validation error before business logic.
+* Persist both human-readable amount and minor-units integer (`amountMinor`) for audit stability.
+
+## Idempotency Policy (Authoritative)
+
+Apply to all state-mutating endpoints.
+
+| Endpoint | Scope Key | Uniqueness Window | Replay Behavior |
+|---|---|---|---|
+| `/api/v1/slot/spin` | `playerId + idempotencyKey` | 24h | Return original response, no new state mutation |
+| `/api/v1/slot/feature/buy` | `playerId + idempotencyKey` | 24h | Return original response, no extra debit |
+| `/api/v1/slot/feature/pick` | `playerId + idempotencyKey` | 24h | Return original response, no extra pick resolution |
+| `/api/v1/wallet/debit` | `playerId + transactionId + idempotencyKey` | 48h | Return original transaction outcome |
+| `/api/v1/wallet/credit` | `playerId + transactionId + idempotencyKey` | 48h | Return original transaction outcome |
+| `/api/v1/wallet/rollback` | `playerId + originalTransactionId + idempotencyKey` | 48h | Return original rollback outcome |
+
+Additional rules:
+* Idempotency records are durable in Postgres; Redis cache is optional acceleration only.
+* Same key with different payload must fail (`409`) and include mismatch reason.
+* Replay responses must include original `timestamp` and `transactionId`.
+
 ---
 
 ## Core Feature Requirements
@@ -64,7 +98,8 @@ Required Redis use cases:
 ### 0. Wallet Integration (Production Model + POC Implementation)
 * Production model (target architecture): RGS communicates with an external Operator Wallet API using the operations `authenticate`, `balance`, `credit`, `debit`, `rollback`.
 * POC model (current scope): implement wallet in the same server in a dedicated package namespace, while preserving the exact operator-style API contract and call sequence.
-* RGS must call wallet through API-oriented interfaces (HTTP client or adapter abstraction), not by bypassing wallet business rules.
+* RGS must call wallet through API-oriented interfaces (gateway/adapter abstraction), not by bypassing wallet business rules.
+* POC default integration mode is in-process gateway invocation (no loopback HTTP requirement). Wallet REST endpoints still exist as contract mirror and test surface.
 * Every monetary mutation must include:
   * `playerId`
   * `sessionId`
@@ -95,6 +130,88 @@ POC Package and Design Rules:
   * `OperatorWalletGateway` (stub/interface-ready for future external API integration)
 * Enforce idempotency for `debit`, `credit`, and `rollback` by unique key constraints and deterministic replay responses.
 * Keep wallet ledger immutable; corrections must be done through compensating transactions (`rollback`), never by in-place updates.
+
+### 0.1 API Contracts (Normative for Agent Implementation)
+
+The following contracts are mandatory and must not be freely invented by implementation agents.
+
+Common error contract:
+```json
+{
+  "code": "INSUFFICIENT_FUNDS",
+  "message": "Wallet debit failed",
+  "httpStatus": 409,
+  "traceId": "c8c90d1f-24df-4cd3-95e2-33d3015d5d31",
+  "timestamp": "2026-06-17T10:15:30Z"
+}
+```
+
+Wallet debit request:
+```json
+{
+  "playerId": "p-1001",
+  "sessionId": "s-2001",
+  "roundId": "r-3001",
+  "transactionId": "t-4001",
+  "idempotencyKey": "idem-5001",
+  "amount": 1.50,
+  "currency": "EUR",
+  "transactionType": "BET"
+}
+```
+
+Wallet debit response:
+```json
+{
+  "transactionId": "t-4001",
+  "status": "SUCCESS",
+  "balanceBefore": 100.00,
+  "balanceAfter": 98.50,
+  "currency": "EUR",
+  "processedAt": "2026-06-17T10:15:30Z",
+  "idempotentReplay": false
+}
+```
+
+Wallet credit request/response follows the same shape with `transactionType` in `WIN`, `FEATURE_WIN`, `ADJUSTMENT`.
+
+Wallet rollback request:
+```json
+{
+  "playerId": "p-1001",
+  "originalTransactionId": "t-4001",
+  "transactionId": "t-rollback-7001",
+  "idempotencyKey": "idem-rollback-7001",
+  "rollbackReason": "DOWNSTREAM_FAILURE"
+}
+```
+
+Wallet rollback response:
+```json
+{
+  "transactionId": "t-rollback-7001",
+  "originalTransactionId": "t-4001",
+  "status": "SUCCESS",
+  "processedAt": "2026-06-17T10:16:00Z",
+  "idempotentReplay": false
+}
+```
+
+Canonical enums (must be reused consistently):
+* `WalletTransactionType`: `BET`, `BONUS_BUY`, `WIN`, `FEATURE_WIN`, `ROLLBACK`
+* `WalletTransactionStatus`: `SUCCESS`, `REJECTED`
+* `RollbackReason`: `DOWNSTREAM_FAILURE`, `TECHNICAL_ERROR`, `OPERATOR_CANCEL`
+* `GameState`: `BASE_GAME`, `FREE_SPINS_AWAITING`, `FREE_SPINS_LOOP`, `PICK_COLLECT_AWAITING`, `PICK_COLLECT_LOOP`
+* `GameCommand`: `SPIN`, `START_FREE_SPINS`, `BUY_FEATURE`, `START_PICK_COLLECT`, `PICK`
+
+Mandatory wallet error codes:
+* `AUTH_FAILED`
+* `INSUFFICIENT_FUNDS`
+* `DUPLICATE_TRANSACTION`
+* `IDEMPOTENCY_KEY_CONFLICT`
+* `ORIGINAL_TRANSACTION_NOT_FOUND`
+* `CURRENCY_MISMATCH`
+* `VALIDATION_ERROR`
 
 Required RGS -> Wallet Call Sequence:
 * Game init/resume:
@@ -183,7 +300,16 @@ Implementation Notes:
 
 Default runtime mode for this project is **Demo Mode** using fake money for gameplay demonstration and feature validation.
 
-Real-money wallet behavior and production-grade wallet integration are planned for later iterations under **Milestone 4.5** and **Milestone 5**.
+Operating mode matrix (authoritative):
+
+| Capability | Demo Mode (Default) | Wallet Integration Mode (Later Iteration) |
+|---|---|---|
+| Currency | Fake money only | Real wallet-backed balance |
+| Wallet Gateway | `InternalWalletGateway` | `OperatorWalletGateway` |
+| Failure Policy | Deterministic simulation failures | Real wallet error propagation + rollback |
+| Compliance Logging | Basic technical logging | Full operational audit and reconciliation |
+
+Production-grade wallet behavior is planned in **Milestone 4A** and **Milestone 5**.
 
 ## Implementation Roadmap & Milestone Breakdowns
 
@@ -254,12 +380,12 @@ Expose the state engine through optimized REST API endpoints.
     * `BonusBuyResponse` including `buyType`, `cost`, `enteredState`, `featureInitPayload`.
     * `PickResponse` including `position`, `resolvedTileType`, `resolvedValue`, `currentCollected`, `remainingPicks`, `featureCompleted`, `featureTotalWin`.
 
-### Milestone 4.5: Wallet API and Gateway Layer (POC-Ready, Production-Shaped)
-* **Task 4.5.1:** Implement wallet controller endpoints for `authenticate`, `balance`, `debit`, `credit`, `rollback` under `/api/v1/wallet`.
-* **Task 4.5.2:** Add `WalletGateway` abstraction and route all RGS financial operations through it.
-* **Task 4.5.3:** Implement internal wallet service and persistence in dedicated `wallet` package with immutable transaction ledger.
-* **Task 4.5.4:** Add idempotency middleware/policy for financial endpoints and include consistent replay response semantics.
-* **Task 4.5.5:** Add error model mapping for wallet failures (insufficient funds, duplicate transaction, original transaction not found, currency mismatch, authentication failure).
+### Milestone 4A: Wallet API and Gateway Layer (POC-Ready, Production-Shaped)
+* **Task 4A.1:** Implement wallet controller endpoints for `authenticate`, `balance`, `debit`, `credit`, `rollback` under `/api/v1/wallet`.
+* **Task 4A.2:** Add `WalletGateway` abstraction and route all RGS financial operations through it.
+* **Task 4A.3:** Implement internal wallet service and persistence in dedicated `wallet` package with immutable transaction ledger.
+* **Task 4A.4:** Add idempotency middleware/policy for financial endpoints and include consistent replay response semantics.
+* **Task 4A.5:** Add error model mapping for wallet failures (insufficient funds, duplicate transaction, original transaction not found, currency mismatch, authentication failure).
 
 ### Milestone 5: Wallet, Ledger, and Auditability Hardening
 * **Task 5.1:** Implement atomic wallet operations with transaction boundaries around bet/buy debits and win credits.
@@ -300,12 +426,12 @@ You must include clean, expressive integration and unit tests matching the follo
     * Collect overall statistics: Total Bet, Total Win, count of Free Spin activations, count of Bonus Buy usage, Pick & Collect entry rate, and average feature payout.
     * Print out the empirical RTP percentage to the console logs to prove the math foundation behaves accurately across scale.
 7.  **Wallet Integration and Idempotency Tests:**
-  * Verify `authenticate` and `balance` are called before first monetary action in a new/ resumed game session.
-  * Verify successful base spin calls `debit` first and `credit` only when win amount is positive.
-  * Verify duplicate `debit`/`credit` requests with same idempotency key do not create duplicate ledger effects.
-  * Verify rollback correctly compensates the original transaction and cannot be executed twice for the same original transaction.
-  * Verify insufficient funds on `debit` returns deterministic business error and does not alter game state.
-  * Verify currency mismatch or invalid player authentication hard-fails before any state mutation.
+    * Verify `authenticate` and `balance` are called before first monetary action in a new/resumed game session.
+    * Verify successful base spin calls `debit` first and `credit` only when win amount is positive.
+    * Verify duplicate `debit`/`credit` requests with same idempotency key do not create duplicate ledger effects.
+    * Verify rollback correctly compensates the original transaction and cannot be executed twice for the same original transaction.
+    * Verify insufficient funds on `debit` returns deterministic business error and does not alter game state.
+    * Verify currency mismatch or invalid player authentication hard-fails before any state mutation.
 
 ---
 

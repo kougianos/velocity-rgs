@@ -4,6 +4,21 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+### Milestone 2 — RNG Engine & Grid Generator
+
+- Added `rng.RngDraw` record (`boundExclusive`, `value`, `sequence`) — the canonical audit unit persisted into `game_round.rng_draws` per A.11.
+- Added `rng.RandomNumberGenerator` round-scoped interface with single method `int nextIndex(int boundExclusive)` so production and replay paths are wire-compatible.
+- Added `rng.RngDrawSink` (+ default `InMemoryRngDrawSink`) — the caller-supplied, per-round audit collector.
+- Implemented `rng.SecureRandomNumberGenerator`: wraps `java.security.SecureRandom`, records every draw to the sink with monotonic per-instance sequence, rejects non-positive bounds. Stateful → instantiated per round (not a Spring bean).
+- Implemented `rng.DeterministicReplayRng`: pops a pre-recorded `List<RngDraw>` in order, enforces bound parity with the original capture, throws when drained. Used by `ReplayService` (M6) and by every milestone's deterministic unit tests.
+- Implemented `math.engine.GridGenerationEngine` (`@Component`): for a given `SlotMathDefinition` + `ReelStripSet` (`BASE` / `POWER_BET` / `FREE_SPINS`), draws one stop per reel and builds the `rows × cols` matrix via wrapping indexing. Returns immutable `GridGenerationResult(matrix, stopPositions)` wire-aligned with A.7's `stopPositions` field.
+
+### Tests (Milestone 2)
+
+- `SecureRandomNumberGeneratorTest`: bound respect across 5k draws, audit-list order + monotonic sequence, value parity with injected `SecureRandom`, non-positive bound rejection.
+- `DeterministicReplayRngTest`: exact replay of a recorded sequence, drained-throws, bound-mismatch detection, full secure→replay round-trip.
+- `GridGenerationEngineTest`: stop=0 yields first three symbols of each strip; stop near end-of-strip wraps to the strip head; reel-strip-set selector swaps the underlying strips (`BASE` vs `POWER_BET`); engine requests exactly one draw per reel at `boundExclusive = stripLength`.
+
 ### Milestone 1 — Math Domain & JSON Configuration
 
 - Added `math.domain` records `Symbol`, `Payline`, `PayTable`, `ReelStrip` and enums `SymbolType`, `ReelStripSet`, `BonusBuyType`, `PickTileType`.

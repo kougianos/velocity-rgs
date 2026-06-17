@@ -16,6 +16,8 @@ Your objective is to build a robust, modular, and enterprise-grade Slot RGS Foun
 5. **iGaming-Grade Randomness:** Use `java.security.SecureRandom` for all RNG components to emulate cryptographic security standards required by GLI-19 compliance.
 6. **Feature Purchase Compliance:** Any paid feature entry (e.g., Bonus Buy) must be explicitly requested by the client, priced by server-side configuration, and fully auditable through immutable transaction and session-event records.
 7. **Single Source of Financial Truth:** Bet debits, buy-in debits, and win credits must be written atomically with idempotency keys to prevent duplicate wallet mutations during retries/timeouts.
+8. **Wallet API Contract Parity:** The RGS financial flow must follow operator-style wallet operations (`authenticate`, `balance`, `credit`, `debit`, `rollback`) even in POC mode.
+9. **POC Boundary Preservation:** For this project scope, wallet must live in the same Spring Boot service under a dedicated `wallet` package, but RGS must interact through wallet endpoints/contracts (not direct repository mutation) to preserve future externalization.
 
 ---
 
@@ -28,6 +30,53 @@ Your objective is to build a robust, modular, and enterprise-grade Slot RGS Foun
 ---
 
 ## Core Feature Requirements
+
+### 0. Wallet Integration (Production Model + POC Implementation)
+* Production model (target architecture): RGS communicates with an external Operator Wallet API using the operations `authenticate`, `balance`, `credit`, `debit`, `rollback`.
+* POC model (current scope): implement wallet in the same server in a dedicated package namespace, while preserving the exact operator-style API contract and call sequence.
+* RGS must call wallet through API-oriented interfaces (HTTP client or adapter abstraction), not by bypassing wallet business rules.
+* Every monetary mutation must include:
+  * `playerId`
+  * `sessionId`
+  * `roundId`
+  * `transactionId`
+  * `idempotencyKey`
+  * `amount`
+  * `currency`
+  * `transactionType`
+
+Wallet Endpoints (POC inside same server):
+* `POST /api/v1/wallet/authenticate`
+  * Validates player context/session token and returns wallet eligibility status for game actions.
+* `GET /api/v1/wallet/balance`
+  * Returns current player balance and currency.
+* `POST /api/v1/wallet/debit`
+  * Debits amount for bet placement and bonus buy purchases with idempotent processing.
+* `POST /api/v1/wallet/credit`
+  * Credits amount for base wins, free-spin settlement, and Pick & Collect finalization.
+* `POST /api/v1/wallet/rollback`
+  * Reverts a previously successful financial operation using original `transactionId` and `rollbackReason`.
+
+POC Package and Design Rules:
+* Use a clear package boundary such as `...wallet.api`, `...wallet.service`, `...wallet.domain`, `...wallet.persistence`.
+* Implement an RGS-facing `WalletGateway` interface and keep RGS unaware of wallet storage details.
+* Provide two gateway implementations strategy-ready:
+  * `InternalWalletGateway` (active in POC profile)
+  * `OperatorWalletGateway` (stub/interface-ready for future external API integration)
+* Enforce idempotency for `debit`, `credit`, and `rollback` by unique key constraints and deterministic replay responses.
+* Keep wallet ledger immutable; corrections must be done through compensating transactions (`rollback`), never by in-place updates.
+
+Required RGS -> Wallet Call Sequence:
+* Game init/resume:
+  * `authenticate` -> `balance`
+* Base spin:
+  * `debit` (bet) -> spin evaluation -> `credit` (if win > 0)
+* Bonus Buy:
+  * `debit` (buy cost) -> feature entry
+* Feature settlement (Free Spins / Pick & Collect):
+  * `credit` (final accumulated feature payout)
+* Failure handling:
+  * call `rollback` for the relevant `transactionId` when a downstream step fails after a successful debit/credit.
 
 ### 1. Base Game Configuration ($3 \times 5$ Grid)
 * A standard slot matrix consisting of 3 rows and 5 columns.
@@ -100,6 +149,12 @@ Implementation Notes:
 
 ---
 
+## Scope Note (Demo Mode First)
+
+Default runtime mode for this project is **Demo Mode** using fake money for gameplay demonstration and feature validation.
+
+Real-money wallet behavior and production-grade wallet integration are planned for later iterations under **Milestone 4.5** and **Milestone 5**.
+
 ## Implementation Roadmap & Milestone Breakdowns
 
 Execute this implementation sequentially. Do not move to the next milestone until the current milestone's logic and its corresponding tests are fully complete and stable.
@@ -169,10 +224,19 @@ Expose the state engine through optimized REST API endpoints.
     * `BonusBuyResponse` including `buyType`, `cost`, `enteredState`, `featureInitPayload`.
     * `PickResponse` including `position`, `resolvedTileType`, `resolvedValue`, `currentCollected`, `remainingPicks`, `featureCompleted`, `featureTotalWin`.
 
+### Milestone 4.5: Wallet API and Gateway Layer (POC-Ready, Production-Shaped)
+* **Task 4.5.1:** Implement wallet controller endpoints for `authenticate`, `balance`, `debit`, `credit`, `rollback` under `/api/v1/wallet`.
+* **Task 4.5.2:** Add `WalletGateway` abstraction and route all RGS financial operations through it.
+* **Task 4.5.3:** Implement internal wallet service and persistence in dedicated `wallet` package with immutable transaction ledger.
+* **Task 4.5.4:** Add idempotency middleware/policy for financial endpoints and include consistent replay response semantics.
+* **Task 4.5.5:** Add error model mapping for wallet failures (insufficient funds, duplicate transaction, original transaction not found, currency mismatch, authentication failure).
+
 ### Milestone 5: Wallet, Ledger, and Auditability Hardening
 * **Task 5.1:** Implement atomic wallet operations with transaction boundaries around bet/buy debits and win credits.
 * **Task 5.2:** Introduce immutable ledger tables/events for: spin debit, bonus buy debit, spin win credit, feature win credit, rollback reason codes.
 * **Task 5.3:** Add replay support endpoint (internal/admin) to reconstruct a session from persisted RNG seeds, board snapshots, and action events for dispute handling.
+* **Task 5.4:** Add reconciliation report job comparing RGS game rounds against wallet ledger entries to detect orphan credits/debits.
+* **Task 5.5:** Add profile-based switch configuration so internal wallet can be replaced by external operator wallet gateway without changing RGS core logic.
 
 ---
 
@@ -205,6 +269,13 @@ You must include clean, expressive integration and unit tests matching the follo
     * Write a specialized JUnit/Integration test class (disabled by default via `@Disabled` or setup as a separate profile) that runs an automated loop of `100,000` spins against the engine components.
     * Collect overall statistics: Total Bet, Total Win, count of Free Spin activations, count of Bonus Buy usage, Pick & Collect entry rate, and average feature payout.
     * Print out the empirical RTP percentage to the console logs to prove the math foundation behaves accurately across scale.
+7.  **Wallet Integration and Idempotency Tests:**
+  * Verify `authenticate` and `balance` are called before first monetary action in a new/ resumed game session.
+  * Verify successful base spin calls `debit` first and `credit` only when win amount is positive.
+  * Verify duplicate `debit`/`credit` requests with same idempotency key do not create duplicate ledger effects.
+  * Verify rollback correctly compensates the original transaction and cannot be executed twice for the same original transaction.
+  * Verify insufficient funds on `debit` returns deterministic business error and does not alter game state.
+  * Verify currency mismatch or invalid player authentication hard-fails before any state mutation.
 
 ---
 
@@ -215,6 +286,7 @@ You must include clean, expressive integration and unit tests matching the follo
 3. **Resumability:** On reconnect, `init` must return current feature board state abstraction (opened positions and player-visible data) without exposing hidden unrevealed tile values.
 4. **Regulatory Explainability:** Every paid/awarded feature entry must store structured reason codes (e.g., `TRIGGERED_BY_SCATTER`, `ENTERED_VIA_BUY`) and be queryable.
 5. **Abuse Prevention:** Enforce per-session action sequencing and replay protection via idempotency key + action counter versioning.
+6. **POC-to-Production Wallet Compatibility:** Internal wallet endpoints must mirror operator wallet request/response semantics so migration to external wallet is configuration and adapter change, not game-engine rewrite.
 
 ## Instructions for Code Generation
 Generate the source files modularly. Focus on writing clean, readable code with explicit type declarations, leveraging Java 21 syntax updates wherever applicable. Ensure all exceptions are intercepted via a global controller advice handler to return standardized error formats back to the client application.

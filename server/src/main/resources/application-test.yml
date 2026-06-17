@@ -8,3 +8,12 @@ rgs:
     mode: internal
   security:
     jwt-secret: test-secret-test-secret-test-secret-32b
+    public-paths:
+      - /actuator/health
+      - /actuator/info
+      - /actuator/prometheus
+      - /v3/api-docs
+      - /v3/api-docs/**
+      - /swagger-ui.html
+      - /swagger-ui/**
+      - /api/v1/dev/**

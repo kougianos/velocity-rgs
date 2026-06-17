@@ -4,6 +4,32 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+## [0.1.0] - QA-ready milestone (M7)
+
+### Milestone 7 — QA Readiness & Operational Tooling
+
+- Added top-level `docker-compose.yml` (Postgres 16 + Redis 7 with healthchecks and a named volume) and per-repo `README.md` (root) + `server/README.md` covering prerequisites, quickstart, environment variables, profile matrix, build/test/package commands.
+- Added demo-only `qa.dev.DevTokenController` (`@Profile("demo")`) exposing `POST /api/v1/dev/token` that mints HS256 JWTs (subject, sid, cur, roles, issuer from `SecurityProperties`); the request DTO validates ISO currency codes and clamps `ttlMinutes` defaults; the endpoint path is whitelisted in `application-demo.yml` via `rgs.security.public-paths` so callers without a token can self-bootstrap.
+- Added demo-only `qa.admin.AdminQaController` (`@Profile("demo")`, all endpoints require the JWT `ADMIN` role claim):
+  - `POST /api/v1/admin/wallet/balance` — upserts the `wallet_balance` row for an arbitrary `(playerId, currency)` pair using the `Money` helper for minor-unit conversion; enforces currency stability on existing rows; writes a structured audit log line.
+  - `GET /api/v1/admin/session/{playerId}` — returns the persistent `GameSession` projection plus a `cachedInRedis` flag and the parsed `active_feature_payload` JSON.
+  - `GET /api/v1/admin/round/{roundId}` — returns the full persisted `GameRound` (matrix, stop positions, RNG draws, win lines, reason codes) for offline manual replay or compliance review.
+- Added the synchronous RTP simulator HTTP harness per A.19 / Task 7.6:
+  - Refactored the existing `RtpSimulator` CLI runner so all simulation logic now lives in a reusable `game.service.RtpSimulationService`; the CLI is a thin `CommandLineRunner` wrapper that builds a default `RtpSimulationRequest` from `rgs.simulator.*` properties.
+  - `game.service.RtpSimulationRequest` (record with validation) parameterises the run with `gameId`, `mathVersion`, `bet`, three independent spin counts (`spinsBaseGame`, `spinsBonusBuyFreeSpins`, `spinsBonusBuyPickCollect`), and a `PickStrategy` enum (`SEQUENTIAL`, `RANDOM_UNOPENED`, `COLLECT_FIRST`); `game.service.RtpReport` carries per-channel `Channel(spins, totalBet, totalWin, rtpPercent)` plus a wager-weighted overall channel and elapsed time.
+  - `qa.simulator.SimulatorAdminController` — `@ConditionalOnExpression` gating exposes `POST /api/v1/admin/simulator/run` under the `simulator` profile and (when `rgs.simulator.expose-on-demo=true`) under `demo`. ADMIN-guarded; persists each invocation into `audit_simulation_run` with the request JSON, the report JSON, and the start/finish timestamps so compliance can cite a stable `runId`.
+  - Flyway `V9__audit_simulation_run.sql` migration + `audit.simulation.AuditSimulationRun` JPA entity (JSONB `params` / `report` columns) + `AuditSimulationRunRepository`.
+  - `application-demo.yml` sets `rgs.simulator.expose-on-demo=true` so QA can drive simulations from the demo deployment without a separate profile.
+- Hardened actuator under the `wallet-operator` profile: `application-wallet-operator.yml` now sets `rgs.security.public-paths` to only the liveness and readiness probes; `/actuator/prometheus`, `/actuator/info`, `/v3/api-docs`, and Swagger UI all require a valid JWT in production deployments.
+
+### Documentation (Milestone 7)
+
+- Added [`README.md`](../README.md) at the repository root and [`README.md`](README.md) in the server module. The `be-requirements.md` blueprint received `Milestone 7 — QA Readiness & Operational Tooling` (Section 7), `Appendix A.19 — RTP Simulator HTTP API`, and `Appendix A.20 — Dev & QA Helpers` ahead of implementation.
+
+### Deferred from Milestone 7
+
+- **Task 7.5 (OpenAPI commit gate):** plumbing is wired (`springdoc-openapi-maven-plugin` + Spring Boot start/stop bound to `integration-test`), but the default `skip.openapi.gen=true` was kept to avoid breaking CI before the initial `docs/openapi.yaml` snapshot is committed. Follow-up ticket: flip the default to `false`, commit the generated spec, and add a `git diff --exit-code docs/openapi.yaml` step to `.github/workflows/server-ci.yml`.
+
 ### Milestone 6 — Audit, Replay & Reconciliation Hardening
 
 - Added Flyway migration `V8__audit_reconciliation_finding.sql` per A.16: `audit_reconciliation_finding` table with `(player_id, bucket_start, discrepancy_kind)` UNIQUE for idempotent re-runs, `bucket_start`/`bucket_end` TIMESTAMPTZ, `expected_debit`/`actual_debit`/`expected_credit`/`actual_credit`/`discrepancy` NUMERIC(19,4), `discrepancy_kind`, free-text `detail`, plus `(player_id, created_at)` and `(bucket_start)` indexes.

@@ -331,6 +331,7 @@ M0 (Bootstrap & Cross-Cutting)
                      └── M4 (Session FSM & Persistence)
                            └── M5 (Slot Game API — end-to-end wiring)
                                  └── M6 (Audit, Replay & Reconciliation)
+                                       └── M7 (QA Readiness & Operational Tooling)
 ```
 
 ### Milestone 0: Project Bootstrap & Cross-Cutting Foundation
@@ -473,6 +474,35 @@ Tests for M6:
 * Operator gateway WireMock contract test passes; profile switch leaves `SlotEngineService` source code untouched.
 
 Foundation guarantee for production: replay is bit-exact, reconciliation catches drift, operator wallet swap is a configuration change.
+
+### Milestone 7: QA Readiness & Operational Tooling
+
+M0–M6 produced a feature-complete, test-green backend, but a manual QA cycle on the deployed server is still gated by missing developer-experience and tooling artifacts. M7 closes those gaps; no game logic is added.
+
+* **Task 7.1 — Local run quickstart.** Add a root `README.md` (and matching `server/README.md`) covering: prerequisites (JDK 21, Docker, Maven), `docker compose up` for Postgres + Redis, the canonical `mvn spring-boot:run -Dspring-boot.run.profiles=demo` invocation, environment variables (`RGS_DB_URL`, `RGS_DB_USERNAME`, `RGS_DB_PASSWORD`, `RGS_REDIS_HOST`, `RGS_JWT_SECRET`), default ports, and links to Swagger UI / Actuator. Add a top-level `docker-compose.yml` exposing `postgres:16` (db `rgs`, user/pass `rgs`/`rgs`) and `redis:7`. The repo instruction "do not auto-update README" is explicitly waived for this task.
+* **Task 7.2 — Dev JWT minting helper.** Per A.20, expose `POST /api/v1/dev/token` under the `demo` profile only (404 otherwise) that mints an HS256 JWT signed with the active `rgs.security.jwt-secret`. Ship a tiny standalone `JwtTestFactory` CLI under `server/tools/` reusing the same secret for offline use.
+* **Task 7.3 — HTTP request collection.** Commit `server/http/velocity-rgs.http` (VS Code REST Client format) with one block per endpoint: `/dev/token`, `/wallet/*`, `/slot/*`, `/admin/replay/{roundId}`. Each block uses `@variables` for `playerId`, `sessionId`, `bearerToken`, `idempotencyKey` so QA can re-run a full journey without hand-crafting payloads.
+* **Task 7.4 — QA-only admin endpoints.** Per A.20, add under the `demo` profile only (404 otherwise) and guarded by the same `roles=[ADMIN]` claim as `/admin/replay`:
+  * `POST /api/v1/admin/wallet/balance` — set an arbitrary balance for a player/currency (creates the `wallet_balance` row if absent). Body: `{playerId, currency, balance}`. Used to test `INSUFFICIENT_FUNDS`, large bonus-buy costs, currency edge cases.
+  * `GET /api/v1/admin/session/{playerId}` — returns the canonical `GameSession` snapshot (including `activeFeaturePayload`) plus the Redis cache view, for stuck-session debugging.
+  * `GET /api/v1/admin/round/{roundId}` — returns the `GameRound` row including `rng_draws` and `win_lines`.
+* **Task 7.5 — Bind OpenAPI generation to `verify` and commit `docs/openapi.yaml`.** Remove the `skip.openapi.gen=true` default so `springdoc-openapi-maven-plugin` runs on every `mvn -B verify`. Commit the generated `docs/openapi.yaml` and add a CI step that fails when the freshly generated file differs from the committed snapshot (per A.15).
+* **Task 7.6 — Extended RTP simulator harness.** Per A.19:
+  1. Refactor the existing `simulator`-profile `CommandLineRunner` into a reusable `RtpSimulationService` parameterised by `(gameId, mathVersion, bet, spinsBaseGame, freeSpinReinvestRate, pickStrategy)`.
+  2. Expose `POST /api/v1/admin/simulator/run` under the `simulator` profile only (and on `demo` when `rgs.simulator.expose-on-demo=true`) guarded by `roles=[ADMIN]`. Returns the structured `RtpReport` defined in A.19 (the three RTP channels plus a payout-distribution histogram, max-win bucket, hit frequency, feature trigger frequency, average feature payout, p50/p95/p99 round latency at math-only level).
+  3. The Pick & Collect path inside the simulator must support a configurable `pickStrategy` (`SEQUENTIAL`, `RANDOM_UNOPENED` — default —, `COLLECT_FIRST`) so math designers can stress-test board-design assumptions.
+  4. Persist each simulator run as an `audit_simulation_run` row (`id, requested_by, game_id, math_version, params JSONB, report JSONB, started_at, finished_at`) under a new Flyway migration `V9__audit_simulation_run.sql`.
+* **Task 7.7 — Actuator hardening.** Document explicitly in `README.md` whether `/actuator/health`, `/actuator/prometheus`, `/actuator/info` remain anonymous. Default for `demo`: anonymous (current behaviour). Default for `wallet-operator`: require the same JWT as the rest of the API (new `management.endpoints.web.security.enabled=true` plus a `SecurityFilterChain` rule). Ship the new defaults in `application-wallet-operator.yml`.
+* **Task 7.8 — Performance smoke harness.** Add `server/perf/` with a k6 (`spin.js`) and a JMeter (`spin.jmx`) scenario that drives an authenticated player through `init` → `spin` × N at a configurable RPS, asserting `pick` p95 < 120 ms and `spin` p95 < 250 ms per Section "Latency Budget for Feature Actions". CI does not run this scenario; it is invoked on demand by performance engineers.
+* **Task 7.9 — Release packaging.** Cut `0.1.0` from the `[Unreleased]` CHANGELOG section. Tag the commit `v0.1.0`. Configure the existing `spring-boot-maven-plugin` to attach a runnable jar artifact. (No Docker image is required at this milestone.)
+
+Tests for M7:
+* Dev token endpoint returns HTTP 404 outside the `demo` profile, mints a JWT accepted by the JWT auth filter inside `demo`, and the minted token reaches `init` / `spin` / `feature/buy` without modification.
+* Admin endpoints: non-`ADMIN` JWT → `FORBIDDEN_ACTION` (403); `wallet/balance` PUT followed by `GET /wallet/balance` returns the new amount; `session/{playerId}` returns the same payload that `init` would resume to; `round/{roundId}` returns the persisted RNG draws byte-identical to what `ReplayService` consumes.
+* OpenAPI drift CI step fails when an endpoint is added without regenerating `docs/openapi.yaml`.
+* Simulator HTTP endpoint returns a non-empty `RtpReport` matching the schema in A.19; each run produces exactly one `audit_simulation_run` row; the three RTP channel values are within ±5% of the math-design target on a 100k-spin run with the `aztec-fire/v1` fixture (assertion is `WARN`-only, not test-failure-only, to avoid flakiness on noisy CI runners).
+
+Foundation guarantee for QA cycle: a manual tester can clone the repo, run two commands, mint a token, and exercise every endpoint without reading Java source.
 
 ---
 
@@ -973,3 +1003,74 @@ A milestone is "done" only when:
 * **Ways-to-Win** — Win evaluation mode counting any left-to-right symbol adjacency; OUT OF SCOPE.
 * **FSM** — Finite State Machine.
 * **DRBG** — Deterministic Random Bit Generator (not used; see A.11).
+
+### A.19 RTP Simulator HTTP API (M7)
+
+Request (`POST /api/v1/admin/simulator/run`, header `Authorization: Bearer <admin-jwt>`):
+```json
+{
+  "gameId": "aztec-fire",
+  "mathVersion": "v1",
+  "bet": 1.00,
+  "spinsBaseGame": 100000,
+  "spinsBonusBuyFreeSpins": 2000,
+  "spinsBonusBuyPickCollect": 2000,
+  "pickStrategy": "RANDOM_UNOPENED"
+}
+```
+
+Response (`200`):
+```json
+{
+  "runId": "sim-9f3a...",
+  "gameId": "aztec-fire",
+  "mathVersion": "v1",
+  "spins": { "baseGame": 100000, "bonusBuyFreeSpins": 2000, "bonusBuyPickCollect": 2000 },
+  "rtp": { "baseGame": 95.23, "bonusBuy": 96.40, "overall": 95.45 },
+  "hitFrequency": 0.2741,
+  "featureTriggerFrequency": 0.0042,
+  "maxWinMultiplier": 4870.0,
+  "payoutDistribution": [
+    { "bucket": "0x",        "count": 72591 },
+    { "bucket": "0-1x",      "count": 12044 },
+    { "bucket": "1-5x",      "count": 9123  },
+    { "bucket": "5-20x",     "count": 4581  },
+    { "bucket": "20-100x",   "count": 1402  },
+    { "bucket": "100-1000x", "count": 251   },
+    { "bucket": ">=1000x",   "count": 8     }
+  ],
+  "latencyMs": { "p50": 0.41, "p95": 1.12, "p99": 2.04 },
+  "startedAt": "2026-06-17T10:15:30Z",
+  "finishedAt": "2026-06-17T10:15:48Z"
+}
+```
+
+Rules:
+* Available only when the `simulator` profile is active, or when running under `demo` with `rgs.simulator.expose-on-demo=true`.
+* Guarded by JWT `roles` claim containing `ADMIN`; otherwise `FORBIDDEN_ACTION` (403).
+* `pickStrategy` enum: `SEQUENTIAL`, `RANDOM_UNOPENED`, `COLLECT_FIRST`.
+* Each call persists one `audit_simulation_run` row (table created by `V9__audit_simulation_run.sql`).
+* The endpoint is synchronous; for runs > 1M spins the caller should use the CLI mode (existing `simulator`-profile boot runner) to avoid HTTP timeouts.
+
+### A.20 Dev & QA Helpers (M7)
+
+**Dev JWT minting** — `POST /api/v1/dev/token` (profile `demo` only; HTTP 404 elsewhere). Body: `{ "playerId": "p-1001", "sessionId": "s-2001", "currency": "EUR", "roles": ["PLAYER"], "ttlMinutes": 60 }`. Response: `{ "token": "<jwt>", "expiresAt": "2026-06-17T11:15:30Z" }`. The endpoint is NOT idempotent and does NOT require auth.
+
+**Admin QA endpoints** — all under profile `demo` only, JWT `roles=[ADMIN]` required:
+* `POST /api/v1/admin/wallet/balance` — set/overwrite a balance row. Body: `{ "playerId", "currency", "balance" }`. Response: the new `WalletBalanceResponse`.
+* `GET /api/v1/admin/session/{playerId}` — returns `{ "postgres": <GameSession-json>, "redis": <cached-json-or-null> }`.
+* `GET /api/v1/admin/round/{roundId}` — returns the full `GameRound` row (including `rng_draws` and `win_lines`).
+
+**HTTP request collection** — committed at `server/http/velocity-rgs.http`. Variables: `@host`, `@playerId`, `@sessionId`, `@bearerToken`, `@idempotencyKey`. Blocks: `dev-token`, `wallet-authenticate`, `wallet-balance`, `wallet-debit`, `wallet-credit`, `wallet-rollback`, `slot-init`, `slot-spin`, `slot-feature-start`, `slot-feature-buy`, `slot-feature-pick`, `admin-replay`, `admin-set-balance`, `admin-get-session`, `admin-get-round`, `admin-simulator-run`.
+
+**Local infra** — root `docker-compose.yml`:
+```yaml
+services:
+  postgres:
+    image: postgres:16
+    environment: { POSTGRES_DB: rgs, POSTGRES_USER: rgs, POSTGRES_PASSWORD: rgs }
+    ports: ["5432:5432"]
+  redis:
+    image: redis:7
+    ports: ["6379:6379"]
+```

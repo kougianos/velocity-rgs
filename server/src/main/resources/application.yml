@@ -72,6 +72,10 @@ rgs:
     redis-cache-enabled: true
     default-ttl-hours: 24
     wallet-ttl-hours: 48
+  math:
+    catalog:
+      - gameId: aztec-fire
+        mathVersion: v1
 
 logging:
   level:

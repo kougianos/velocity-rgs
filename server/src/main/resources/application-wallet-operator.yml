@@ -1,0 +1,6 @@
+rgs:
+  wallet:
+    mode: operator
+    operator:
+      base-url: ${RGS_WALLET_OPERATOR_URL:http://localhost:9090}
+      timeout-ms: 2000

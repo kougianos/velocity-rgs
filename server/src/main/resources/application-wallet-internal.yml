@@ -1,0 +1,5 @@
+rgs:
+  wallet:
+    mode: internal
+  audit:
+    verbose: true

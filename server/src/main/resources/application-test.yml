@@ -1,0 +1,10 @@
+spring:
+  jpa:
+    hibernate:
+      ddl-auto: validate
+
+rgs:
+  wallet:
+    mode: internal
+  security:
+    jwt-secret: test-secret-test-secret-test-secret-32b

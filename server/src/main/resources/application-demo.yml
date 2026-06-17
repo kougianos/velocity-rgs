@@ -1,0 +1,6 @@
+rgs:
+  wallet:
+    mode: internal
+    demo:
+      starting-balance-minor: 1000000
+      currency: EUR

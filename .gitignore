@@ -1,0 +1,167 @@
+# ──────────────────────────────────────────────────────────────────────
+# OS
+# ──────────────────────────────────────────────────────────────────────
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+$RECYCLE.BIN/
+
+# ──────────────────────────────────────────────────────────────────────
+# Editors / IDEs
+# ──────────────────────────────────────────────────────────────────────
+.idea/
+*.iml
+*.iws
+*.ipr
+.idea_modules/
+out/
+
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+!.vscode/*.code-snippets
+.history/
+*.code-workspace
+
+.project
+.classpath
+.settings/
+.factorypath
+.apt_generated/
+.apt_generated_test/
+.springBeans
+.sts4-cache/
+
+*.swp
+*.swo
+*~
+.netrwhist
+
+# ──────────────────────────────────────────────────────────────────────
+# Logs / temp
+# ──────────────────────────────────────────────────────────────────────
+*.log
+logs/
+tmp/
+temp/
+.cache/
+.parcel-cache/
+
+# ──────────────────────────────────────────────────────────────────────
+# Environment / secrets
+# ──────────────────────────────────────────────────────────────────────
+.env
+.env.*
+!.env.example
+!.env.sample
+*.pem
+*.key
+*.p12
+*.keystore
+secrets/
+
+# ──────────────────────────────────────────────────────────────────────
+# Backend: Java / Maven / Gradle (server/)
+# ──────────────────────────────────────────────────────────────────────
+target/
+build/
+*.class
+*.jar
+*.war
+*.ear
+*.nar
+hs_err_pid*
+replay_pid*
+
+.mvn/wrapper/maven-wrapper.jar
+!**/src/main/**/target/
+!**/src/test/**/target/
+
+.gradle/
+gradle-app.setting
+!gradle-wrapper.jar
+!gradle-wrapper.properties
+
+# Spring Boot devtools
+.spring-boot-devtools.properties
+
+# Test reports
+**/target/surefire-reports/
+**/target/failsafe-reports/
+**/target/site/
+**/target/jacoco.exec
+**/target/jacoco-it.exec
+
+# ──────────────────────────────────────────────────────────────────────
+# Frontend: Node / TypeScript / React / PixiJS (client/)
+# ──────────────────────────────────────────────────────────────────────
+node_modules/
+.pnp
+.pnp.js
+.pnp.cjs
+.yarn/cache
+.yarn/unplugged
+.yarn/build-state.yml
+.yarn/install-state.gz
+.pnpm-store/
+
+# Build output
+dist/
+dist-ssr/
+build/
+out/
+.next/
+.nuxt/
+.svelte-kit/
+.vite/
+.turbo/
+.rollup.cache/
+storybook-static/
+
+# TypeScript
+*.tsbuildinfo
+.tsc-cache/
+
+# Test / coverage
+coverage/
+.nyc_output/
+*.lcov
+junit.xml
+playwright-report/
+test-results/
+.cypress/videos/
+.cypress/screenshots/
+
+# Lint / format caches
+.eslintcache
+.stylelintcache
+.prettiercache
+
+# Package manager artifacts (lockfiles kept on purpose)
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# PixiJS / asset processing (generated)
+**/assets/generated/
+**/public/assets/atlas/*.json.gz
+*.spine.atlas.gz
+
+# ──────────────────────────────────────────────────────────────────────
+# Docker / infra
+# ──────────────────────────────────────────────────────────────────────
+*.pid
+*.seed
+*.tgz
+*.tar
+*.tar.gz
+docker-compose.override.yml

@@ -1,0 +1,4 @@
+rgs:
+  simulator:
+    spins: 100000
+    parallelism: 16

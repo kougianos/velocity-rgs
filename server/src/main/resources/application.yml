@@ -72,6 +72,11 @@ rgs:
     redis-cache-enabled: true
     default-ttl-hours: 24
     wallet-ttl-hours: 48
+  wallet:
+    mode: internal
+    demo:
+      starting-balance-minor: 1000000
+      currency: EUR
   math:
     catalog:
       - gameId: aztec-fire

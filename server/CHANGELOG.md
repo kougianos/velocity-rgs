@@ -4,7 +4,24 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
-### Milestone 2 — RNG Engine & Grid Generator
+### Milestone 3 — Wallet API, Gateway & Ledger
+
+- Added Flyway migrations `V2__wallet_balance.sql` (per-player current balance with `version` for JPA optimistic locking) and `V3__wallet_transaction.sql` (immutable ledger with unique `transaction_id`, player/created and original-tx indexes per A.9).
+- Added canonical wallet enums per A.0.1: `WalletTransactionType` (BET / BONUS_BUY / WIN / FEATURE_WIN / ROLLBACK), `WalletTransactionStatus` (SUCCESS / REJECTED), `RollbackReason` (DOWNSTREAM_FAILURE / TECHNICAL_ERROR / OPERATOR_CANCEL).
+- Added DTO records for the wallet wire contract: `WalletAuthenticateRequest/Response`, `WalletBalanceResponse`, `WalletDebitRequest/Response`, `WalletCreditRequest/Response`, `WalletRollbackRequest/Response` — bodies match A.0.1 byte-for-byte (no `idempotencyKey` field; the key arrives via the `Idempotency-Key` header per A.6).
+- Implemented JPA entities `WalletBalance` (optimistic `@Version`) and `WalletTransaction` (insert-only, monetary columns `NUMERIC(19,4)` plus mirrored `BIGINT` minor units per A.9) and their Spring Data repositories.
+- Implemented `WalletLedgerWriter` (`REQUIRES_NEW` transactional unit) and `InternalWalletService` (orchestrator with bounded optimistic-lock retry loop) covering `authenticate`, `balance`, `debit`, `credit`, `rollback`. All math goes through `Money` with HALF_UP rounding; balance + ledger insert are committed atomically per call.
+- Implemented `WalletGateway` interface plus `InternalWalletGateway` (active in `default` / `demo` / `wallet-internal` / `test` / `simulator`) and `OperatorWalletGateway` skeleton (active in `wallet-operator`; throws `INTERNAL_ERROR` with explicit M6 deferral message).
+- Implemented `WalletController` under `/api/v1/wallet/*` (authenticate, balance, debit, credit, rollback). Mutating endpoints carry `@Idempotent` with the exact A.6 scope strings (`wallet:debit:{playerId}:{transactionId}`, `wallet:credit:{playerId}:{transactionId}`, `wallet:rollback:{playerId}:{originalTransactionId}`) and a 48h TTL. JWT-authenticated player is enforced against the request `playerId` (`FORBIDDEN_ACTION` on mismatch).
+- Added `WalletDemoSeeder` (`@Profile({"demo","default","test","simulator"})`) that creates a `WalletBalance` row on first `authenticate` for an unknown player using the configured starting balance (default 10,000.00 EUR / 1,000,000 minor units).
+- Added `WalletProperties` (`rgs.wallet.*`) and a small `WalletConfiguration` binding bean; wallet defaults are declared in `application.yml` so non-demo profiles inherit them.
+- Mapped the full set of M3 wallet error codes per A.8: `INSUFFICIENT_FUNDS`, `DUPLICATE_TRANSACTION` (raised both upfront and via the unique-constraint catch in the ledger writer), `ORIGINAL_TRANSACTION_NOT_FOUND`, `CURRENCY_MISMATCH`, `FORBIDDEN_ACTION`, plus `SESSION_VERSION_CONFLICT` when balance-row contention exceeds the retry budget.
+
+### Tests (Milestone 3)
+
+- `WalletControllerIntegrationTest` (`@RgsIntegrationTest`, full Testcontainers Postgres + Redis): 13 end-to-end cases covering authenticate-with-auto-seed, balance, successful debit (balance + ledger asserted), idempotent-replay returns cached response with `Idempotent-Replay: true` and no extra ledger row, same `transactionId` with a different idempotency key raises `DUPLICATE_TRANSACTION`, insufficient funds rejects without state mutation, currency mismatch against JWT `cur`, full debit → credit → rollback ledger flow with balance reconciliation, unknown original-tx rollback returns `404`, second rollback on the same original raises `DUPLICATE_TRANSACTION`, two concurrent debits both succeed via optimistic-lock retry, unauthenticated request → `401`, `playerId` ≠ JWT principal → `403`.
+
+
 
 - Added `rng.RngDraw` record (`boundExclusive`, `value`, `sequence`) — the canonical audit unit persisted into `game_round.rng_draws` per A.11.
 - Added `rng.RandomNumberGenerator` round-scoped interface with single method `int nextIndex(int boundExclusive)` so production and replay paths are wire-compatible.

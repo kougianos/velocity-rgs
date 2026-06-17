@@ -23,7 +23,7 @@ Your objective is to build a robust, modular, and enterprise-grade Slot RGS Foun
 * **Language:** Java 21 (Utilize modern features such as Record types for immutable DTOs, Pattern Matching for switch expressions, and Virtual Threads for scaling high-concurrency simulation loops).
 * **Framework:** Spring Boot 3.x (Spring Web, Spring Data JPA).
 * **Libraries:** Lombok (for boilerplate reduction), Jackson (for flexible JSON configurations), MapStruct (optional, or manual mapping for clean DTO separation).
-* **Testing:** JUnit 5, AssertJ, and Mockito.
+* **Testing:** JUnit 5, AssertJ, and Mockito. IMPORTANT: Tests are mandatory in each iteration, avoid using too many mocks, prefer integration tests.
 
 ---
 

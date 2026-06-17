@@ -11,7 +11,7 @@ Your objective is to build a robust, modular, and enterprise-grade Slot RGS Foun
 
 1. **Pure Determinism:** The backend must never trust the client. A spin request accepts only configuration inputs (e.g., base bet, feature toggles like Power Bet). The engine calculates the random stops, constructs the grid matrix, evaluates wins, and updates state.
 2. **Strict State Isolation:** A player’s session state determines what actions are legal. If a user has remaining Free Spins, the standard `SPIN` endpoint must be blocked, and only a `FREE_SPIN` action can advance the state machine.
-3. **Thread Safety & Statestate Persistence:** Game sessions must be stateless at the application layer, using an absolute transactional database boundary (simulated via JPA/Hibernate or Redis) to avoid concurrency issues like race-condition double-dipping.
+3. **Thread Safety & Stateful Persistence:** Game services must be stateless at the application layer. Persistent and cache boundaries must prevent concurrency issues such as race-condition double-dipping.
 4. **Math Model Separation (Data-Driven):** Reel strips, paytables, and feature weights must **never** be hardcoded into evaluation loops. They must be loaded dynamically via configuration classes (JSON blueprints) to allow easy RTP tuning without changing code.
 5. **iGaming-Grade Randomness:** Use `java.security.SecureRandom` for all RNG components to emulate cryptographic security standards required by GLI-19 compliance.
 6. **Feature Purchase Compliance:** Any paid feature entry (e.g., Bonus Buy) must be explicitly requested by the client, priced by server-side configuration, and fully auditable through immutable transaction and session-event records.
@@ -26,6 +26,36 @@ Your objective is to build a robust, modular, and enterprise-grade Slot RGS Foun
 * **Framework:** Spring Boot 3.x (Spring Web, Spring Data JPA).
 * **Libraries:** Lombok (for boilerplate reduction), Jackson (for flexible JSON configurations), MapStruct (optional, or manual mapping for clean DTO separation).
 * **Testing:** JUnit 5, AssertJ, and Mockito. IMPORTANT: Tests are mandatory in each iteration, avoid using too many mocks, prefer integration tests.
+
+## Persistence Layer Strategy (Explicit)
+
+Use a hybrid persistence model with clear separation of concerns between Postgres and Redis.
+
+### Postgres (System of Record)
+Use Postgres for durable, auditable, and relational data that must survive restarts and support reconciliation/reporting.
+
+Required Postgres use cases:
+* Game rounds and round lifecycle events (round start, spin result, feature entry, feature completion).
+* Financial transactions and immutable wallet ledger entries (`debit`, `credit`, `rollback`).
+* Bonus buy purchase events and regulatory reason codes.
+* Dispute/replay artifacts metadata (RNG seeds references, action timeline indexes, result hashes).
+* Idempotency records for monetary and state-mutating operations.
+* Reconciliation data sets and operational audit queries.
+
+### Redis (Low-Latency Session State)
+Use Redis for fast-changing, short-lived runtime state that optimizes gameplay responsiveness.
+
+Required Redis use cases:
+* Active player game session state (FSM state, next action, temporary feature payload references).
+* In-progress feature context (for example Pick and Collect opened positions and remaining picks) when not yet finalized.
+* Idempotency response cache for quick replay of recent identical requests.
+* Short TTL locks/guards for per-player action sequencing.
+
+### Persistence Rules
+* Postgres remains the source of truth for money, rounds, and audit trails.
+* Redis loss must not cause financial inconsistency; sessions can be rebuilt from durable Postgres records when needed.
+* Wallet balance mutations are committed in Postgres transaction boundaries; Redis may only mirror derived session-facing balance snapshots.
+* On session resume, reconstruct canonical state from Postgres, then hydrate Redis cache/session entries.
 
 ---
 

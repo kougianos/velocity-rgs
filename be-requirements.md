@@ -25,7 +25,7 @@ Your objective is to build a robust, modular, and enterprise-grade Slot RGS Foun
 * **Language:** Java 21 (Utilize modern features such as Record types for immutable DTOs, Pattern Matching for switch expressions, and Virtual Threads for scaling high-concurrency simulation loops).
 * **Framework:** Spring Boot 3.x (Spring Web, Spring Data JPA).
 * **Libraries:** Lombok (for boilerplate reduction), Jackson (for flexible JSON configurations), MapStruct (optional, or manual mapping for clean DTO separation).
-* **Testing:** JUnit 5, AssertJ, and Mockito. IMPORTANT: Tests are mandatory in each iteration, avoid using too many mocks, prefer integration tests.
+* **Testing:** JUnit 5, AssertJ, Mockito, and Testcontainers (Postgres + Redis). IMPORTANT: Tests are mandatory in each iteration. Mocking policy: **mock only the `SecureRandomNumberGenerator` and outbound HTTP boundaries**; everything else (Postgres, Redis, wallet gateway in POC mode) must run against real Testcontainers in integration tests using `@SpringBootTest`. Slice tests (`@WebMvcTest`, `@DataJpaTest`) are allowed for narrow unit coverage only.
 
 ## Persistence Layer Strategy (Explicit)
 
@@ -227,7 +227,7 @@ Required RGS -> Wallet Call Sequence:
 
 ### 1. Base Game Configuration ($3 \times 5$ Grid)
 * A standard slot matrix consisting of 3 rows and 5 columns.
-* A configurable payline evaluation module (standard 20-line configuration or mathematical Ways-to-Win calculation).
+* A configurable payline evaluation module. **Default for this project: fixed 20-line configuration** (payline coordinates defined in math JSON, see Appendix A.4). A `WAYS_TO_WIN` mode is an interface-level extension point and is out of scope for Milestone 1-5.
 
 ### 2. Free Spins Feature
 * Triggered by landing $\ge 3$ Scatter symbols anywhere on the grid during a base spin.
@@ -446,3 +446,420 @@ You must include clean, expressive integration and unit tests matching the follo
 
 ## Instructions for Code Generation
 Generate the source files modularly. Focus on writing clean, readable code with explicit type declarations, leveraging Java 21 syntax updates wherever applicable. Ensure all exceptions are intercepted via a global controller advice handler to return standardized error formats back to the client application.
+
+**Hard rule — Do Not Invent:** the following items are fixed by Appendix A and must NOT be renamed, restructured, or substituted by the implementation agent:
+* Root package, module/package layout, dependency versions.
+* Endpoint paths, HTTP methods, request/response field names, header names.
+* Enum names and values.
+* Error codes and their HTTP status mapping.
+* Database table and column names, Flyway migration filenames.
+* Redis key naming convention and TTLs.
+* Spring profile names.
+* Math JSON file layout and field names.
+
+If a requirement seems missing, prefer the default declared in Appendix A. If Appendix A is silent, raise the gap explicitly in code review comments rather than inventing a contract.
+
+---
+
+## Appendix A: Normative Defaults (Authoritative)
+
+This appendix resolves all otherwise-implicit decisions. Every value here is binding for the implementation agent.
+
+### A.1 Project Bootstrap
+
+* **Build tool:** Maven (single module).
+* **Java toolchain:** Java 21 (`maven.compiler.release=21`).
+* **Spring Boot:** `3.3.x` (latest patch at build time).
+* **Root package:** `com.velocity.rgs`.
+* **Artifact:** `groupId=com.velocity`, `artifactId=velocity-rgs`, `version=0.1.0-SNAPSHOT`.
+* **Mandatory dependencies (pin in `pom.xml`):**
+  * `spring-boot-starter-web`, `spring-boot-starter-validation`, `spring-boot-starter-actuator`
+  * `spring-boot-starter-data-jpa`, `spring-boot-starter-data-redis`
+  * `org.postgresql:postgresql`
+  * `org.flywaydb:flyway-core`, `flyway-database-postgresql`
+  * `org.projectlombok:lombok` (provided)
+  * `com.fasterxml.jackson.module:jackson-module-parameter-names`
+  * `org.mapstruct:mapstruct` + `mapstruct-processor` (DTO mapping is MapStruct, not manual)
+  * `org.springdoc:springdoc-openapi-starter-webmvc-ui` (auto-generated OpenAPI at `/v3/api-docs` and `/swagger-ui.html`)
+  * `io.micrometer:micrometer-registry-prometheus`
+  * Test scope: `spring-boot-starter-test`, `org.testcontainers:postgresql`, `org.testcontainers:junit-jupiter`, `com.redis:testcontainers-redis`, `org.assertj:assertj-core`
+* **Lombok scope rule:** allowed on JPA entities, services, components. Forbidden on Java records (use records' built-in semantics). DTOs are records with `@Builder` only when the constructor has 5+ fields.
+
+### A.2 Module / Package Layout
+
+```
+com.velocity.rgs
+├── config           # Spring configuration, Jackson, OpenAPI, security, virtual-thread executor
+├── common
+│   ├── error        # ApiError, GlobalExceptionHandler, ErrorCode enum
+│   ├── idempotency  # IdempotencyKey, IdempotencyStore, @Idempotent aspect
+│   └── money        # Money value object, currency rounding utils
+├── math
+│   ├── config       # SlotMathConfiguration, JSON loaders
+│   ├── domain       # Symbol, Payline, PayTable, ReelStrip records
+│   └── engine       # ReelEvaluator, GridGenerationEngine
+├── rng              # SecureRandomNumberGenerator, RngDraw record (audit)
+├── session
+│   ├── domain       # GameSession entity, FSM state/command sealed types
+│   ├── fsm          # SessionStateMachine, transition rules
+│   ├── persistence  # GameSessionRepository (JPA), SessionCache (Redis)
+│   └── service
+├── game
+│   ├── api          # SlotGameController, request/response DTOs
+│   ├── service      # SlotEngineService facade
+│   └── feature
+│       ├── freespins
+│       ├── bonusbuy
+│       └── pickcollect  # PickCollectEngine, PickCollectState
+├── wallet
+│   ├── api          # WalletController, DTOs
+│   ├── service      # InternalWalletService
+│   ├── gateway      # WalletGateway, InternalWalletGateway, OperatorWalletGateway
+│   ├── domain       # WalletTransaction, LedgerEntry entities
+│   └── persistence
+├── audit            # FeaturePurchaseEvent, ReplayService, ReconciliationJob
+└── observability    # Logging filter, MDC propagation, metrics
+```
+
+### A.3 Configuration Profiles
+
+| Profile | Purpose |
+|---|---|
+| `default` | Local dev, uses Testcontainers-managed Postgres/Redis via `spring-boot-docker-compose` |
+| `demo` | Default runtime mode, `InternalWalletGateway` active, fake money |
+| `wallet-internal` | Equivalent to `demo` but with full audit logging enabled |
+| `wallet-operator` | `OperatorWalletGateway` active (future external integration) |
+| `test` | Integration test profile, Testcontainers wired by base test class |
+| `simulator` | Enables `@RtpSimulationTest` execution (disabled in `default`) |
+
+Selection: `SPRING_PROFILES_ACTIVE=demo` is the default for `mvn spring-boot:run`.
+
+### A.4 Slot Math JSON — Canonical Layout
+
+**Location:** `src/main/resources/math/<gameId>/<mathVersion>.json` (e.g. `math/aztec-fire/v1.json`). Loaded at startup via `SlotMathConfiguration`. Hot-reload is NOT supported in scope.
+
+**Skeleton (all fields required unless marked optional):**
+
+```json
+{
+  "gameId": "aztec-fire",
+  "mathVersion": "v1",
+  "grid": { "rows": 3, "cols": 5 },
+  "symbols": [
+    { "id": 1, "name": "ACE",      "type": "STANDARD" },
+    { "id": 9, "name": "WILD",     "type": "WILD",    "substitutes": "STANDARD" },
+    { "id": 12,"name": "SCATTER",  "type": "SCATTER" }
+  ],
+  "paylines": [
+    { "id": 1, "coords": [[1,0],[1,1],[1,2],[1,3],[1,4]] }
+  ],
+  "payTable": {
+    "1":  { "3": 5,  "4": 20, "5": 100 },
+    "9":  { "3": 25, "4": 100,"5": 500 }
+  },
+  "reelStrips": {
+    "BASE":      [[1,2,3,9,1,...], [...], [...], [...], [...]],
+    "POWER_BET": [[1,12,3,9,12,...], [...], [...], [...], [...]],
+    "FREE_SPINS":[[1,12,9,9,12,...], [...], [...], [...], [...]]
+  },
+  "scatterTriggers": { "minCount": 3, "freeSpinsAwarded": 10, "retriggerAwards": 5 },
+  "freeSpins": { "betLockedToTriggerBet": true, "powerBetPersists": false, "maxRetriggerStack": 50 },
+  "powerBet": { "betMultiplier": 1.50 },
+  "bonusBuyOptions": [
+    { "buyType": "FREE_SPINS_BUY",  "costMultiplier": 80,  "targetState": "FREE_SPINS_AWAITING",
+      "initialFeaturePayload": { "freeSpinsAwarded": 10 } },
+    { "buyType": "PICK_COLLECT_BUY","costMultiplier": 120, "targetState": "PICK_COLLECT_AWAITING",
+      "initialFeaturePayload": { "boardSize": 12, "maxPicks": 5 } }
+  ],
+  "pickCollect": {
+    "boardSize": 12,
+    "completion": { "type": "FIXED_PICKS", "value": 5 },
+    "tileDistribution": [
+      { "type": "CREDITS",   "weight": 50, "valueRange": [1, 50] },
+      { "type": "MULTIPLIER","weight": 20, "valueRange": [2, 5] },
+      { "type": "COLLECT",   "weight": 20 },
+      { "type": "BLANK",     "weight": 10 }
+    ],
+    "maxFeatureWinMultiplier": 5000
+  },
+  "limits": { "maxWinPerRoundMultiplier": 10000 }
+}
+```
+
+* `coords` are `[row, col]` zero-indexed. Row 0 = top.
+* `payTable` keys are `symbolId` (string due to JSON), inner keys are match counts.
+* `WILD` substitutes the `substitutes` type only (never SCATTER).
+* `Money` rounding applies to **final** payouts only; intermediate math stays in `BigDecimal`.
+
+### A.5 Game Catalog
+
+A minimal catalog is fixed. Multi-game scope is reserved but only one is shipped:
+
+| gameId | mathVersion | currency | status |
+|---|---|---|---|
+| `aztec-fire` | `v1` | EUR/USD | ACTIVE |
+
+Every request/response in `/api/v1/slot/*` MUST carry `gameId` and the server MUST stamp `mathVersion` on the response.
+
+### A.6 Authentication & Headers
+
+* **Slot + Wallet APIs** are protected by a single header: `Authorization: Bearer <jwt>`.
+* JWT validation: HS256 with shared secret `rgs.security.jwt-secret` (env `RGS_JWT_SECRET`). Issuer = `velocity-rgs`. Required claims: `sub` (= `playerId`), `sid` (= sessionId), `cur` (currency), `exp`.
+* **Idempotency** is delivered via header `Idempotency-Key: <uuid>` on every mutating endpoint (NOT in body). The body fields previously shown as `idempotencyKey` are removed from the body schema; the header is the single source.
+* **Correlation:** clients MAY send `X-Trace-Id`; server generates one if absent. Echoed in all responses and errors.
+
+### A.7 Complete API Contracts (Slot)
+
+**`POST /api/v1/slot/init`**
+
+Request:
+```json
+{ "gameId": "aztec-fire", "currency": "EUR" }
+```
+
+Response (`200`):
+```json
+{
+  "sessionId": "s-2001",
+  "sessionVersion": 7,
+  "gameId": "aztec-fire",
+  "mathVersion": "v1",
+  "currency": "EUR",
+  "balance": 98.50,
+  "currentState": "FREE_SPINS_AWAITING",
+  "remainingFreeSpins": 10,
+  "accumulatedFreeSpinsWin": 0.00,
+  "currentBet": 1.00,
+  "availableActions": ["START_FREE_SPINS"],
+  "featureFlags": { "bonusBuyEnabled": true, "powerBetEnabled": true },
+  "activeFeatureView": null
+}
+```
+
+`activeFeatureView` exposes player-visible state only (e.g. for Pick & Collect: opened positions and revealed values, never hidden tiles).
+
+**`POST /api/v1/slot/spin`**
+
+Request:
+```json
+{
+  "gameId": "aztec-fire",
+  "sessionId": "s-2001",
+  "sessionVersion": 7,
+  "betSize": 1.00,
+  "powerBetActive": false
+}
+```
+
+Response: as in Task 4.5, extended with required fields:
+```json
+{
+  "sessionId": "s-2001",
+  "sessionVersion": 8,
+  "roundId": "r-3001",
+  "mathVersion": "v1",
+  "betDebited": 1.00,
+  "totalWin": 150.0,
+  "matrix": [[2,5,1,8,9],[3,12,1,1,4],[7,8,2,3,11]],
+  "stopPositions": [14, 82, 4, 119, 43],
+  "winLines": [{ "lineId": 3, "symbolId": 1, "count": 4, "payout": 150.0 }],
+  "featuresTriggered": {
+    "freeSpinsAwarded": 10, "isPowerBetActive": false,
+    "pickCollectTriggered": false, "bonusBuyExecuted": false,
+    "reasonCodes": ["TRIGGERED_BY_SCATTER"]
+  },
+  "sessionState": {
+    "currentState": "FREE_SPINS_AWAITING",
+    "remainingSpins": 10,
+    "totalAccumulatedWin": 150.0
+  },
+  "availableActions": ["START_FREE_SPINS"]
+}
+```
+
+**`POST /api/v1/slot/feature/buy`**
+
+Request:
+```json
+{
+  "gameId": "aztec-fire",
+  "sessionId": "s-2001",
+  "sessionVersion": 8,
+  "buyType": "FREE_SPINS_BUY",
+  "betSize": 1.00
+}
+```
+
+Response:
+```json
+{
+  "sessionId": "s-2001",
+  "sessionVersion": 9,
+  "buyType": "FREE_SPINS_BUY",
+  "cost": 80.00,
+  "currency": "EUR",
+  "enteredState": "FREE_SPINS_AWAITING",
+  "featureInitPayload": { "freeSpinsAwarded": 10 },
+  "availableActions": ["START_FREE_SPINS"]
+}
+```
+
+**`POST /api/v1/slot/feature/pick`**
+
+Request:
+```json
+{
+  "gameId": "aztec-fire",
+  "sessionId": "s-2001",
+  "sessionVersion": 12,
+  "position": 4
+}
+```
+
+Response:
+```json
+{
+  "sessionId": "s-2001",
+  "sessionVersion": 13,
+  "position": 4,
+  "resolvedTileType": "MULTIPLIER",
+  "resolvedValue": 3,
+  "currentCollected": 45.00,
+  "remainingPicks": 2,
+  "featureCompleted": false,
+  "featureTotalWin": null,
+  "availableActions": ["PICK"]
+}
+```
+
+### A.8 Error Model & Status Mapping
+
+`ApiError` shape (already defined) is reused unchanged. Added: `details` optional array for field validation.
+
+```json
+{
+  "code": "VALIDATION_ERROR",
+  "message": "Request validation failed",
+  "httpStatus": 400,
+  "traceId": "c8c90d1f-...",
+  "timestamp": "2026-06-17T10:15:30Z",
+  "details": [{ "field": "betSize", "reason": "must be > 0" }]
+}
+```
+
+Mapping table (authoritative):
+
+| Error Code | HTTP | Thrown When |
+|---|---|---|
+| `VALIDATION_ERROR` | 400 | Bean validation / scale mismatch / unknown enum |
+| `AUTH_FAILED` | 401 | Missing/invalid JWT |
+| `FORBIDDEN_ACTION` | 403 | JWT player ≠ request player |
+| `SESSION_NOT_FOUND` | 404 | Session id unknown |
+| `ILLEGAL_STATE_TRANSITION` | 409 | Command not allowed for current FSM state |
+| `SESSION_VERSION_CONFLICT` | 409 | Stale `sessionVersion` |
+| `IDEMPOTENCY_KEY_CONFLICT` | 409 | Same key, different payload |
+| `DUPLICATE_TRANSACTION` | 409 | Wallet detects duplicate `transactionId` |
+| `INSUFFICIENT_FUNDS` | 409 | Wallet rejects debit |
+| `ORIGINAL_TRANSACTION_NOT_FOUND` | 404 | Rollback references unknown tx |
+| `CURRENCY_MISMATCH` | 409 | Cross-currency operation |
+| `BONUS_BUY_DISABLED` | 409 | Policy gate (jurisdiction/flag) |
+| `MAX_WIN_REACHED` | 409 | Round/feature win exceeds cap |
+| `INTERNAL_ERROR` | 500 | Uncaught / unmapped exception |
+
+`GlobalExceptionHandler` maps domain exceptions → `ErrorCode` one-to-one. Logging level: `WARN` for 4xx (except 401/403 = `INFO`), `ERROR` for 5xx.
+
+### A.9 Persistence — Postgres Schema (Flyway)
+
+* Migrations under `src/main/resources/db/migration/`, naming `V<seq>__<snake_case>.sql`, starting `V1__init.sql`.
+* Conventions: snake_case tables/columns; surrogate `id BIGSERIAL` PK; mandatory `created_at TIMESTAMPTZ NOT NULL DEFAULT now()`; `version BIGINT NOT NULL DEFAULT 0` for entities that need optimistic locking; monetary columns as `NUMERIC(19,4)`; minor-units mirror as `BIGINT`.
+
+Required tables (minimum):
+
+| Table | Purpose | Key columns |
+|---|---|---|
+| `game_session` | Canonical session snapshot | `id, player_id, game_id, math_version, current_state, current_bet, remaining_free_spins, accumulated_free_spins_win, active_feature_payload JSONB, next_action_allowed, session_version, currency, created_at, updated_at` |
+| `game_round` | One row per spin | `id, session_id, player_id, round_id UNIQUE, math_version, bet_amount, bet_amount_minor, total_win, total_win_minor, matrix JSONB, stop_positions JSONB, rng_draws JSONB, reason_codes JSONB, created_at` |
+| `feature_purchase_event` | Bonus Buy audit | `id, player_id, session_id, buy_type, cost, cost_minor, currency, idempotency_key, resulting_state, created_at` |
+| `pick_collect_snapshot` | Replay artifact | `id, session_id, round_id, board_seed, board JSONB, opened_positions JSONB, final_win, created_at` |
+| `wallet_transaction` | Immutable ledger | `id, player_id, transaction_id UNIQUE, original_transaction_id, type, status, amount, amount_minor, currency, balance_before, balance_after, idempotency_key, rollback_reason, created_at` |
+| `wallet_balance` | Per player current balance | `player_id PK, currency, balance, balance_minor, version, updated_at` |
+| `idempotency_record` | Replay store | `scope, key, payload_hash, response_body JSONB, status_code, created_at, expires_at, PRIMARY KEY(scope, key)` |
+
+Indexes: at minimum `(player_id, created_at)` on rounds, transactions, and purchase events.
+
+### A.10 Redis — Keys, TTLs, Locks
+
+| Key pattern | Purpose | TTL | Format |
+|---|---|---|---|
+| `rgs:session:{playerId}` | Hydrated session JSON | 30 min, refreshed on each action | JSON via Jackson |
+| `rgs:idem:{scope}:{key}` | Idempotency replay cache | mirror Postgres TTL (24h or 48h) | JSON |
+| `rgs:lock:player:{playerId}` | Per-player action lock | 3s | `SET key val NX PX 3000`, value = caller UUID for safe release via Lua |
+
+Implementation: plain Spring Data Redis (`StringRedisTemplate`); Redisson is NOT used. Locks acquired in `SlotEngineService` around any state mutation; released in `finally` only if value matches.
+
+### A.11 RNG Audit Strategy (Resolved)
+
+`SecureRandom` is non-reproducible by design. Audit/replay uses **draw capture**, not seed replay:
+
+* `SecureRandomNumberGenerator` returns `RngDraw(int boundExclusive, int value, long sequence)`.
+* Every draw within a round is appended to an in-memory list and persisted as `game_round.rng_draws` JSONB at round commit.
+* `ReplayService` reconstructs the round by feeding the recorded draws back into a `DeterministicReplayRng` that pops values in sequence.
+* This satisfies dispute/reconstruction without claiming reproducible seeding.
+
+### A.12 Concurrency Wiring
+
+* Session entity uses JPA `@Version` for the `session_version` column → automatic optimistic locking; controller catches `OptimisticLockingFailureException` → `SESSION_VERSION_CONFLICT`.
+* Request thread executor: virtual threads enabled via `spring.threads.virtual.enabled=true`. `@Async` is NOT used for game flow; only the RTP simulator uses an `ExecutorService` of virtual threads.
+
+### A.13 Wallet Edge Cases
+
+* **Max win cap:** enforced as `bet * limits.maxWinPerRoundMultiplier`; excess is truncated and reason code `MAX_WIN_CAPPED` recorded.
+* **In-flight feature on session timeout:** Redis session expiry does NOT cancel an active feature; on next `init`, server rehydrates from Postgres and the player resumes. Features cannot be force-closed by timeout.
+* **Bet during free spins:** `betLockedToTriggerBet=true` (per math JSON); server rejects mismatching `betSize` in free spin loop with `VALIDATION_ERROR`.
+* **Power Bet during free spins:** governed by `freeSpins.powerBetPersists`; default false.
+* **Allowed currencies:** EUR, USD (scale 2). Any other currency in JWT `cur` → `CURRENCY_MISMATCH`.
+
+### A.14 Observability
+
+* **Logging:** Logback JSON encoder (`logstash-logback-encoder`). Required MDC fields on every log line in request scope: `traceId`, `playerId`, `sessionId`, `roundId` (when present), `gameId`.
+* **Servlet filter** `MdcCorrelationFilter` extracts/generates `X-Trace-Id` and populates MDC; cleared in `finally`.
+* **Metrics (Micrometer + Prometheus):**
+  * `rgs.spin.count` (tags: `gameId`, `powerBet`, `result=win|loss`)
+  * `rgs.spin.duration` (timer)
+  * `rgs.feature.entered` (tags: `featureType`, `source=natural|buy`)
+  * `rgs.wallet.operation` (tags: `op`, `status`)
+  * `rgs.idempotency.replay` counter
+* **Actuator:** `/actuator/health`, `/actuator/prometheus`, `/actuator/info` exposed; rest disabled.
+
+### A.15 OpenAPI
+
+`springdoc-openapi` auto-generates the spec. Implementation MUST:
+* Annotate every controller and DTO so generated schema matches Appendix A.7 exactly.
+* Commit the generated spec snapshot to `docs/openapi.yaml` via a Maven goal (`springdoc-openapi-maven-plugin`) bound to `verify`.
+* CI must fail if the committed `openapi.yaml` drifts from the freshly generated one.
+
+### A.16 Reconciliation & Replay (Milestones 5.3 / 5.4)
+
+* **Replay endpoint:** `POST /api/v1/admin/replay/{roundId}` — protected by separate JWT scope claim `roles=["ADMIN"]`. Returns full reconstructed matrix, win lines, RNG draws, and resulting state.
+* **Reconciliation job:** scheduled at `0 5 * * * *` (every hour, minute 5) via `@Scheduled`. Compares `game_round` win/bet totals against `wallet_transaction` credits/debits per player per hour bucket. Discrepancies written to `audit_reconciliation_finding` table and logged at `ERROR` with metric `rgs.reconciliation.discrepancy`.
+
+### A.17 Definition of Done (per milestone)
+
+A milestone is "done" only when:
+1. `mvn -B verify` passes (compile + tests + checkstyle + spotbugs if configured).
+2. Test coverage on changed packages ≥ 80% lines (JaCoCo).
+3. New endpoints appear in generated `openapi.yaml` and the file is committed.
+4. Flyway migrations are forward-only (no edits to applied versions).
+5. No new `TODO` markers left in committed code.
+6. README is NOT auto-updated (per repo instructions); CHANGELOG entry under `## [Unreleased]` is mandatory.
+
+### A.18 Glossary
+
+* **RGS** — Remote Gaming Server.
+* **RTP** — Return To Player, expected payout ratio over infinite spins.
+* **GLI-19** — Gaming Labs International standard for online gaming systems.
+* **Scatter** — Symbol whose count anywhere on the grid triggers features regardless of payline.
+* **Wild** — Substitute symbol for STANDARD symbols (never SCATTER in this game).
+* **Ways-to-Win** — Win evaluation mode counting any left-to-right symbol adjacency; OUT OF SCOPE.
+* **FSM** — Finite State Machine.
+* **DRBG** — Deterministic Random Bit Generator (not used; see A.11).

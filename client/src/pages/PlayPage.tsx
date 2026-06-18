@@ -1,16 +1,19 @@
 import { useAuthStore } from '@/auth/authStore';
 import { useSessionStore } from '@/session/sessionStore';
 import { useSessionInit } from '@/session/useSessionInit';
+import { BalancePanel } from '@/wallet/components/BalancePanel';
+import { BetSelector } from '@/wallet/components/BetSelector';
+import { useWalletBalance } from '@/wallet/useWalletBalance';
 
 import styles from './PlayPage.module.css';
 
 /**
- * M2 placeholder: prints the FSM mirror as JSON so the next milestones can
- * iterate on real components without breaking the wiring. Real HUD lands in
- * M3 (Wallet Panel) and the Pixi stage in M4.
+ * M3: shows the HUD pill (balance) and the bet selector on top of the FSM
+ * mirror placeholder. Pixi stage lands in M4.
  */
 export function PlayPage(): JSX.Element {
   const initQuery = useSessionInit();
+  useWalletBalance();
   const playerId = useAuthStore((s) => s.playerId);
 
   const sessionVersion = useSessionStore((s) => s.sessionVersion);
@@ -29,8 +32,13 @@ export function PlayPage(): JSX.Element {
   return (
     <main className={styles.play}>
       <header className={styles.header}>
-        <h1 className={styles.title}>Velocity RGS — {gameId ?? '…'}</h1>
-        <p className={styles.subtitle}>Player {playerId ?? '…'}</p>
+        <div className={styles.headerRow}>
+          <div>
+            <h1 className={styles.title}>Velocity RGS — {gameId ?? '…'}</h1>
+            <p className={styles.subtitle}>Player {playerId ?? '…'}</p>
+          </div>
+          <BalancePanel />
+        </div>
       </header>
 
       {initQuery.isLoading && <p className={styles.status}>Loading session…</p>}
@@ -45,6 +53,10 @@ export function PlayPage(): JSX.Element {
           Resuming your previous round…
         </div>
       )}
+
+      <section className={styles.hud} aria-label="Game HUD">
+        <BetSelector />
+      </section>
 
       <section className={styles.stateBlock} aria-label="Session state">
         <dl className={styles.stateGrid}>

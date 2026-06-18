@@ -5,7 +5,7 @@ import { RgsHttpError, RgsNetworkError } from '@/api/http/errors';
 import { useAuthStore } from '@/auth/authStore';
 import { pushToast } from '@/ui/toast/toastStore';
 
-import { setRgsErrorHandler } from './errorBus';
+import { subscribeRgsError } from './errorBus';
 import { useSessionStore } from './sessionStore';
 
 /**
@@ -52,7 +52,7 @@ export function useSessionRecovery(): void {
       }
     };
 
-    setRgsErrorHandler(handler);
-    return () => setRgsErrorHandler(null);
+    const unsubscribe = subscribeRgsError(handler);
+    return unsubscribe;
   }, [queryClient, resetSession, clearAuth]);
 }

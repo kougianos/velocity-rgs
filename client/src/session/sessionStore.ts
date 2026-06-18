@@ -39,6 +39,7 @@ export interface SessionStore extends SessionState {
   applyFeatureStartResponse: (r: FeatureStartResponse) => void;
   applyFeatureBuyResponse: (r: FeatureBuyResponse) => void;
   applyPickResponse: (r: FeaturePickResponse) => void;
+  setCurrentBet: (bet: Money) => void;
   reset: () => void;
 }
 
@@ -173,6 +174,10 @@ export const useSessionStore = create<SessionStore>((set, get) => ({
       availableActions: [...r.availableActions],
       lastPick: r,
     });
+  },
+
+  setCurrentBet: (bet) => {
+    set({ currentBet: bet });
   },
 
   reset: () => set({ ...initial }),

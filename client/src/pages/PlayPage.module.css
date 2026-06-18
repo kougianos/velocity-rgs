@@ -9,6 +9,14 @@
   margin-bottom: 1.5rem;
 }
 
+.headerRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
 .title {
   margin: 0;
   font-size: 1.5rem;
@@ -42,6 +50,13 @@
   border: 1px solid #1f2933;
   border-radius: 8px;
   padding: 1rem 1.25rem;
+}
+
+.hud {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-bottom: 1rem;
 }
 
 .stateGrid {

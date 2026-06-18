@@ -1,0 +1,32 @@
+.panel {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.45rem 0.95rem;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #11151a, #1a2230);
+  border: 1px solid #2c3a4c;
+  color: #f5f7fa;
+  font-family: ui-sans-serif, system-ui, sans-serif;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+  user-select: none;
+}
+
+.label {
+  color: #9aa5b1;
+  font-size: 0.75rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.amount {
+  font-size: 1.1rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.skeleton {
+  color: #9aa5b1;
+  font-size: 1.1rem;
+  letter-spacing: 0.15em;
+}

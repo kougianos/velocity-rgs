@@ -30,28 +30,31 @@ interface BannerState {
 
 /**
  * Top-of-stage transient overlay banner. Subscribes to the latest spin's
- * `reasonCodes` and `freeSpinsAwarded` delta; renders the canonical Appendix H
+ * `reasonCodes` and `freeSpinsAwarded` delta, plus the latest pick's
+ * `reasonCodes` (e.g. `PICK_COMPLETED`). Renders the canonical Appendix H
  * copy and auto-dismisses per the per-code TTL.
  */
 export function ReasonCodeBanner(): JSX.Element {
-  const reasonCodes = useSessionStore((s) => s.lastSpin?.featuresTriggered.reasonCodes);
+  const spinReasonCodes = useSessionStore((s) => s.lastSpin?.featuresTriggered.reasonCodes);
+  const pickReasonCodes = useSessionStore((s) => s.lastPick?.reasonCodes ?? undefined);
   const freeSpinsAwarded = useSessionStore((s) => s.lastSpin?.featuresTriggered.freeSpinsAwarded);
   const sessionVersion = useSessionStore((s) => s.sessionVersion);
 
   const [banner, setBanner] = useState<BannerState | null>(null);
 
   useEffect(() => {
-    if (!reasonCodes || reasonCodes.length === 0) {
+    const codes = [...(spinReasonCodes ?? []), ...(pickReasonCodes ?? [])];
+    if (codes.length === 0) {
       setBanner(null);
       return;
     }
     // Show the first known code; multiple codes per spin are rare but we
     // privilege the most player-visible one (win-bursts over info).
     const ordered = [
-      ...reasonCodes.filter((c) => COPY[c]?.tone === 'win'),
-      ...reasonCodes.filter((c) => COPY[c]?.tone === 'cap'),
-      ...reasonCodes.filter((c) => COPY[c]?.tone === 'info'),
-      ...reasonCodes.filter((c) => !COPY[c]),
+      ...codes.filter((c) => COPY[c]?.tone === 'win'),
+      ...codes.filter((c) => COPY[c]?.tone === 'cap'),
+      ...codes.filter((c) => COPY[c]?.tone === 'info'),
+      ...codes.filter((c) => !COPY[c]),
     ];
     const code = ordered[0];
     if (!code) return;
@@ -68,7 +71,7 @@ export function ReasonCodeBanner(): JSX.Element {
       tone: entry.tone,
       ttlMs: entry.ttlMs,
     });
-  }, [reasonCodes, freeSpinsAwarded, sessionVersion]);
+  }, [spinReasonCodes, pickReasonCodes, freeSpinsAwarded, sessionVersion]);
 
   useEffect(() => {
     if (!banner) return;

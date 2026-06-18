@@ -3,25 +3,23 @@ import { useEffect, useRef, useState } from 'react';
 import { useStartFeature } from '@/game/feature/start/useStartFeature';
 import { useSessionStore } from '@/session/sessionStore';
 
-import styles from './FreeSpinsOverlay.module.css';
+import styles from './PickCollectOverlay.module.css';
 
 const SPINNER_DELAY_MS = 250;
 const STILL_WORKING_DELAY_MS = 1500;
 
 /**
- * Free Spins HUD overlay. Renders the awaiting CTA or the in-loop badge
- * depending on `currentState` (Task 6.1). Returns `null` outside the Free
- * Spins states so it never crowds base-game UI.
+ * Pick & Collect HUD overlay (Task 7.7). Renders the awaiting CTA in
+ * `PICK_COLLECT_AWAITING` and a compact badge in `PICK_COLLECT_LOOP`.
+ * Returns `null` outside both states.
  *
- * The Start CTA gates strictly on `availableActions` per §0 Q4 — the
- * server's view of what's allowed wins.
+ * Mirrors the structure of {@link FreeSpinsOverlay} so HUD patterns stay
+ * consistent.
  */
-export function FreeSpinsOverlay(): JSX.Element | null {
+export function PickCollectOverlay(): JSX.Element | null {
   const currentState = useSessionStore((s) => s.currentState);
   const availableActions = useSessionStore((s) => s.availableActions);
-  const remainingFreeSpins = useSessionStore((s) => s.remainingFreeSpins);
-  const accumulated = useSessionStore((s) => s.accumulatedFreeSpinsWin);
-  const currency = useSessionStore((s) => s.currency);
+  const activeFeatureView = useSessionStore((s) => s.activeFeatureView);
 
   const mutation = useStartFeature();
   const inflightRef = useRef(false);
@@ -42,30 +40,31 @@ export function FreeSpinsOverlay(): JSX.Element | null {
     };
   }, [isPending]);
 
-  if (currentState !== 'FREE_SPINS_AWAITING' && currentState !== 'FREE_SPINS_LOOP') {
+  if (
+    currentState !== 'PICK_COLLECT_AWAITING' &&
+    currentState !== 'PICK_COLLECT_LOOP'
+  ) {
     return null;
   }
 
-  if (currentState === 'FREE_SPINS_AWAITING') {
-    const canStart = availableActions.includes('START_FREE_SPINS');
+  if (currentState === 'PICK_COLLECT_AWAITING') {
+    const canStart = availableActions.includes('START_PICK_COLLECT');
     const disabled = !canStart || isPending || inflightRef.current;
 
     const handleStart = (): void => {
       if (disabled || inflightRef.current) return;
       inflightRef.current = true;
       mutation.mutate(
-        { featureType: 'FREE_SPINS' },
+        { featureType: 'PICK_COLLECT' },
         { onSettled: () => { inflightRef.current = false; } },
       );
     };
 
     return (
-      <div className={styles.overlay} role="region" aria-label="Free Spins awaiting">
+      <div className={styles.overlay} role="region" aria-label="Pick and Collect awaiting">
         <div className={styles.card}>
-          <h2 className={styles.title}>Free Spins ready</h2>
-          <p className={styles.subtitle}>
-            {remainingFreeSpins} free {remainingFreeSpins === 1 ? 'spin' : 'spins'} awarded.
-          </p>
+          <h2 className={styles.title}>Pick &amp; Collect ready</h2>
+          <p className={styles.subtitle}>Reveal tiles to collect your prize.</p>
           <button
             type="button"
             className={styles.cta}
@@ -77,7 +76,7 @@ export function FreeSpinsOverlay(): JSX.Element | null {
             {latency === 'spinner' || latency === 'stillWorking' ? (
               <span className={styles.spinner} aria-hidden="true" />
             ) : (
-              <span>Start Free Spins</span>
+              <span>Start Pick &amp; Collect</span>
             )}
           </button>
           {latency === 'stillWorking' && (
@@ -88,18 +87,13 @@ export function FreeSpinsOverlay(): JSX.Element | null {
     );
   }
 
-  // FREE_SPINS_LOOP — compact badge
+  // PICK_COLLECT_LOOP — compact badge (board renders separately).
+  const remaining = activeFeatureView?.remainingPicks ?? 0;
   return (
-    <div className={styles.badge} role="status" aria-label="Free Spins active">
+    <div className={styles.badge} role="status" aria-label="Pick and Collect active">
       <span className={styles.badgeRow}>
-        <span className={styles.badgeLabel}>Free Spins</span>
-        <span className={styles.badgeValue}>{remainingFreeSpins}</span>
-      </span>
-      <span className={styles.badgeRow}>
-        <span className={styles.badgeLabel}>Accumulated</span>
-        <span className={styles.badgeValue}>
-          {accumulated ? accumulated.format(currency ?? 'EUR', 'en-US') : '—'}
-        </span>
+        <span className={styles.badgeLabel}>Picks left</span>
+        <span className={styles.badgeValue}>{remaining}</span>
       </span>
     </div>
   );

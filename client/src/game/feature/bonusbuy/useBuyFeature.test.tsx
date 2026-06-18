@@ -6,9 +6,10 @@ import type { ReactNode } from 'react';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
 import { Money } from '@/common/money/Money';
-import { useStartFeature } from '@/game/feature/start/useStartFeature';
 import { handlers } from '@/mocks/handlers';
 import { useSessionStore } from '@/session/sessionStore';
+
+import { useBuyFeature } from './useBuyFeature';
 
 function Wrap({ children }: { children: ReactNode }): JSX.Element {
   const qc = new QueryClient({ defaultOptions: { mutations: { retry: 0 } } });
@@ -22,11 +23,11 @@ function seedSession(): void {
     gameId: 'aztec-fire',
     mathVersion: 'v1',
     currency: 'EUR',
-    currentState: 'FREE_SPINS_AWAITING',
-    remainingFreeSpins: 10,
+    currentState: 'BASE_GAME',
+    remainingFreeSpins: 0,
     accumulatedFreeSpinsWin: Money.zero('EUR'),
     currentBet: Money.fromNumber(1.0, 'EUR'),
-    availableActions: ['START_FREE_SPINS'],
+    availableActions: ['SPIN', 'BUY_FEATURE'],
     featureFlags: { bonusBuyEnabled: true, powerBetEnabled: true },
     activeFeatureView: null,
     lastSpin: null,
@@ -36,7 +37,7 @@ function seedSession(): void {
 
 const server = setupServer(...handlers);
 
-describe('useStartFeature', () => {
+describe('useBuyFeature', () => {
   beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));
   afterEach(() => {
     server.resetHandlers();
@@ -48,46 +49,57 @@ describe('useStartFeature', () => {
     seedSession();
   });
 
-  it('sends a fresh Idempotency-Key header and applies the response to the session store', async () => {
+  it('sends the bet + buyType with a fresh Idempotency-Key and applies the response', async () => {
     let capturedKey: string | null = null;
+    let capturedBody: unknown = null;
     server.use(
-      mswHttp.post('*/api/v1/slot/feature/start', ({ request }) => {
+      mswHttp.post('*/api/v1/slot/feature/buy', async ({ request }) => {
         capturedKey = request.headers.get('Idempotency-Key');
+        capturedBody = await request.json();
         return HttpResponse.json({
           sessionId: 's-2001',
           sessionVersion: 9,
-          currentState: 'FREE_SPINS_LOOP',
-          remainingFreeSpins: 10,
-          activeFeatureView: null,
-          availableActions: ['SPIN'],
+          buyType: 'FREE_SPINS_BUY',
+          cost: 80.0,
+          currency: 'EUR',
+          enteredState: 'FREE_SPINS_AWAITING',
+          featureInitPayload: { freeSpinsAwarded: 10 },
+          availableActions: ['START_FREE_SPINS'],
         });
       }),
     );
 
-    const { result } = renderHook(() => useStartFeature(), { wrapper: Wrap });
+    const { result } = renderHook(() => useBuyFeature(), { wrapper: Wrap });
 
     await new Promise<void>((resolve, reject) => {
       result.current.mutate(
-        { featureType: 'FREE_SPINS' },
+        { buyType: 'FREE_SPINS_BUY', betSize: 1.0 },
         { onSuccess: () => resolve(), onError: (e) => reject(e) },
       );
     });
 
     await waitFor(() => {
-      expect(useSessionStore.getState().currentState).toBe('FREE_SPINS_LOOP');
+      expect(useSessionStore.getState().currentState).toBe('FREE_SPINS_AWAITING');
     });
-    expect(capturedKey).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i);
+    expect(capturedKey).toMatch(/^[0-9a-f-]{36}$/);
+    expect(capturedBody).toMatchObject({
+      gameId: 'aztec-fire',
+      sessionId: 's-2001',
+      sessionVersion: 8,
+      buyType: 'FREE_SPINS_BUY',
+      betSize: 1.0,
+    });
     expect(useSessionStore.getState().sessionVersion).toBe(9);
-    expect(useSessionStore.getState().availableActions).toEqual(['SPIN']);
+    expect(useSessionStore.getState().availableActions).toEqual(['START_FREE_SPINS']);
   });
 
   it('throws when the session is not initialised', async () => {
     useSessionStore.getState().reset();
-    const { result } = renderHook(() => useStartFeature(), { wrapper: Wrap });
+    const { result } = renderHook(() => useBuyFeature(), { wrapper: Wrap });
     await expect(
       new Promise<void>((resolve, reject) => {
         result.current.mutate(
-          { featureType: 'FREE_SPINS' },
+          { buyType: 'FREE_SPINS_BUY', betSize: 1.0 },
           { onSuccess: () => resolve(), onError: (e) => reject(e) },
         );
       }),

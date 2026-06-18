@@ -1,6 +1,10 @@
 import { useAuthStore } from '@/auth/authStore';
+import { BonusBuyPanel } from '@/game/feature/bonusbuy/BonusBuyPanel';
 import { FreeSpinsOverlay } from '@/game/feature/freespins/FreeSpinsOverlay';
 import { FreeSpinsSettlement } from '@/game/feature/freespins/FreeSpinsSettlement';
+import { PickBoardScene } from '@/game/feature/pickcollect/PickBoardScene';
+import { PickCollectOverlay } from '@/game/feature/pickcollect/PickCollectOverlay';
+import { PickCollectSettlement } from '@/game/feature/pickcollect/PickCollectSettlement';
 import { SlotStage } from '@/game/pixi/SlotStage';
 import { PowerBetToggle } from '@/game/ui/PowerBetToggle';
 import { ReasonCodeBanner } from '@/game/ui/ReasonCodeBanner';
@@ -17,7 +21,7 @@ import styles from './PlayPage.module.css';
 /**
  * M3 + M4: shows the balance pill / bet selector on top of the FSM mirror
  * placeholder and mounts the Pixi slot stage (placeholder matrix until the
- * first `/spin` lands in M5).
+ * first `/spin` lands in M5). M7: surfaces Bonus Buy & Pick & Collect.
  */
 export function PlayPage(): JSX.Element {
   const initQuery = useSessionInit();
@@ -67,14 +71,19 @@ export function PlayPage(): JSX.Element {
         <SpinButton />
         <PowerBetToggle />
         <TotalWinDisplay />
+        <BonusBuyPanel />
       </section>
 
       <div className={styles.stageWrap}>
         <ReasonCodeBanner />
         <FreeSpinsSettlement />
+        <PickCollectSettlement />
         <SlotStage />
         <FreeSpinsOverlay />
+        <PickCollectOverlay />
       </div>
+
+      <PickBoardScene />
 
       <section className={styles.stateBlock} aria-label="Session state">
         <dl className={styles.stateGrid}>

@@ -1,0 +1,117 @@
+.overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(12, 15, 18, 0.72);
+  backdrop-filter: blur(4px);
+  border-radius: 8px;
+  z-index: 5;
+  pointer-events: auto;
+}
+
+.card {
+  background: linear-gradient(180deg, #1f2933 0%, #11151a 100%);
+  border: 1px solid #f1c40f;
+  border-radius: 12px;
+  padding: 1.5rem 2rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  box-shadow: 0 0 24px rgba(241, 196, 15, 0.25);
+  min-width: 280px;
+}
+
+.title {
+  margin: 0;
+  font-size: 1.25rem;
+  color: #f1c40f;
+  letter-spacing: 0.04em;
+}
+
+.subtitle {
+  margin: 0 0 0.5rem 0;
+  color: #cbd5dc;
+  font-size: 0.95rem;
+}
+
+.cta {
+  appearance: none;
+  background: #f1c40f;
+  color: #11151a;
+  border: 0;
+  border-radius: 999px;
+  padding: 0.65rem 1.5rem;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  min-width: 180px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: filter 0.15s ease;
+}
+
+.cta:hover:not(:disabled) {
+  filter: brightness(1.08);
+}
+
+.cta:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 2px;
+}
+
+.cta:disabled {
+  background: #4a5562;
+  color: #cbd5dc;
+  cursor: not-allowed;
+}
+
+.spinner {
+  width: 18px;
+  height: 18px;
+  border: 2px solid rgba(17, 21, 26, 0.3);
+  border-top-color: #11151a;
+  border-radius: 50%;
+  animation: spin 0.75s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.caption {
+  font-size: 0.85rem;
+  color: #cbd5dc;
+}
+
+.badge {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  background: #11151a;
+  border: 1px solid #f1c40f;
+  border-radius: 8px;
+  padding: 0.55rem 0.9rem;
+  min-width: 180px;
+  box-shadow: 0 0 12px rgba(241, 196, 15, 0.18);
+}
+
+.badgeRow {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  font-size: 0.9rem;
+}
+
+.badgeLabel {
+  color: #9aa5b1;
+}
+
+.badgeValue {
+  color: #f1c40f;
+  font-weight: 600;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}

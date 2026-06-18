@@ -1,5 +1,8 @@
 import { useAuthStore } from '@/auth/authStore';
+import { FreeSpinsOverlay } from '@/game/feature/freespins/FreeSpinsOverlay';
+import { FreeSpinsSettlement } from '@/game/feature/freespins/FreeSpinsSettlement';
 import { SlotStage } from '@/game/pixi/SlotStage';
+import { PowerBetToggle } from '@/game/ui/PowerBetToggle';
 import { ReasonCodeBanner } from '@/game/ui/ReasonCodeBanner';
 import { SpinButton } from '@/game/ui/SpinButton';
 import { TotalWinDisplay } from '@/game/ui/TotalWinDisplay';
@@ -62,12 +65,15 @@ export function PlayPage(): JSX.Element {
       <section className={styles.hud} aria-label="Game HUD">
         <BetSelector />
         <SpinButton />
+        <PowerBetToggle />
         <TotalWinDisplay />
       </section>
 
       <div className={styles.stageWrap}>
         <ReasonCodeBanner />
+        <FreeSpinsSettlement />
         <SlotStage />
+        <FreeSpinsOverlay />
       </div>
 
       <section className={styles.stateBlock} aria-label="Session state">

@@ -8,6 +8,7 @@ import { PickCollectSettlement } from '@/game/feature/pickcollect/PickCollectSet
 import { SlotStage } from '@/game/pixi/SlotStage';
 import { PowerBetToggle } from '@/game/ui/PowerBetToggle';
 import { ReasonCodeBanner } from '@/game/ui/ReasonCodeBanner';
+import { SpinAnnouncer } from '@/game/ui/SpinAnnouncer';
 import { SpinButton } from '@/game/ui/SpinButton';
 import { TotalWinDisplay } from '@/game/ui/TotalWinDisplay';
 import { useSessionStore } from '@/session/sessionStore';
@@ -81,6 +82,7 @@ export function PlayPage(): JSX.Element {
         <SlotStage />
         <FreeSpinsOverlay />
         <PickCollectOverlay />
+        <SpinAnnouncer />
       </div>
 
       <PickBoardScene />

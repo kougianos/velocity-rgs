@@ -6,6 +6,7 @@ import { BrowserRouter } from 'react-router-dom';
 import { App } from '@/app/App';
 import { createQueryClient } from '@/app/queryClient';
 import '@/env';
+import { initWebVitals } from '@/observability/webVitals';
 import '@/styles/global.css';
 
 async function bootstrap(): Promise<void> {
@@ -30,6 +31,8 @@ async function bootstrap(): Promise<void> {
       </QueryClientProvider>
     </StrictMode>,
   );
+
+  initWebVitals();
 }
 
 void bootstrap();

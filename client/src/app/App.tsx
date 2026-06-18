@@ -1,3 +1,4 @@
+import { lazy, Suspense } from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
 
 import { AuthPage } from '@/auth/AuthPage';
@@ -5,14 +6,20 @@ import { selectIsAuthenticated, useAuthStore } from '@/auth/authStore';
 import { RequireAuth } from '@/auth/RequireAuth';
 import { RequireRole } from '@/auth/RequireRole';
 import { env } from '@/env';
-import { AdminPage } from '@/pages/AdminPage';
-import { DebugPage } from '@/pages/DebugPage';
+import { DebugHud } from '@/observability/DebugHud';
+import { useLoggerContext } from '@/observability/useLoggerContext';
 import { LobbyPage } from '@/pages/LobbyPage';
 import { NotFoundPage } from '@/pages/NotFoundPage';
 import { PlayPage } from '@/pages/PlayPage';
 import { useSessionRecovery } from '@/session/useSessionRecovery';
 import { ToastContainer } from '@/ui/toast/ToastContainer';
 import { useWalletErrorRecovery } from '@/wallet/errors';
+
+// Admin tools are large and only reachable by ADMIN-role users; lazy-loading
+// keeps them out of the player-facing initial bundle (Task 9.4).
+const AdminPage = lazy(() =>
+  import('@/pages/AdminPage').then((m) => ({ default: m.AdminPage })),
+);
 
 function RootRedirect(): JSX.Element {
   const authed = useAuthStore(selectIsAuthenticated);
@@ -31,6 +38,7 @@ function AuthRoute(): JSX.Element {
 export function App(): JSX.Element {
   useSessionRecovery();
   useWalletErrorRecovery();
+  useLoggerContext();
 
   return (
     <>
@@ -50,13 +58,15 @@ export function App(): JSX.Element {
           path="/admin"
           element={
             <RequireRole requiredRole="ADMIN">
-              <AdminPage />
+              <Suspense fallback={<p role="status">Loading admin tools…</p>}>
+                <AdminPage />
+              </Suspense>
             </RequireRole>
           }
         />
-        <Route path="/debug" element={<DebugPage />} />
         <Route path="*" element={<NotFoundPage />} />
       </Routes>
+      <DebugHud />
     </>
   );
 }

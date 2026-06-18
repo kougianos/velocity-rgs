@@ -1,0 +1,92 @@
+.hud {
+  position: fixed;
+  bottom: 0.5rem;
+  right: 0.5rem;
+  z-index: 9999;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.75rem;
+  color: #e6edf3;
+  background: rgba(13, 17, 23, 0.94);
+  border: 1px solid #30363d;
+  border-radius: 6px;
+  max-width: 360px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.6);
+}
+
+.toggle {
+  width: 100%;
+  background: transparent;
+  color: inherit;
+  border: 0;
+  padding: 0.4rem 0.6rem;
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+}
+
+.toggle:focus-visible {
+  outline: 2px solid #58a6ff;
+  outline-offset: -2px;
+}
+
+.body {
+  padding: 0.5rem 0.75rem 0.75rem;
+  border-top: 1px solid #30363d;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.2rem 0.75rem;
+  margin: 0;
+}
+
+.grid dt {
+  color: #8b949e;
+}
+
+.grid dd {
+  margin: 0;
+  word-break: break-all;
+}
+
+.tracesHeading {
+  margin: 0.5rem 0 0.25rem;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #8b949e;
+}
+
+.empty {
+  margin: 0;
+  color: #8b949e;
+}
+
+.traces {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.15rem;
+}
+
+.traces li {
+  display: grid;
+  grid-template-columns: auto auto 1fr;
+  gap: 0.5rem;
+  align-items: baseline;
+}
+
+.tAt {
+  color: #8b949e;
+}
+
+.tSource {
+  color: #f1c40f;
+}
+
+.tId {
+  word-break: break-all;
+  color: #e6edf3;
+}

@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 
 import { RgsHttpError } from '@/api/http/errors';
+import { logger } from '@/observability/logger';
 import { subscribeRgsError } from '@/session/errorBus';
 import { pushToast } from '@/ui/toast/toastStore';
 
@@ -31,8 +32,7 @@ export function useWalletErrorRecovery(): void {
           return;
         case 'DUPLICATE_TRANSACTION':
           // client bug: silent for the user, loud for ops.
-          // eslint-disable-next-line no-console
-          console.error('[wallet] DUPLICATE_TRANSACTION', { traceId: err.traceId });
+          logger.error('[wallet] DUPLICATE_TRANSACTION', { traceId: err.traceId });
           return;
         default:
           return;

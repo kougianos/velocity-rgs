@@ -4,6 +4,7 @@ import type { SpinResponse } from '@/api/slot/spin';
 import { GRID, getPayline, MATH_VERSION } from '@/game/math/aztec-fire';
 import type { Reel } from '@/game/pixi/Reel';
 import type { SlotGrid } from '@/game/pixi/SlotGrid';
+import { logger } from '@/observability/logger';
 
 /**
  * Deterministic Pixi animator for a single {@link SpinResponse}.
@@ -72,10 +73,10 @@ export class SpinAnimator {
     this.grid.renderMatrix(response.matrix);
 
     if (response.mathVersion !== MATH_VERSION) {
-      // eslint-disable-next-line no-console
-      console.warn(
-        `[SpinAnimator] math version drift: client=${MATH_VERSION} server=${response.mathVersion}; skipping win-line overlay`,
-      );
+      logger.warn('[SpinAnimator] math version drift; skipping win-line overlay', {
+        clientMathVersion: MATH_VERSION,
+        serverMathVersion: response.mathVersion,
+      });
       return;
     }
 

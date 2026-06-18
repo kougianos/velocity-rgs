@@ -8,6 +8,7 @@ import type { FeatureStartResponse } from '@/api/slot/featureStart';
 import type { SlotInitResponse } from '@/api/slot/init';
 import type { SpinResponse } from '@/api/slot/spin';
 import { Money, type Currency } from '@/common/money/Money';
+import { logger } from '@/observability/logger';
 
 export type ActiveFeatureView = components['schemas']['PickCollectFeatureView'];
 
@@ -74,10 +75,10 @@ function isStale(currentVersion: number | null, incomingVersion: number): boolea
 }
 
 function warnStale(label: string, currentVersion: number | null, incomingVersion: number): void {
-  // eslint-disable-next-line no-console
-  console.warn(
-    `[sessionStore] dropped stale ${label} response (current=${String(currentVersion)}, incoming=${incomingVersion})`,
-  );
+  logger.warn(`[sessionStore] dropped stale ${label} response`, {
+    currentVersion,
+    incomingVersion,
+  });
 }
 
 export const useSessionStore = create<SessionStore>((set, get) => ({

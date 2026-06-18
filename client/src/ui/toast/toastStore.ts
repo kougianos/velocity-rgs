@@ -1,5 +1,7 @@
 import { create } from 'zustand';
 
+import { recordTrace } from '@/observability/recentTraces';
+
 export type ToastLevel = 'info' | 'warn' | 'error';
 
 export interface Toast {
@@ -51,6 +53,7 @@ export function pushToast(
   message: string,
   options?: { traceId?: string; ttlMs?: number },
 ): string {
+  if (options?.traceId) recordTrace(`toast:${level}`, options.traceId);
   return useToastStore.getState().push({
     level,
     message,

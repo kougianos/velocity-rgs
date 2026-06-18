@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 
+import { logger } from '@/observability/logger';
 import { useSessionStore } from '@/session/sessionStore';
 
 import { loadSymbolTextures } from './assets';
@@ -107,8 +108,9 @@ export function SlotStage({ initialMatrix = PLACEHOLDER_MATRIX }: SlotStageProps
     const next = prior.then(() => animator.play(lastSpin));
     animatingRef.current = next;
     void next.catch((e: unknown) => {
-      // eslint-disable-next-line no-console
-      console.error('[SlotStage] spin animation failed', e);
+      logger.error('[SlotStage] spin animation failed', {
+        error: e instanceof Error ? e.message : String(e),
+      });
     });
   }, [lastSpin, texturesLoaded, matrix]);
 

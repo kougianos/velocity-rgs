@@ -1,0 +1,195 @@
+### Velocity RGS — Client REST Client mirror
+### Use with the "REST Client" VS Code extension (humao.rest-client).
+### Authentication: first call `dev/token`, then copy the returned token into @token.
+
+@host = http://localhost:8080
+@gameId = aztec-fire
+@currency = EUR
+@playerId = p-1001
+@sessionId = s-2001
+@roundId = r-3001
+@token = paste-jwt-here
+@idempotencyKey = 11111111-2222-4333-8444-555555555555
+@traceId = 22222222-3333-4444-8555-666666666666
+
+### Demo: mint a JWT (demo profile only)
+POST {{host}}/api/v1/dev/token
+Content-Type: application/json
+
+{
+  "playerId": "{{playerId}}",
+  "sessionId": "{{sessionId}}",
+  "currency": "{{currency}}",
+  "roles": ["PLAYER", "ADMIN"],
+  "ttlMinutes": 60
+}
+
+### Wallet — authenticate the player session
+POST {{host}}/api/v1/wallet/authenticate
+Authorization: Bearer {{token}}
+X-Trace-Id: {{traceId}}
+Content-Type: application/json
+
+{ "playerId": "{{playerId}}" }
+
+### Wallet — read balance
+GET {{host}}/api/v1/wallet/balance
+Authorization: Bearer {{token}}
+X-Trace-Id: {{traceId}}
+
+### Wallet — direct debit (Idempotency-Key required)
+POST {{host}}/api/v1/wallet/debit
+Authorization: Bearer {{token}}
+Idempotency-Key: {{idempotencyKey}}
+X-Trace-Id: {{traceId}}
+Content-Type: application/json
+
+{
+  "playerId": "{{playerId}}",
+  "sessionId": "{{sessionId}}",
+  "roundId": "{{roundId}}",
+  "transactionId": "t-4001",
+  "amount": 1.00,
+  "currency": "{{currency}}",
+  "transactionType": "BET"
+}
+
+### Wallet — direct credit
+POST {{host}}/api/v1/wallet/credit
+Authorization: Bearer {{token}}
+Idempotency-Key: {{idempotencyKey}}
+X-Trace-Id: {{traceId}}
+Content-Type: application/json
+
+{
+  "playerId": "{{playerId}}",
+  "sessionId": "{{sessionId}}",
+  "roundId": "{{roundId}}",
+  "transactionId": "t-4002",
+  "amount": 150.00,
+  "currency": "{{currency}}",
+  "transactionType": "WIN"
+}
+
+### Wallet — rollback a transaction
+POST {{host}}/api/v1/wallet/rollback
+Authorization: Bearer {{token}}
+Idempotency-Key: {{idempotencyKey}}
+X-Trace-Id: {{traceId}}
+Content-Type: application/json
+
+{
+  "playerId": "{{playerId}}",
+  "originalTransactionId": "t-4001",
+  "transactionId": "t-5001",
+  "rollbackReason": "DOWNSTREAM_FAILURE"
+}
+
+### Slot — init / resume session
+POST {{host}}/api/v1/slot/init
+Authorization: Bearer {{token}}
+X-Trace-Id: {{traceId}}
+Content-Type: application/json
+
+{ "gameId": "{{gameId}}", "currency": "{{currency}}" }
+
+### Slot — spin
+POST {{host}}/api/v1/slot/spin
+Authorization: Bearer {{token}}
+Idempotency-Key: {{idempotencyKey}}
+X-Trace-Id: {{traceId}}
+Content-Type: application/json
+
+{
+  "gameId": "{{gameId}}",
+  "sessionId": "{{sessionId}}",
+  "sessionVersion": 7,
+  "betSize": 1.00,
+  "powerBetActive": false
+}
+
+### Slot — start a feature (FREE_SPINS or PICK_COLLECT)
+POST {{host}}/api/v1/slot/feature/start
+Authorization: Bearer {{token}}
+Idempotency-Key: {{idempotencyKey}}
+X-Trace-Id: {{traceId}}
+Content-Type: application/json
+
+{
+  "gameId": "{{gameId}}",
+  "sessionId": "{{sessionId}}",
+  "sessionVersion": 8,
+  "featureType": "FREE_SPINS"
+}
+
+### Slot — buy a feature
+POST {{host}}/api/v1/slot/feature/buy
+Authorization: Bearer {{token}}
+Idempotency-Key: {{idempotencyKey}}
+X-Trace-Id: {{traceId}}
+Content-Type: application/json
+
+{
+  "gameId": "{{gameId}}",
+  "sessionId": "{{sessionId}}",
+  "sessionVersion": 8,
+  "buyType": "FREE_SPINS_BUY",
+  "betSize": 1.00
+}
+
+### Slot — pick a tile
+POST {{host}}/api/v1/slot/feature/pick
+Authorization: Bearer {{token}}
+Idempotency-Key: {{idempotencyKey}}
+X-Trace-Id: {{traceId}}
+Content-Type: application/json
+
+{
+  "gameId": "{{gameId}}",
+  "sessionId": "{{sessionId}}",
+  "sessionVersion": 12,
+  "position": 4
+}
+
+### Admin — set player wallet balance (demo profile)
+POST {{host}}/api/v1/admin/wallet/balance
+Authorization: Bearer {{token}}
+X-Trace-Id: {{traceId}}
+Content-Type: application/json
+
+{
+  "playerId": "{{playerId}}",
+  "currency": "{{currency}}",
+  "balance": 500.00
+}
+
+### Admin — inspect a session
+GET {{host}}/api/v1/admin/session/{{playerId}}
+Authorization: Bearer {{token}}
+X-Trace-Id: {{traceId}}
+
+### Admin — inspect a round
+GET {{host}}/api/v1/admin/round/{{roundId}}
+Authorization: Bearer {{token}}
+X-Trace-Id: {{traceId}}
+
+### Admin — replay a round deterministically
+POST {{host}}/api/v1/admin/replay/{{roundId}}
+Authorization: Bearer {{token}}
+X-Trace-Id: {{traceId}}
+
+### Admin — run RTP simulator
+POST {{host}}/api/v1/admin/simulator/run
+Authorization: Bearer {{token}}
+X-Trace-Id: {{traceId}}
+Content-Type: application/json
+
+{
+  "gameId": "{{gameId}}",
+  "mathVersion": "v1",
+  "bet": 1.00,
+  "spinsBaseGame": 1000,
+  "spinsBonusBuyFreeSpins": 0,
+  "spinsBonusBuyPickCollect": 0,
+  "pickStrategy": "SEQUENTIAL"
+}

@@ -1,0 +1,46 @@
+.sideBySide {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+@media (max-width: 720px) {
+  .sideBySide {
+    grid-template-columns: 1fr;
+  }
+}
+
+.column {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.column h3 {
+  margin: 0;
+  font-size: 0.95rem;
+  color: #cbd5dc;
+}
+
+.badgeMatch,
+.badgeMismatch {
+  align-self: start;
+  padding: 0.45rem 0.9rem;
+  border-radius: 6px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.85rem;
+}
+
+.badgeMatch {
+  background: rgba(46, 204, 113, 0.18);
+  color: #2ecc71;
+  border: 1px solid #2ecc71;
+}
+
+.badgeMismatch {
+  background: rgba(231, 76, 60, 0.18);
+  color: #e74c3c;
+  border: 1px solid #e74c3c;
+}

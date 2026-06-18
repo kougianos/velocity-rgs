@@ -1,0 +1,14 @@
+.notFound {
+  min-height: 100vh;
+  padding: 2rem;
+  background: #0c0f12;
+  color: #f5f7fa;
+}
+
+.title {
+  margin-top: 0;
+}
+
+.link {
+  color: #3498db;
+}

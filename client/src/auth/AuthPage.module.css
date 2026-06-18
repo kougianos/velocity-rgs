@@ -1,0 +1,85 @@
+.page {
+  max-width: 28rem;
+  margin: 4rem auto;
+  padding: 2rem;
+  background: #11151a;
+  color: #f5f7fa;
+  border-radius: 12px;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45);
+}
+
+.title {
+  margin: 0 0 0.25rem 0;
+  font-size: 1.5rem;
+}
+
+.subtitle {
+  margin: 0 0 1.5rem 0;
+  color: #9aa5b1;
+  font-size: 0.9rem;
+}
+
+.subtitle code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  background: #1f2933;
+  padding: 0.1rem 0.35rem;
+  border-radius: 4px;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.field {
+  font-size: 0.85rem;
+  color: #cbd2d9;
+  margin-top: 0.5rem;
+}
+
+.input {
+  background: #1f2933;
+  color: #f5f7fa;
+  border: 1px solid #323f4b;
+  border-radius: 6px;
+  padding: 0.55rem 0.75rem;
+  font-size: 0.95rem;
+}
+
+.input:focus-visible {
+  outline: 2px solid #3498db;
+  outline-offset: 1px;
+}
+
+.input[aria-invalid='true'] {
+  border-color: #e74c3c;
+}
+
+.error {
+  margin: 0;
+  color: #e74c3c;
+  font-size: 0.8rem;
+}
+
+.submit {
+  margin-top: 1.25rem;
+  background: #3498db;
+  color: #ffffff;
+  border: 0;
+  border-radius: 6px;
+  padding: 0.7rem 1rem;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.submit:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.submit:focus-visible {
+  outline: 2px solid #f5f7fa;
+  outline-offset: 2px;
+}

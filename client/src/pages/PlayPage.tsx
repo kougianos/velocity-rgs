@@ -1,4 +1,5 @@
 import { useAuthStore } from '@/auth/authStore';
+import { SlotStage } from '@/game/pixi/SlotStage';
 import { useSessionStore } from '@/session/sessionStore';
 import { useSessionInit } from '@/session/useSessionInit';
 import { BalancePanel } from '@/wallet/components/BalancePanel';
@@ -8,8 +9,9 @@ import { useWalletBalance } from '@/wallet/useWalletBalance';
 import styles from './PlayPage.module.css';
 
 /**
- * M3: shows the HUD pill (balance) and the bet selector on top of the FSM
- * mirror placeholder. Pixi stage lands in M4.
+ * M3 + M4: shows the balance pill / bet selector on top of the FSM mirror
+ * placeholder and mounts the Pixi slot stage (placeholder matrix until the
+ * first `/spin` lands in M5).
  */
 export function PlayPage(): JSX.Element {
   const initQuery = useSessionInit();
@@ -57,6 +59,8 @@ export function PlayPage(): JSX.Element {
       <section className={styles.hud} aria-label="Game HUD">
         <BetSelector />
       </section>
+
+      <SlotStage />
 
       <section className={styles.stateBlock} aria-label="Session state">
         <dl className={styles.stateGrid}>

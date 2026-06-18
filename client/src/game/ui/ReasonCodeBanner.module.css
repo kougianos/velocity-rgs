@@ -1,0 +1,38 @@
+.host {
+  position: absolute;
+  top: 1.25rem;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: center;
+  pointer-events: none;
+  z-index: 5;
+}
+
+.banner {
+  pointer-events: auto;
+  padding: 0.6rem 1.4rem;
+  border-radius: 999px;
+  font-weight: 800;
+  font-size: 1rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  cursor: pointer;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.4);
+}
+
+.win {
+  background: linear-gradient(180deg, #f1c40f 0%, #d68910 100%);
+  color: #0c0f12;
+}
+
+.cap {
+  background: linear-gradient(180deg, #c0392b 0%, #7b241c 100%);
+  color: #fff;
+}
+
+.info {
+  background: #1f2933;
+  color: #f5f7fa;
+  border: 1px solid #2c3a4c;
+}

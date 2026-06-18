@@ -5,6 +5,7 @@ import { useSessionStore } from '@/session/sessionStore';
 import { loadSymbolTextures } from './assets';
 import { SlotGrid } from './SlotGrid';
 import styles from './SlotStage.module.css';
+import { SpinAnimator } from './SpinAnimator';
 import { usePixiApp } from './usePixiApp';
 
 const CELL_SIZE = 128;
@@ -42,11 +43,13 @@ export function SlotStage({ initialMatrix = PLACEHOLDER_MATRIX }: SlotStageProps
   const [texturesLoaded, setTexturesLoaded] = useState(false);
   const [textureError, setTextureError] = useState<Error | null>(null);
   const gridRef = useRef<SlotGrid | null>(null);
+  const animatorRef = useRef<SpinAnimator | null>(null);
+  const animatingRef = useRef<Promise<void> | null>(null);
 
-  const lastSpinMatrix = useSessionStore((s) => s.lastSpin?.matrix);
+  const lastSpin = useSessionStore((s) => s.lastSpin);
   const matrix = useMemo<readonly (readonly number[])[]>(
-    () => lastSpinMatrix ?? initialMatrix,
-    [lastSpinMatrix, initialMatrix],
+    () => lastSpin?.matrix ?? initialMatrix,
+    [lastSpin, initialMatrix],
   );
 
   // Once Pixi is ready and textures are loaded, build the grid and attach.
@@ -61,6 +64,10 @@ export function SlotStage({ initialMatrix = PLACEHOLDER_MATRIX }: SlotStageProps
         app.app.stage.addChild(grid);
         centerGrid(grid, app.app.renderer.width, app.app.renderer.height);
         grid.renderMatrix(matrix);
+        animatorRef.current = new SpinAnimator(grid, {
+          cellSize: CELL_SIZE,
+          reelGap: REEL_GAP,
+        });
         setTexturesLoaded(true);
       })
       .catch((e: unknown) => {
@@ -71,6 +78,8 @@ export function SlotStage({ initialMatrix = PLACEHOLDER_MATRIX }: SlotStageProps
     return () => {
       cancelled = true;
       const grid = gridRef.current;
+      animatorRef.current?.destroy();
+      animatorRef.current = null;
       if (grid) {
         if (app.isInitialised) app.app.stage.removeChild(grid);
         grid.destroy({ children: true });
@@ -78,15 +87,30 @@ export function SlotStage({ initialMatrix = PLACEHOLDER_MATRIX }: SlotStageProps
       }
       setTexturesLoaded(false);
     };
-    // We deliberately ignore `matrix` here — re-render below handles updates.
+    // We deliberately ignore `matrix` here — animator below handles updates.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [status, app]);
 
-  // Re-render the matrix whenever it changes after first paint.
+  // Play the spin animator whenever a fresh `SpinResponse` lands. Earlier
+  // responses are ignored (the session store already drops stale versions).
   useEffect(() => {
     if (!texturesLoaded) return;
-    gridRef.current?.renderMatrix(matrix);
-  }, [matrix, texturesLoaded]);
+    const animator = animatorRef.current;
+    const grid = gridRef.current;
+    if (!animator || !grid) return;
+    if (!lastSpin) {
+      grid.renderMatrix(matrix);
+      return;
+    }
+    // Serialise plays so two rapid-fire responses don't overlap visually.
+    const prior = animatingRef.current ?? Promise.resolve();
+    const next = prior.then(() => animator.play(lastSpin));
+    animatingRef.current = next;
+    void next.catch((e: unknown) => {
+      // eslint-disable-next-line no-console
+      console.error('[SlotStage] spin animation failed', e);
+    });
+  }, [lastSpin, texturesLoaded, matrix]);
 
   // Keep the grid centered on viewport resize.
   useEffect(() => {

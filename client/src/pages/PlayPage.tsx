@@ -1,5 +1,8 @@
 import { useAuthStore } from '@/auth/authStore';
 import { SlotStage } from '@/game/pixi/SlotStage';
+import { ReasonCodeBanner } from '@/game/ui/ReasonCodeBanner';
+import { SpinButton } from '@/game/ui/SpinButton';
+import { TotalWinDisplay } from '@/game/ui/TotalWinDisplay';
 import { useSessionStore } from '@/session/sessionStore';
 import { useSessionInit } from '@/session/useSessionInit';
 import { BalancePanel } from '@/wallet/components/BalancePanel';
@@ -58,9 +61,14 @@ export function PlayPage(): JSX.Element {
 
       <section className={styles.hud} aria-label="Game HUD">
         <BetSelector />
+        <SpinButton />
+        <TotalWinDisplay />
       </section>
 
-      <SlotStage />
+      <div className={styles.stageWrap}>
+        <ReasonCodeBanner />
+        <SlotStage />
+      </div>
 
       <section className={styles.stateBlock} aria-label="Session state">
         <dl className={styles.stateGrid}>

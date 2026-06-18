@@ -16,6 +16,11 @@ export default defineConfig({
     environment: 'jsdom',
     setupFiles: ['./vitest.setup.ts'],
     css: false,
+    env: {
+      VITE_API_BASE_URL: 'http://localhost:8080',
+      VITE_DEFAULT_GAME_ID: 'aztec-fire',
+      VITE_DEFAULT_CURRENCY: 'EUR',
+    },
     include: ['src/**/*.{test,spec}.{ts,tsx}', 'tests/unit/**/*.{test,spec}.{ts,tsx}'],
     coverage: {
       provider: 'v8',

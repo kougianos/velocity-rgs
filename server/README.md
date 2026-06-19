@@ -9,6 +9,14 @@ docker compose -f ../docker-compose.yml up -d
 mvn spring-boot:run -Dspring-boot.run.profiles=demo
 ```
 
+### Built-in demo test harness
+
+A self-contained vanilla HTML/CSS/JS client lives in [`src/main/resources/static/`](src/main/resources/static/)
+and is served at **`http://localhost:8080/`** (demo profile). It auto-mints a
+`PLAYER`+`ADMIN` JWT (no login) and lets you spin, toggle power bet, buy/start
+features, play Pick & Collect, run RTP simulations, and set balances directly
+against this backend. No Node/pnpm build required.
+
 ## Test
 
 ```bash

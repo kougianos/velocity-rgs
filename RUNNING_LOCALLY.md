@@ -75,6 +75,35 @@ export RGS_REDIS_PORT=6379
 
 ---
 
+## Built-in Demo Test Harness (no client build required)
+
+The server ships a self-contained vanilla **HTML/CSS/JS** test harness under
+`server/src/main/resources/static/`. It is served directly by Spring Boot and
+needs **no Node.js, pnpm, or React build** — only the `demo` profile (Step 2).
+
+1. With the server running, open **`http://localhost:8080/`** in your browser.
+2. The page **auto-creates a demo player** (it mints a JWT with `PLAYER` + `ADMIN`
+   roles via the public `POST /api/v1/dev/token` endpoint) — there is **no login**.
+3. The 10,000 EUR demo balance is seeded automatically on first `init`.
+
+What you can do from the page:
+
+| Control | Backend call |
+|---|---|
+| **SPIN** (with **Bet** + **Power Bet** toggle) | `POST /api/v1/slot/spin` |
+| **Buy Free Spins** / **Buy Pick & Collect** | `POST /api/v1/slot/feature/buy` |
+| **Start Feature** (appears when a feature is pending) | `POST /api/v1/slot/feature/start` |
+| **Pick tiles** (Pick & Collect board) | `POST /api/v1/slot/feature/pick` |
+| **Run Simulation** (RTP simulator) | `POST /api/v1/admin/simulator/run` |
+| **Set balance** (Admin panel) | `POST /api/v1/admin/wallet/balance` |
+| **New Player** | re-mints a token + fresh session |
+
+The **Last Response** panel shows the raw JSON of every call for quick debugging.
+This harness is intended purely for exercising the backend; the full-featured
+player experience is the React/PixiJS client below.
+
+---
+
 ## Step 3 — Start the Client
 
 In a **new terminal**, from the repository root:

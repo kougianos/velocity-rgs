@@ -169,7 +169,7 @@ class GridGenerationEngineTest {
                 ReelStripSet.FREE_SPINS, List.of(freeStrip, freeStrip, freeStrip, freeStrip, freeStrip)
         );
         return new SlotMathDefinition(
-                "test", "v1",
+                "test", "v1", new BigDecimal("96.0"),
                 new Grid(3, 5),
                 symbols,
                 paylines,

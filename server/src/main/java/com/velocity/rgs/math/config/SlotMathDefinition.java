@@ -7,6 +7,7 @@ import com.velocity.rgs.math.domain.ReelStripSet;
 import com.velocity.rgs.math.domain.Symbol;
 import com.velocity.rgs.math.domain.SymbolType;
 
+import java.math.BigDecimal;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -21,6 +22,7 @@ import java.util.Set;
 public record SlotMathDefinition(
         String gameId,
         String mathVersion,
+        BigDecimal targetRtp,
         Grid grid,
         List<Symbol> symbols,
         List<Payline> paylines,
@@ -37,6 +39,7 @@ public record SlotMathDefinition(
     public SlotMathDefinition {
         Objects.requireNonNull(gameId, "gameId");
         Objects.requireNonNull(mathVersion, "mathVersion");
+        Objects.requireNonNull(targetRtp, "targetRtp");
         Objects.requireNonNull(grid, "grid");
         Objects.requireNonNull(symbols, "symbols");
         Objects.requireNonNull(paylines, "paylines");
@@ -51,6 +54,9 @@ public record SlotMathDefinition(
 
         if (gameId.isBlank() || mathVersion.isBlank()) {
             throw new IllegalArgumentException("gameId/mathVersion must not be blank");
+        }
+        if (targetRtp.signum() <= 0 || targetRtp.compareTo(BigDecimal.valueOf(100)) > 0) {
+            throw new IllegalArgumentException("targetRtp must be a percentage in (0, 100], found " + targetRtp);
         }
         if (symbols.isEmpty()) {
             throw new IllegalArgumentException("symbols cannot be empty");

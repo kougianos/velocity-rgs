@@ -75,6 +75,7 @@ class SlotMathLoaderTest {
                 {
                   "gameId": "aztec-fire",
                   "mathVersion": "v1",
+                  "targetRtp": 96.0,
                   "grid": { "rows": 3, "cols": 5 },
                   "symbols": [
                     { "id": 1, "name": "ACE", "type": "STANDARD" },

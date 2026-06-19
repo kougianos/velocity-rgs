@@ -75,7 +75,7 @@ class BonusBuyPolicyServiceTest {
     @Test
     void rejectsWhenBalanceBelowCost() {
         assertThatThrownBy(() -> service.requireOption(math, BonusBuyType.FREE_SPINS_BUY,
-                session, new BigDecimal("10.00"), BigDecimal.ONE, null))
+                session, new BigDecimal("5.00"), BigDecimal.ONE, null))
                 .isInstanceOf(RgsException.class)
                 .extracting(e -> ((RgsException) e).getErrorCode())
                 .isEqualTo(ErrorCode.INSUFFICIENT_FUNDS);
@@ -88,6 +88,6 @@ class BonusBuyPolicyServiceTest {
 
         assertThat(option.buyType()).isEqualTo(BonusBuyType.FREE_SPINS_BUY);
         assertThat(option.targetState()).isEqualTo(GameState.FREE_SPINS_AWAITING);
-        assertThat(option.costMultiplier()).isEqualByComparingTo("80");
+        assertThat(option.costMultiplier()).isEqualByComparingTo("9");
     }
 }

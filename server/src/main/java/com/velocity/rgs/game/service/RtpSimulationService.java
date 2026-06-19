@@ -4,6 +4,7 @@ import com.velocity.rgs.game.feature.pickcollect.PickCollectEngine;
 import com.velocity.rgs.game.feature.pickcollect.PickCollectState;
 import com.velocity.rgs.math.config.SlotMathDefinition;
 import com.velocity.rgs.math.config.SlotMathRegistry;
+import com.velocity.rgs.math.domain.BonusBuyType;
 import com.velocity.rgs.math.domain.ReelStripSet;
 import com.velocity.rgs.math.domain.SymbolType;
 import com.velocity.rgs.math.engine.EvaluationResult;
@@ -41,8 +42,6 @@ import java.util.concurrent.atomic.LongAdder;
 public class RtpSimulationService {
 
     private static final BigDecimal HUNDRED = BigDecimal.valueOf(100);
-    private static final BigDecimal FREE_SPINS_BUY_MULT = BigDecimal.valueOf(80);
-    private static final BigDecimal PICK_COLLECT_BUY_MULT = BigDecimal.valueOf(120);
 
     private final SlotMathRegistry mathRegistry;
     private final GridGenerationEngine gridEngine;
@@ -115,7 +114,7 @@ public class RtpSimulationService {
 
     private void simulateBonusBuyFreeSpins(SlotMathDefinition math, RandomNumberGenerator rng,
                                            BigDecimal bet, Aggregator agg) {
-        BigDecimal cost = bet.multiply(FREE_SPINS_BUY_MULT);
+        BigDecimal cost = buyCost(math, BonusBuyType.FREE_SPINS_BUY, bet);
         BigDecimal win = simulateFreeSpins(math, rng, bet, math.scatterTriggers().freeSpinsAwarded());
         agg.record(cost, win);
     }
@@ -123,7 +122,7 @@ public class RtpSimulationService {
     private void simulateBonusBuyPickCollect(SlotMathDefinition math, RandomNumberGenerator rng,
                                              BigDecimal bet, RtpSimulationRequest.PickStrategy strategy,
                                              Aggregator agg, LongAdder pickEntries) {
-        BigDecimal cost = bet.multiply(PICK_COLLECT_BUY_MULT);
+        BigDecimal cost = buyCost(math, BonusBuyType.PICK_COLLECT_BUY, bet);
         PickCollectState pickState = pickCollectEngine.startFeature(math.pickCollect(), bet, rng,
                 math.pickCollect().completion().value());
         pickEntries.increment();
@@ -156,6 +155,14 @@ public class RtpSimulationService {
     }
 
     // ------------------------------------------------------------------ helpers
+
+    private BigDecimal buyCost(SlotMathDefinition math, BonusBuyType type, BigDecimal bet) {
+        return math.bonusBuyOptions().stream()
+                .filter(o -> o.buyType() == type)
+                .findFirst()
+                .map(o -> bet.multiply(o.costMultiplier()))
+                .orElseThrow(() -> new IllegalStateException("No bonus-buy option configured for " + type));
+    }
 
     private int nextPick(PickCollectState state, RandomNumberGenerator rng,
                          RtpSimulationRequest.PickStrategy strategy, int seqCursor) {

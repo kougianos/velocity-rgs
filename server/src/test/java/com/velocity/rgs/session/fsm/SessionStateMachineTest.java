@@ -67,7 +67,7 @@ class SessionStateMachineTest {
         assertThat(res.monetaryEffect()).isInstanceOf(MonetaryEffect.Debit.class);
         MonetaryEffect.Debit debit = (MonetaryEffect.Debit) res.monetaryEffect();
         assertThat(debit.type()).isEqualTo(WalletTransactionType.BONUS_BUY);
-        assertThat(debit.amount()).isEqualTo(Money.of(new BigDecimal("80.00"), "EUR"));
+        assertThat(debit.amount()).isEqualTo(Money.of(new BigDecimal("9.00"), "EUR"));
         assertThat(res.reasonCodes()).containsExactly("ENTERED_VIA_BUY");
         assertThat(res.availableActions()).containsExactly(GameCommand.START_FREE_SPINS);
     }
@@ -81,7 +81,7 @@ class SessionStateMachineTest {
 
         assertThat(res.newState()).isInstanceOf(SessionState.PickCollectAwaiting.class);
         assertThat(((MonetaryEffect.Debit) res.monetaryEffect()).amount())
-                .isEqualTo(Money.of(new BigDecimal("120.00"), "EUR"));
+                .isEqualTo(Money.of(new BigDecimal("155.00"), "EUR"));
         assertThat(res.availableActions()).containsExactly(GameCommand.START_PICK_COLLECT);
     }
 
@@ -210,6 +210,7 @@ class SessionStateMachineTest {
         SlotMathDefinition stripped = new SlotMathDefinition(
                 math.gameId(),
                 math.mathVersion(),
+                math.targetRtp(),
                 math.grid(),
                 math.symbols(),
                 math.paylines(),
@@ -236,6 +237,7 @@ class SessionStateMachineTest {
         SlotMathDefinition stripped = new SlotMathDefinition(
                 math.gameId(),
                 math.mathVersion(),
+                math.targetRtp(),
                 math.grid(),
                 math.symbols(),
                 math.paylines(),

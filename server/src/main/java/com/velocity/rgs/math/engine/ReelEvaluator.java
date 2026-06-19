@@ -21,6 +21,8 @@ import java.util.Optional;
  * <p>Rules:
  * <ul>
  *   <li>Each payline reads symbols from the matrix in order. A run is counted from the leftmost reel.</li>
+ *   <li>The stake is split evenly across all active paylines: {@code lineBet = bet / paylines}. A line
+ *       payout is {@code lineBet * payTableCoefficient}, matching the conventional fixed-payline model.</li>
  *   <li>{@link SymbolType#WILD} substitutes for {@link SymbolType#STANDARD} only (never for SCATTER).</li>
  *   <li>{@link SymbolType#SCATTER} occurrences break a line run; scatters do not contribute to line payouts.</li>
  *   <li>Where leading wilds also pay on their own (≥ 3), the higher payout is chosen.</li>
@@ -60,9 +62,10 @@ public class ReelEvaluator {
 
         List<WinLine> wins = new ArrayList<>();
         BigDecimal total = BigDecimal.ZERO;
+        BigDecimal lineBet = bet.divide(BigDecimal.valueOf(math.paylines().size()), 12, RoundingMode.HALF_UP);
         for (Payline payline : math.paylines()) {
             int[] line = readLine(matrix, payline.coords());
-            evaluateLine(payline.id(), line, bet, math.payTable(), bySymbolId, wildId)
+            evaluateLine(payline.id(), line, lineBet, math.payTable(), bySymbolId, wildId)
                     .ifPresent(w -> wins.add(w));
         }
         for (WinLine w : wins) {
@@ -95,7 +98,7 @@ public class ReelEvaluator {
         return line;
     }
 
-    private Optional<WinLine> evaluateLine(int paylineId, int[] line, BigDecimal bet, PayTable payTable,
+    private Optional<WinLine> evaluateLine(int paylineId, int[] line, BigDecimal lineBet, PayTable payTable,
                                            Map<Integer, Symbol> bySymbolId, int wildId) {
         Symbol first = bySymbolId.get(line[0]);
         if (first == null) {
@@ -132,12 +135,12 @@ public class ReelEvaluator {
                     break;
                 }
             }
-            baseRunPayout = payoutFor(paylineId, baseSymbolId, runCount, bet, payTable);
+            baseRunPayout = payoutFor(paylineId, baseSymbolId, runCount, lineBet, payTable);
         }
 
         Optional<WinLine> wildRunPayout = Optional.empty();
         if (wildPrefix >= 3) {
-            wildRunPayout = payoutFor(paylineId, wildId, wildPrefix, bet, payTable);
+            wildRunPayout = payoutFor(paylineId, wildId, wildPrefix, lineBet, payTable);
         }
 
         if (baseRunPayout.isPresent() && wildRunPayout.isPresent()) {
@@ -159,13 +162,13 @@ public class ReelEvaluator {
         return n;
     }
 
-    private Optional<WinLine> payoutFor(int paylineId, int symbolId, int count, BigDecimal bet,
+    private Optional<WinLine> payoutFor(int paylineId, int symbolId, int count, BigDecimal lineBet,
                                         PayTable payTable) {
         if (count < 3) {
             return Optional.empty();
         }
         return payTable.lookup(symbolId, count)
-                .map(coef -> bet.multiply(coef).setScale(2, RoundingMode.HALF_UP))
+                .map(coef -> lineBet.multiply(coef).setScale(2, RoundingMode.HALF_UP))
                 .filter(p -> p.signum() > 0)
                 .map(p -> new WinLine(paylineId, symbolId, count, p));
     }

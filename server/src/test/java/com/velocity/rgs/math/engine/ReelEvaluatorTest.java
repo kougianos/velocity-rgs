@@ -41,7 +41,7 @@ class ReelEvaluatorTest {
                 {ACE,   ACE,   ACE,   ACE,   ACE},
                 {QUEEN, KING,  KING,  KING,  KING}
         };
-        EvaluationResult result = evaluator.evaluate(matrix, new BigDecimal("1.00"), math(10_000));
+        EvaluationResult result = evaluator.evaluate(matrix, new BigDecimal("3.00"), math(10_000));
 
         assertThat(result.totalWin()).isEqualByComparingTo("100.00");
         assertThat(result.winLines()).hasSize(1);
@@ -61,7 +61,7 @@ class ReelEvaluatorTest {
                 {WILD,  ACE,   ACE,   ACE,   KING},
                 {QUEEN, QUEEN, QUEEN, QUEEN, QUEEN}
         };
-        EvaluationResult result = evaluator.evaluate(matrix, new BigDecimal("1.00"), math(10_000));
+        EvaluationResult result = evaluator.evaluate(matrix, new BigDecimal("3.00"), math(10_000));
 
         assertThat(result.winLines()).anyMatch(w -> w.lineId() == 2 && w.symbolId() == ACE && w.count() == 4);
     }
@@ -74,7 +74,7 @@ class ReelEvaluatorTest {
                 {ACE,   ACE,   SCATTER, ACE,   ACE},
                 {QUEEN, QUEEN, QUEEN,   QUEEN, QUEEN}
         };
-        EvaluationResult result = evaluator.evaluate(matrix, new BigDecimal("1.00"), math(10_000));
+        EvaluationResult result = evaluator.evaluate(matrix, new BigDecimal("3.00"), math(10_000));
 
         assertThat(result.winLines()).noneMatch(w -> w.lineId() == 2);
     }
@@ -87,7 +87,7 @@ class ReelEvaluatorTest {
                 {ACE,   ACE,   ACE,   KING,  QUEEN},
                 {QUEEN, QUEEN, QUEEN, QUEEN, QUEEN}
         };
-        EvaluationResult result = evaluator.evaluate(matrix, new BigDecimal("1.00"), math(10_000));
+        EvaluationResult result = evaluator.evaluate(matrix, new BigDecimal("3.00"), math(10_000));
 
         WinLine middle = result.winLines().stream()
                 .filter(w -> w.lineId() == 2).findFirst().orElseThrow();
@@ -107,7 +107,7 @@ class ReelEvaluatorTest {
                 {WILD,  WILD,  WILD,  QUEEN, QUEEN},
                 {ACE,   ACE,   ACE,   ACE,   ACE}
         };
-        EvaluationResult result = evaluator.evaluate(matrix, new BigDecimal("1.00"), math(10_000));
+        EvaluationResult result = evaluator.evaluate(matrix, new BigDecimal("3.00"), math(10_000));
 
         WinLine middle = result.winLines().stream()
                 .filter(w -> w.lineId() == 2).findFirst().orElseThrow();
@@ -124,10 +124,10 @@ class ReelEvaluatorTest {
                 {ACE,   ACE,   ACE,   ACE,   ACE},
                 {QUEEN, QUEEN, QUEEN, QUEEN, QUEEN}
         };
-        EvaluationResult result = evaluator.evaluate(matrix, new BigDecimal("1.00"), math(1));
+        EvaluationResult result = evaluator.evaluate(matrix, new BigDecimal("3.00"), math(1));
 
         assertThat(result.reasonCodes()).contains("MAX_WIN_CAPPED");
-        assertThat(result.totalWin()).isEqualByComparingTo("1.00");
+        assertThat(result.totalWin()).isEqualByComparingTo("3.00");
     }
 
     private SlotMathDefinition math(int maxWinMultiplier) {
@@ -156,7 +156,7 @@ class ReelEvaluatorTest {
                 ReelStripSet.FREE_SPINS, List.of(filler, filler, filler, filler, filler)
         );
         return new SlotMathDefinition(
-                "test", "v1",
+                "test", "v1", new BigDecimal("96.0"),
                 new Grid(3, 5),
                 symbols,
                 paylines,

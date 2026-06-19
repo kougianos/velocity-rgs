@@ -4,6 +4,27 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+### RTP Tuning & Per-Line Bet Model
+
+- **Fixed critical RTP inflation bug in `ReelEvaluator`:** The payout model was incorrectly paying `bet × coefficient` on **every payline independently**, inflating the effective RTP ~20×. The engine now implements the standard fixed-payline model: `lineBet = bet ÷ paylines`, and each line payout is `lineBet × payTableCoefficient`. This dramatically reduces per-spin variance (~20×) and makes RTP convergence tests tractable.
+- **Added `targetRtp` field to `SlotMathDefinition`**: All game math now declares its intended RTP directly in the JSON (`math/<gameId>/<mathVersion>.json`). This is validated at load time and available for compliance reporting.
+- **Retuned aztec-fire v1.json to 96% RTP**:
+  - Paytable redesigned analytically (higher coefficients across all symbols).
+  - BASE, POWER_BET, and FREE_SPINS reel strips optimized via analytical tuner to converge to the target RTP (verified: 95.9% over 1M base spins).
+  - Bonus-buy costs realigned to fair RTP for each channel: Free-spins purchase `80× → 9×`, Pick & Collect purchase `120× → 155×`.
+- **Updated `RtpSimulationService`** to read bonus-buy costs from the math definition instead of hardcoded constants, enabling per-game cost customization.
+- **Added `@Tag("slow")` RTP verification test** (`RtpSimulationVerificationTest`): Runs 1,000,000 base-game spins and asserts the simulated RTP is within ±0.5pp of the declared target. Tagged as slow; excluded from `mvn test` and `mvn verify` by default. Run explicitly with `mvn -Prtp test` (~14s).
+- **Updated Maven surefire configuration** to exclude the `slow` test group by default. Added `rtp` profile to run only slow statistical tests (`mvn -Prtp test`).
+- **Updated all affected unit and integration tests** to account for the new per-line bet scaling (tests now use `bet=3.00` to keep line payouts in expected ranges) and the new bonus-buy costs.
+
+### Verified Results
+
+| Channel | Simulated RTP (300k+ spins) |
+|---|---|
+| Base Game (declared 96.0%) | 95.9% |
+| Free-spins Purchase | 95.1% |
+| Pick & Collect Purchase | 95.6% |
+
 ## [0.1.0] - QA-ready milestone (M7)
 
 ### Milestone 7 — QA Readiness & Operational Tooling

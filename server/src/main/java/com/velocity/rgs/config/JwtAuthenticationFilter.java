@@ -14,7 +14,6 @@ import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.slf4j.MDC;
-import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.util.AntPathMatcher;
@@ -35,7 +34,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private static final AntPathMatcher MATCHER = new AntPathMatcher();
 
     private final SecurityProperties properties;
-    private final ObjectProvider<PlayerContext> contextProvider;
     private final ObjectMapper objectMapper;
 
     private volatile SecretKey cachedKey;
@@ -64,19 +62,23 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     .parseSignedClaims(token)
                     .getPayload();
 
-            PlayerContext ctx = contextProvider.getObject();
-            ctx.setPlayerId(claims.getSubject());
-            ctx.setSessionId(claims.get("sid", String.class));
-            ctx.setCurrency(claims.get("cur", String.class));
-            Object roles = claims.get("roles");
-            ctx.setRoles(roles instanceof List<?> list
+                String playerId = claims.getSubject();
+                String sessionId = claims.get("sid", String.class);
+                String currency = claims.get("cur", String.class);
+                Object rolesRaw = claims.get("roles");
+                List<String> roles = rolesRaw instanceof List<?> list
                     ? list.stream().map(Object::toString).toList()
-                    : List.of());
-            ctx.setAuthenticated(true);
+                    : List.of();
 
-            MDC.put("playerId", ctx.getPlayerId());
-            if (ctx.getSessionId() != null) {
-                MDC.put("sessionId", ctx.getSessionId());
+                request.setAttribute(PlayerContext.ATTR_PLAYER_ID, playerId);
+                request.setAttribute(PlayerContext.ATTR_SESSION_ID, sessionId);
+                request.setAttribute(PlayerContext.ATTR_CURRENCY, currency);
+                request.setAttribute(PlayerContext.ATTR_ROLES, roles);
+                request.setAttribute(PlayerContext.ATTR_AUTHENTICATED, Boolean.TRUE);
+
+                MDC.put("playerId", playerId);
+                if (sessionId != null) {
+                MDC.put("sessionId", sessionId);
             }
             chain.doFilter(request, response);
         } catch (JwtException | IllegalArgumentException ex) {

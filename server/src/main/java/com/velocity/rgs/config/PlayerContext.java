@@ -12,6 +12,12 @@ import java.util.List;
 @Setter
 public class PlayerContext {
 
+    public static final String ATTR_PLAYER_ID = "rgs.auth.playerId";
+    public static final String ATTR_SESSION_ID = "rgs.auth.sessionId";
+    public static final String ATTR_CURRENCY = "rgs.auth.currency";
+    public static final String ATTR_ROLES = "rgs.auth.roles";
+    public static final String ATTR_AUTHENTICATED = "rgs.auth.authenticated";
+
     private String playerId;
     private String sessionId;
     private String currency;

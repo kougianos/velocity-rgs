@@ -70,6 +70,8 @@ rgs:
   security:
     jwt-secret: ${RGS_JWT_SECRET:change-me-change-me-change-me-change-me-32b}
     jwt-issuer: velocity-rgs
+    cors-allowed-origins:
+      - ${RGS_CORS_ALLOWED_ORIGIN:http://localhost:5173}
   idempotency:
     redis-cache-enabled: true
     default-ttl-hours: 24

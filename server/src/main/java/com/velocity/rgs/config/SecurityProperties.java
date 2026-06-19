@@ -13,6 +13,7 @@ public class SecurityProperties {
 
     private String jwtSecret;
     private String jwtIssuer = "velocity-rgs";
+    private List<String> corsAllowedOrigins = List.of("http://localhost:5173");
     private List<String> publicPaths = List.of(
             "/actuator/health",
             "/actuator/info",

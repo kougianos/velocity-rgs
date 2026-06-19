@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 
 import { logger } from '@/observability/logger';
 import { useSessionStore } from '@/session/sessionStore';
@@ -9,6 +9,7 @@ import styles from './SlotStage.module.css';
 import { SpinAnimator } from './SpinAnimator';
 import { usePixiApp } from './usePixiApp';
 
+const CANVAS_ID = 'pixi-slot-host';
 const CELL_SIZE = 128;
 const REEL_GAP = 8;
 
@@ -27,6 +28,11 @@ export interface SlotStageProps {
   initialMatrix?: readonly (readonly number[])[];
 }
 
+interface StageSize {
+  readonly width: number;
+  readonly height: number;
+}
+
 /**
  * Pixi host React component. Owns:
  *   - the {@link PixiApp} lifecycle via {@link usePixiApp},
@@ -37,9 +43,59 @@ export interface SlotStageProps {
  * server's spin response (or the placeholder fixture before the first spin).
  */
 export function SlotStage({ initialMatrix = PLACEHOLDER_MATRIX }: SlotStageProps): JSX.Element {
+  const stageRef = useRef<HTMLElement>(null);
+  const [size, setSize] = useState<StageSize | null>(null);
+
+  // Measure the stage element synchronously before paint and follow resizes
+  // so Pixi's internal resolution stays in sync with the CSS-driven layout.
+  useLayoutEffect(() => {
+    const el = stageRef.current;
+    if (!el) return;
+    const measure = (): void => {
+      const rect = el.getBoundingClientRect();
+      const w = Math.max(1, Math.round(rect.width));
+      const h = Math.max(1, Math.round(rect.height));
+      setSize((prev) =>
+        prev && prev.width === w && prev.height === h ? prev : { width: w, height: h },
+      );
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+  return (
+    <section ref={stageRef} className={styles.stage} aria-label="Slot reels" aria-hidden="true">
+      <canvas id={CANVAS_ID} className={styles.canvas} aria-hidden="true" />
+      {size ? (
+        <SlotStageRenderer
+          width={size.width}
+          height={size.height}
+          initialMatrix={initialMatrix}
+        />
+      ) : (
+        <div className={styles.status}>Loading reels…</div>
+      )}
+    </section>
+  );
+}
+
+interface SlotStageRendererProps {
+  readonly width: number;
+  readonly height: number;
+  readonly initialMatrix: readonly (readonly number[])[];
+}
+
+function SlotStageRenderer({
+  width,
+  height,
+  initialMatrix,
+}: SlotStageRendererProps): JSX.Element | null {
   const { app, status, error } = usePixiApp({
-    width: typeof window === 'undefined' ? 800 : window.innerWidth,
-    height: typeof window === 'undefined' ? 480 : window.innerHeight,
+    canvasId: CANVAS_ID,
+    width,
+    height,
   });
   const [texturesLoaded, setTexturesLoaded] = useState(false);
   const [textureError, setTextureError] = useState<Error | null>(null);
@@ -114,21 +170,17 @@ export function SlotStage({ initialMatrix = PLACEHOLDER_MATRIX }: SlotStageProps
     });
   }, [lastSpin, texturesLoaded, matrix]);
 
-  // Keep the grid centered on viewport resize.
+  // Resize the renderer and re-center the grid when the stage element changes.
   useEffect(() => {
     if (status !== 'ready' || !app) return;
-    const handle = (): void => {
-      app.resize(window.innerWidth, window.innerHeight);
-      if (gridRef.current) {
-        centerGrid(gridRef.current, app.app.renderer.width, app.app.renderer.height);
-      }
-    };
-    window.addEventListener('resize', handle);
-    return () => window.removeEventListener('resize', handle);
-  }, [status, app]);
+    app.resize(width, height);
+    if (gridRef.current) {
+      centerGrid(gridRef.current, app.app.renderer.width, app.app.renderer.height);
+    }
+  }, [status, app, width, height]);
 
   return (
-    <section className={styles.stage} aria-label="Slot reels" aria-hidden="true">
+    <>
       {status === 'initialising' && <div className={styles.status}>Loading reels…</div>}
       {status === 'ready' && !texturesLoaded && !textureError && (
         <div className={styles.status}>Loading symbols…</div>
@@ -138,7 +190,7 @@ export function SlotStage({ initialMatrix = PLACEHOLDER_MATRIX }: SlotStageProps
           {error?.message ?? textureError?.message ?? 'Reels unavailable'}
         </div>
       )}
-    </section>
+    </>
   );
 }
 

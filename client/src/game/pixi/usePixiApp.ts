@@ -17,12 +17,27 @@ export interface UsePixiAppOptions extends Omit<PixiAppInitOptions, 'canvas'> {
   canvasId?: string;
 }
 
+interface SharedSlot {
+  app: PixiApp;
+  initPromise: Promise<void>;
+  refCount: number;
+  destroyTimer: ReturnType<typeof setTimeout> | null;
+}
+
+// Shared per HTMLCanvasElement so React StrictMode's unmount → remount cycle
+// re-acquires the live instance instead of churning the WebGL context. Pixi v8
+// cannot reliably re-init on a canvas whose context was already destroyed
+// (symptom: "Cannot read properties of null (reading 'split')").
+const sharedSlots = new Map<HTMLCanvasElement, SharedSlot>();
+const STRICT_MODE_REUSE_WINDOW_MS = 100;
+
 /**
  * Mounts a {@link PixiApp} into a `<canvas>` element (the global
  * `#pixi-host` by default) on mount, and destroys it on unmount.
  *
- * Idempotent under React StrictMode double-invoke: if a previous mount left
- * an alive instance attached to the same canvas it is destroyed first.
+ * Idempotent under React StrictMode double-invoke: instances are shared per
+ * canvas via a module-level slot map and destroy is deferred briefly so an
+ * immediate remount can reclaim the live instance.
  */
 export function usePixiApp(options: UsePixiAppOptions): UsePixiAppResult {
   const appRef = useRef<PixiApp | null>(null);
@@ -45,33 +60,57 @@ export function usePixiApp(options: UsePixiAppOptions): UsePixiAppResult {
       return;
     }
 
-    const next = new PixiApp();
-    setStatus('initialising');
-    setError(null);
+    let slot = sharedSlots.get(canvas);
+    if (slot) {
+      slot.refCount += 1;
+      if (slot.destroyTimer) {
+        clearTimeout(slot.destroyTimer);
+        slot.destroyTimer = null;
+      }
+    } else {
+      const fresh = new PixiApp();
+      const initPromise = fresh.init({ ...optionsRef.current, canvas });
+      slot = { app: fresh, initPromise, refCount: 1, destroyTimer: null };
+      sharedSlots.set(canvas, slot);
+    }
+    const localSlot = slot;
 
-    next
-      .init({ ...optionsRef.current, canvas })
-      .then(() => {
-        if (cancelled) {
-          next.destroy();
-          return;
-        }
-        appRef.current = next;
-        setStatus('ready');
-      })
-      .catch((e: unknown) => {
-        if (cancelled) return;
-        const err = e instanceof Error ? e : new Error(String(e));
-        setError(err);
-        setStatus('error');
-      });
+    if (localSlot.app.isInitialised) {
+      appRef.current = localSlot.app;
+      setStatus('ready');
+      setError(null);
+    } else {
+      setStatus('initialising');
+      setError(null);
+      localSlot.initPromise
+        .then(() => {
+          if (cancelled) return;
+          appRef.current = localSlot.app;
+          setStatus('ready');
+        })
+        .catch((e: unknown) => {
+          if (cancelled) return;
+          const err = e instanceof Error ? e : new Error(String(e));
+          setError(err);
+          setStatus('error');
+        });
+    }
 
     return () => {
       cancelled = true;
-      if (appRef.current === next) {
+      if (appRef.current === localSlot.app) {
         appRef.current = null;
       }
-      next.destroy();
+      localSlot.refCount -= 1;
+      if (localSlot.refCount === 0) {
+        localSlot.destroyTimer = setTimeout(() => {
+          if (sharedSlots.get(canvas) === localSlot) {
+            sharedSlots.delete(canvas);
+          }
+          localSlot.destroyTimer = null;
+          localSlot.app.destroy();
+        }, STRICT_MODE_REUSE_WINDOW_MS);
+      }
     };
   }, []);
 

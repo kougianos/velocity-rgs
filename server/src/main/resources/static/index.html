@@ -3,139 +3,38 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Velocity RGS — Demo Test Harness</title>
+  <title>Velocity RGS — Lobby</title>
   <link rel="stylesheet" href="/styles.css" />
 </head>
-<body>
+<body class="lobby-page">
   <header class="topbar">
     <div class="brand">
-      <span class="logo">🔥</span>
+      <span class="logo">🎰</span>
       <div>
         <h1>Velocity RGS</h1>
-        <p class="subtitle">Aztec Fire — Demo Test Harness</p>
+        <p class="subtitle">Game Lobby — Demo Test Harness</p>
       </div>
     </div>
     <div class="session-info">
-      <div class="pill balance">
-        <span class="pill-label">Balance</span>
-        <span id="balance" class="pill-value">—</span>
-      </div>
       <div class="pill">
-        <span class="pill-label">State</span>
-        <span id="gameState" class="pill-value">—</span>
+        <span class="pill-label">Mode</span>
+        <span class="pill-value">Demo</span>
       </div>
-      <div class="pill">
-        <span class="pill-label">Free Spins</span>
-        <span id="freeSpins" class="pill-value">0</span>
-      </div>
-      <button id="resetSession" class="btn btn-ghost" title="Start a brand new demo player">New Player</button>
     </div>
   </header>
 
-  <main class="layout">
-    <!-- ===== Game column ===== -->
-    <section class="panel game-panel">
-      <h2 class="panel-title">Reels</h2>
-
-      <div id="reels" class="reels" aria-label="Slot grid"></div>
-
-      <div id="winBanner" class="win-banner hidden">
-        <span class="win-label">WIN</span>
-        <span id="winAmount" class="win-amount">0.00</span>
-      </div>
-
-      <div class="controls">
-        <div class="control-group">
-          <label for="betSize">Bet</label>
-          <input id="betSize" type="number" min="0.10" step="0.10" value="1.00" />
-        </div>
-
-        <label class="toggle">
-          <input id="powerBet" type="checkbox" />
-          <span class="toggle-track"><span class="toggle-thumb"></span></span>
-          <span class="toggle-text">Power Bet <small>(×1.5 stake)</small></span>
-        </label>
-
-        <button id="spinBtn" class="btn btn-primary btn-spin">SPIN</button>
-      </div>
-
-      <div class="feature-actions">
-        <button id="buyFreeSpins" class="btn btn-buy" data-buy="FREE_SPINS_BUY">
-          Buy Free Spins <small>(×80)</small>
-        </button>
-        <button id="buyPickCollect" class="btn btn-buy" data-buy="PICK_COLLECT_BUY">
-          Buy Pick &amp; Collect <small>(×120)</small>
-        </button>
-        <button id="startFeature" class="btn btn-accent hidden">Start Feature</button>
-      </div>
-
-      <!-- Pick & Collect board -->
-      <div id="pickPanel" class="pick-panel hidden">
-        <h3>Pick &amp; Collect</h3>
-        <p class="pick-meta">
-          Collected: <strong id="pickCollected">0.00</strong> ·
-          Total Win: <strong id="pickTotal">0.00</strong> ·
-          Picks left: <strong id="pickRemaining">0</strong>
-        </p>
-        <div id="pickBoard" class="pick-board"></div>
-      </div>
-
-      <div id="winLines" class="win-lines"></div>
-    </section>
-
-    <!-- ===== Tools column ===== -->
-    <aside class="side">
-      <!-- Simulator -->
-      <section class="panel">
-        <h2 class="panel-title">RTP Simulator</h2>
-        <div class="form-grid">
-          <label>Bet
-            <input id="simBet" type="number" min="0.10" step="0.10" value="1.00" />
-          </label>
-          <label>Base spins
-            <input id="simBase" type="number" min="0" step="1000" value="100000" />
-          </label>
-          <label>Free-spin buys
-            <input id="simFs" type="number" min="0" step="100" value="0" />
-          </label>
-          <label>Pick&amp;Collect buys
-            <input id="simPc" type="number" min="0" step="100" value="0" />
-          </label>
-          <label>Pick strategy
-            <select id="simStrategy">
-              <option value="RANDOM_UNOPENED">RANDOM_UNOPENED</option>
-              <option value="SEQUENTIAL">SEQUENTIAL</option>
-              <option value="COLLECT_FIRST">COLLECT_FIRST</option>
-            </select>
-          </label>
-        </div>
-        <button id="runSim" class="btn btn-accent full">Run Simulation</button>
-        <div id="simReport" class="sim-report"></div>
-      </section>
-
-      <!-- Admin -->
-      <section class="panel">
-        <h2 class="panel-title">Admin</h2>
-        <div class="control-group inline">
-          <label for="adminBalance">Set balance</label>
-          <input id="adminBalance" type="number" min="0" step="100" value="10000" />
-          <button id="setBalanceBtn" class="btn btn-ghost">Apply</button>
-        </div>
-      </section>
-
-      <!-- Response log -->
-      <section class="panel">
-        <h2 class="panel-title">
-          Last Response
-          <button id="clearLog" class="btn btn-ghost tiny">clear</button>
-        </h2>
-        <pre id="log" class="log">Booting demo session…</pre>
-      </section>
-    </aside>
+  <main class="lobby">
+    <h2 class="lobby-title">Choose your game</h2>
+    <p class="lobby-sub">
+      Three games, one certified <strong>96% RTP</strong> — each tuned to a different
+      volatility and max-win ceiling. Pick your risk.
+    </p>
+    <div id="gameGrid" class="game-grid">
+      <p class="lobby-loading">Loading games…</p>
+    </div>
   </main>
 
-  <div id="toast" class="toast hidden"></div>
-
-  <script src="/app.js"></script>
+  <script src="/games.js"></script>
+  <script src="/lobby.js"></script>
 </body>
 </html>

@@ -6,22 +6,17 @@
  * Auto-mints a demo JWT (PLAYER + ADMIN) so no manual login is required.
  * ======================================================================= */
 
-const GAME_ID = "aztec-fire";
 const CURRENCY = "EUR";
 
-/** Symbol id -> display metadata (mirrors math/aztec-fire/v1.json). */
-const SYMBOLS = {
-  1:  { glyph: "A",   name: "Ace" },
-  2:  { glyph: "K",   name: "King" },
-  3:  { glyph: "Q",   name: "Queen" },
-  4:  { glyph: "J",   name: "Jack" },
-  5:  { glyph: "10",  name: "Ten" },
-  6:  { glyph: "9",   name: "Nine" },
-  7:  { glyph: "🗿",  name: "Statue" },
-  8:  { glyph: "👹",  name: "Mask" },
-  9:  { glyph: "⭐",  name: "Wild" },
-  12: { glyph: "💎",  name: "Scatter" },
-};
+/** Active game resolved from the ?game= query param (falls back to the default). */
+const GAME_ID = (() => {
+  const requested = new URLSearchParams(window.location.search).get("game");
+  return requested && GAME_META[requested] ? requested : DEFAULT_GAME_ID;
+})();
+const META = gameMeta(GAME_ID);
+
+/** Symbol id -> display metadata for the active game (see games.js). */
+const SYMBOLS = META.symbols;
 
 /** Payline coordinates [row, col] indexed by lineId (for win highlighting). */
 const PAYLINES = {
@@ -97,6 +92,11 @@ const els = {
   log: $("log"),
   clearLog: $("clearLog"),
   toast: $("toast"),
+  brandLogo: $("brandLogo"),
+  gameName: $("gameName"),
+  gameTagline: $("gameTagline"),
+  buyFreeSpinsCost: $("buyFreeSpinsCost"),
+  buyPickCollectCost: $("buyPickCollectCost"),
 };
 
 /* ----------------------------------------------------------------- helpers */
@@ -553,9 +553,37 @@ function bindEvents() {
   els.clearLog.addEventListener("click", () => (els.log.textContent = ""));
 }
 
+/** Apply the active game's theme + branding to the page chrome. */
+function applyGameChrome() {
+  document.body.dataset.game = GAME_ID;
+  document.title = `Velocity RGS — ${META.name}`;
+  if (els.brandLogo) els.brandLogo.textContent = META.logo;
+  if (els.gameName) els.gameName.textContent = META.name;
+  if (els.gameTagline) els.gameTagline.textContent = `${META.tagline} · ${META.volatility} volatility`;
+}
+
+/** Pull the live buy-cost multipliers from the catalog so the labels match the math. */
+async function applyGameInfo() {
+  try {
+    const games = await api("/api/v1/games");
+    const info = (games || []).find((g) => g.gameId === GAME_ID);
+    if (!info) return;
+    if (info.freeSpinsBuyCostMultiplier != null) {
+      els.buyFreeSpinsCost.textContent = `(×${Number(info.freeSpinsBuyCostMultiplier)})`;
+    }
+    if (info.pickCollectBuyCostMultiplier != null) {
+      els.buyPickCollectCost.textContent = `(×${Number(info.pickCollectBuyCostMultiplier)})`;
+    }
+  } catch (e) {
+    // non-fatal — labels just keep their placeholder
+  }
+}
+
 function main() {
+  applyGameChrome();
   buildGrid();
   bindEvents();
+  applyGameInfo();
   bootSession();
 }
 

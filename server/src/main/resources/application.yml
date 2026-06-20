@@ -26,6 +26,13 @@ spring:
     name: velocity-rgs
   main:
     web-application-type: servlet
+  web:
+    resources:
+      # Demo/dev: never let the browser cache the embedded UI assets, so edits to
+      # the static lobby/game files show up on a plain refresh while iterating.
+      cache:
+        cachecontrol:
+          no-store: true
   threads:
     virtual:
       enabled: true
@@ -112,6 +119,7 @@ rgs:
       - /swagger-ui.html
       - /swagger-ui/**
       - /api/v1/dev/**
+      - /api/v1/games
 
   idempotency:
     redis-cache-enabled: true
@@ -141,6 +149,10 @@ rgs:
   math:
     catalog:
       - gameId: aztec-fire
+        mathVersion: v1
+      - gameId: frost-crown
+        mathVersion: v1
+      - gameId: inferno-riches
         mathVersion: v1
 
 logging:

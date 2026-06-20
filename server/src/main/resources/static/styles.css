@@ -310,3 +310,143 @@ input:focus, select:focus { outline: none; border-color: var(--accent); }
 .toast.success { border-left-color: var(--primary-hi); }
 
 .hidden { display: none !important; }
+
+/* =========================================================================
+ * Lobby (landing page)
+ * ======================================================================= */
+.lobby { max-width: 1100px; margin: 0 auto; padding: 36px 24px 56px; }
+.lobby-title { margin: 0 0 6px; font-size: 28px; letter-spacing: 0.5px; }
+.lobby-sub { margin: 0 0 28px; color: var(--text-dim); font-size: 15px; max-width: 640px; }
+.lobby-sub strong { color: var(--gold); }
+.lobby-loading, .lobby-error { color: var(--text-dim); font-size: 14px; }
+.lobby-error { color: var(--danger); }
+
+.game-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 22px;
+}
+
+.game-card {
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  text-decoration: none;
+  color: var(--text);
+  box-shadow: var(--shadow);
+  transition: transform 0.14s ease, box-shadow 0.14s ease, border-color 0.14s ease;
+}
+.game-card:hover {
+  transform: translateY(-4px);
+  border-color: var(--accent);
+  box-shadow: 0 12px 34px rgba(0, 0, 0, 0.55);
+}
+
+.card-art {
+  position: relative;
+  height: 132px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #3a2a12, #7c5210);
+}
+.card-logo { font-size: 60px; filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.5)); }
+.vol-badge {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  padding: 4px 9px;
+  border-radius: 20px;
+  background: rgba(0, 0, 0, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  color: #fff;
+}
+.vol-badge.vol-low { color: #8fe3ff; }
+.vol-badge.vol-medium { color: #ffce8f; }
+.vol-badge.vol-high { color: #ff9b8f; }
+
+.card-body { padding: 16px 18px 18px; display: flex; flex-direction: column; flex: 1; }
+.card-body h3 { margin: 0 0 4px; font-size: 19px; }
+.card-tagline { margin: 0 0 16px; font-size: 13px; color: var(--text-dim); flex: 1; }
+
+.card-stats { display: flex; gap: 8px; margin-bottom: 16px; }
+.card-stats .stat {
+  flex: 1;
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 6px;
+  text-align: center;
+}
+.stat-label { display: block; font-size: 9px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-dim); }
+.stat-value { display: block; font-size: 15px; font-weight: 700; margin-top: 2px; color: var(--gold); }
+
+.play-btn {
+  display: block;
+  text-align: center;
+  padding: 10px;
+  border-radius: 8px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  background: var(--accent);
+  color: #1a1a1a;
+}
+.game-card:hover .play-btn { background: #f59a55; }
+
+/* Per-theme card art + accents (lobby cards) */
+.game-card[data-theme="fire"] .card-art { background: linear-gradient(135deg, #7c2d12, #b45309); }
+.game-card[data-theme="frost"] .card-art { background: linear-gradient(135deg, #0c4a6e, #0891b2); }
+.game-card[data-theme="frost"] .play-btn { background: #4fc3f7; }
+.game-card[data-theme="frost"]:hover .play-btn { background: #81d4fa; }
+.game-card[data-theme="frost"]:hover { border-color: #4fc3f7; }
+.game-card[data-theme="inferno"] .card-art { background: linear-gradient(135deg, #7f1d1d, #b91c1c); }
+.game-card[data-theme="inferno"] .play-btn { background: #ff5722; color: #fff; }
+.game-card[data-theme="inferno"]:hover .play-btn { background: #ff7043; }
+.game-card[data-theme="inferno"]:hover { border-color: #ff5722; }
+
+/* Back-to-lobby chevron */
+.back-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px; height: 32px;
+  border-radius: 8px;
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  color: var(--text);
+  text-decoration: none;
+  font-size: 22px;
+  line-height: 1;
+  transition: border-color 0.15s, color 0.15s;
+}
+.back-link:hover { border-color: var(--accent); color: var(--accent); }
+
+/* =========================================================================
+ * Per-game themes (game page) — switched via <body data-game="...">
+ * ======================================================================= */
+body[data-game="frost-crown"] {
+  --accent: #4fc3f7;
+  --accent-2: #0288d1;
+  background: radial-gradient(circle at top, #0c2433 0%, #07121b 60%);
+}
+body[data-game="frost-crown"] .sym-7 { background: #0277bd; }
+body[data-game="frost-crown"] .sym-8 { background: #00838f; }
+body[data-game="frost-crown"] .sym-9 { background: linear-gradient(135deg, #b3e5fc, #4fc3f7); color: #06324a; }
+body[data-game="frost-crown"] .sym-12 { background: linear-gradient(135deg, #5e35b1, #1e88e5); }
+
+body[data-game="inferno-riches"] {
+  --accent: #ff5722;
+  --accent-2: #d84315;
+  background: radial-gradient(circle at top, #2a0d0d 0%, #120606 60%);
+}
+body[data-game="inferno-riches"] .sym-7 { background: #c62828; }
+body[data-game="inferno-riches"] .sym-8 { background: #6a1b9a; }
+body[data-game="inferno-riches"] .sym-9 { background: linear-gradient(135deg, #ff8a65, #ff3d00); color: #2a0d0d; }
+body[data-game="inferno-riches"] .sym-12 { background: linear-gradient(135deg, #ffb300, #e53935); }

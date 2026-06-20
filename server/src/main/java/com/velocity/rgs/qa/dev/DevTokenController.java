@@ -10,7 +10,7 @@ import jakarta.validation.constraints.Pattern;
 import lombok.Builder;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.context.annotation.Profile;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -26,12 +26,12 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Demo-only JWT minting helper (M7 Task 7.2, Appendix A.20). Always profile-gated to {@code demo}
- * and the path {@code /api/v1/dev/token} is whitelisted in {@link SecurityProperties#getPublicPaths()}
- * for that profile so callers can obtain a token without having one yet.
+ * Demo-only JWT minting helper (M7 Task 7.2, Appendix A.20). Registered only when
+ * {@code rgs.mode=demo} (the default), and the path {@code /api/v1/dev/token} is whitelisted in
+ * {@link SecurityProperties#getPublicPaths()} so callers can obtain a token without having one yet.
  */
 @Slf4j
-@Profile({"demo", "test"})
+@ConditionalOnProperty(prefix = "rgs", name = "mode", havingValue = "demo", matchIfMissing = true)
 @RestController
 @RequestMapping("/api/v1/dev")
 @RequiredArgsConstructor

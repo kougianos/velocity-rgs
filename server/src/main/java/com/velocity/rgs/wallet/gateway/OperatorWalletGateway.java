@@ -13,7 +13,7 @@ import com.velocity.rgs.wallet.api.WalletRollbackRequest;
 import com.velocity.rgs.wallet.api.WalletRollbackResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.context.annotation.Profile;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.reactive.function.client.WebClientRequestException;
@@ -22,8 +22,8 @@ import java.time.Duration;
 import java.util.Objects;
 
 /**
- * Operator wallet integration (M6 Task 6.4). Active under {@code wallet-operator}; the engine remains
- * unchanged because everything is wired through {@link WalletGateway}.
+ * Operator wallet integration (M6 Task 6.4). Active when {@code rgs.wallet.mode=operator}; the engine
+ * remains unchanged because everything is wired through {@link WalletGateway}.
  *
  * <p>All mutating calls forward the {@code Idempotency-Key} header to the upstream operator wallet so
  * its server-side replay store can de-dupe retries identically to our in-process flow. Calls block on
@@ -32,7 +32,7 @@ import java.util.Objects;
  */
 @Slf4j
 @Component
-@Profile("wallet-operator")
+@ConditionalOnProperty(prefix = "rgs.wallet", name = "mode", havingValue = "operator")
 @RequiredArgsConstructor
 public class OperatorWalletGateway implements WalletGateway {
 

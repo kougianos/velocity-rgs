@@ -13,7 +13,7 @@ import com.velocity.rgs.game.service.RtpSimulationService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.context.annotation.Profile;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -25,8 +25,8 @@ import java.time.Instant;
 import java.util.UUID;
 
 /**
- * Synchronous RTP simulator endpoint (M7 Task 7.6 / A.19). Active under the {@code simulator},
- * {@code demo}, and {@code test} profiles.
+ * Synchronous RTP simulator endpoint (M7 Task 7.6 / A.19). Registered when {@code rgs.mode=demo}
+ * (the default).
  *
  * <p>{@code POST /api/v1/admin/simulator/run} — ADMIN role required. Runs the requested number of spins
  * synchronously (test/QA tool: spin counts should stay under 10⁶) and persists the immutable result
@@ -35,7 +35,7 @@ import java.util.UUID;
 @Slf4j
 @Controller
 @RequestMapping("/api/v1/admin/simulator")
-@Profile({"simulator", "demo", "test"})
+@ConditionalOnProperty(prefix = "rgs", name = "mode", havingValue = "demo", matchIfMissing = true)
 @RequiredArgsConstructor
 public class SimulatorAdminController {
 

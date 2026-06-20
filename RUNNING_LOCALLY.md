@@ -45,10 +45,14 @@ Both should show `healthy` in the STATUS column.
 
 ```bash
 cd server
-mvn spring-boot:run -Dspring-boot.run.profiles=demo
+mvn spring-boot:run
 ```
 
-The server starts on **`http://localhost:8080`**. Flyway migrations run automatically on startup.
+The server starts on **`http://localhost:8080`** in **demo mode** (the default — no flags
+needed). Flyway migrations run automatically on startup. To switch modes, edit the two
+switches at the top of [`server/src/main/resources/application.yml`](server/src/main/resources/application.yml)
+(`rgs.mode` and `rgs.wallet.mode`) or override at launch, e.g.
+`mvn spring-boot:run -Drgs.mode=production -Drgs.wallet.mode=operator`.
 
 Useful server URLs:
 

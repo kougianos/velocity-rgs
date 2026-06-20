@@ -11,16 +11,16 @@ import com.velocity.rgs.wallet.api.WalletRollbackRequest;
 import com.velocity.rgs.wallet.api.WalletRollbackResponse;
 import com.velocity.rgs.wallet.service.InternalWalletService;
 import lombok.RequiredArgsConstructor;
-import org.springframework.context.annotation.Profile;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
 /**
- * In-process implementation of the wallet gateway. Active under {@code default},
- * {@code demo}, {@code wallet-internal}, and {@code test} profiles (everything
- * except {@code wallet-operator}).
+ * In-process implementation of the wallet gateway. Active when
+ * {@code rgs.wallet.mode=internal} (the default), i.e. everything except
+ * operator mode.
  */
 @Component
-@Profile({"default", "demo", "wallet-internal", "test", "simulator"})
+@ConditionalOnProperty(prefix = "rgs.wallet", name = "mode", havingValue = "internal", matchIfMissing = true)
 @RequiredArgsConstructor
 public class InternalWalletGateway implements WalletGateway {
 

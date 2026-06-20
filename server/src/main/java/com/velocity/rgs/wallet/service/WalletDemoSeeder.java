@@ -6,7 +6,7 @@ import com.velocity.rgs.wallet.domain.WalletBalance;
 import com.velocity.rgs.wallet.persistence.WalletBalanceRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.context.annotation.Profile;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
@@ -15,13 +15,13 @@ import java.math.BigDecimal;
 import java.time.Instant;
 
 /**
- * Active in {@code demo} (and {@code default}). On the first {@code authenticate}
+ * Active when {@code rgs.mode=demo} (the default). On the first {@code authenticate}
  * call for an unknown player, seeds a {@link WalletBalance} row with the configured
  * starting balance so that demo gameplay can proceed without an external wallet.
  */
 @Slf4j
 @Component
-@Profile({"demo", "default", "test", "simulator"})
+@ConditionalOnProperty(prefix = "rgs", name = "mode", havingValue = "demo", matchIfMissing = true)
 @RequiredArgsConstructor
 public class WalletDemoSeeder {
 

@@ -1,10 +1,31 @@
+# =============================================================================
+# Velocity RGS — single consolidated configuration.
+#
+# Everything is driven by the two switches at the top of the `rgs:` block. No
+# Spring profiles are used for wiring anymore — flip a value here (or override
+# with the matching env var / -Dproperty) and restart.
+#
+#   rgs.mode          demo | production
+#     demo        ->  dev-token, QA admin and RTP simulator endpoints are
+#                     registered, the in-process wallet auto-seeds new players,
+#                     and swagger/actuator/dev paths are public (zero auth setup
+#                     needed — ideal for the embedded UI and fast iteration).
+#     production  ->  those helpers are NOT registered; only health probes are
+#                     public. Everything else requires a valid JWT.
+#
+#   rgs.wallet.mode   internal | operator
+#     internal    ->  in-process demo wallet, no external calls (default).
+#     operator    ->  calls a real external operator wallet over HTTP using the
+#                     rgs.wallet.operator.* settings below.
+#
+# Defaults = demo + internal: clone, run, and you get a fully working demo with
+# no external wallet dependency.
+# =============================================================================
 spring:
   application:
     name: velocity-rgs
   main:
     web-application-type: servlet
-  profiles:
-    default: demo
   threads:
     virtual:
       enabled: true
@@ -36,7 +57,7 @@ spring:
       timeout: 2s
 
 server:
-  port: 8080
+  port: ${RGS_SERVER_PORT:8080}
   forward-headers-strategy: framework
   error:
     include-message: never
@@ -67,20 +88,56 @@ springdoc:
     path: /swagger-ui.html
 
 rgs:
+  # ----- run mode ----------------------------------------------------------
+  # demo (default) | production. See the header block above.
+  mode: ${RGS_MODE:demo}
+
   security:
     jwt-secret: ${RGS_JWT_SECRET:change-me-change-me-change-me-change-me-32b}
     jwt-issuer: velocity-rgs
     cors-allowed-origins:
       - ${RGS_CORS_ALLOWED_ORIGIN:http://localhost:5173}
+    # Demo-friendly defaults: the dev-token endpoint, swagger and actuator are
+    # anonymous so the embedded UI and QA tooling work with no auth setup.
+    # For production, trim this down to just the health probes, e.g.:
+    #   public-paths:
+    #     - /actuator/health/liveness
+    #     - /actuator/health/readiness
+    public-paths:
+      - /actuator/health
+      - /actuator/info
+      - /actuator/prometheus
+      - /v3/api-docs
+      - /v3/api-docs/**
+      - /swagger-ui.html
+      - /swagger-ui/**
+      - /api/v1/dev/**
+
   idempotency:
     redis-cache-enabled: true
     default-ttl-hours: 24
     wallet-ttl-hours: 48
+
   wallet:
-    mode: internal
+    # internal (default) | operator. See the header block above.
+    mode: ${RGS_WALLET_MODE:internal}
     demo:
       starting-balance-minor: 1000000
       currency: EUR
+    # Only used when rgs.wallet.mode=operator.
+    operator:
+      base-url: ${RGS_WALLET_OPERATOR_URL:http://localhost:9090}
+      timeout-ms: 2000
+      auth-token: ${RGS_WALLET_OPERATOR_TOKEN:}
+
+  simulator:
+    # The RtpSimulator CLI runner fires one batch RTP run on startup. Off by
+    # default; set true (or RGS_SIMULATOR_CLI_ENABLED=true) for a dedicated
+    # simulation run. The /api/v1/admin/simulator/run endpoint is independent
+    # and is available whenever rgs.mode=demo.
+    cli-enabled: ${RGS_SIMULATOR_CLI_ENABLED:false}
+    spins: 100000
+
   math:
     catalog:
       - gameId: aztec-fire

@@ -19,7 +19,7 @@ import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Positive;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.context.annotation.Profile;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.ResponseEntity;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -43,7 +43,7 @@ import java.util.Map;
  * All endpoints require the {@code ADMIN} role claim and write audit log entries.
  */
 @Slf4j
-@Profile({"demo", "test"})
+@ConditionalOnProperty(prefix = "rgs", name = "mode", havingValue = "demo", matchIfMissing = true)
 @RestController
 @RequestMapping("/api/v1/admin")
 @RequiredArgsConstructor

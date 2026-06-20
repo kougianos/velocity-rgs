@@ -7,10 +7,10 @@ import com.velocity.rgs.common.error.RgsException;
 import io.netty.channel.ChannelOption;
 import io.netty.handler.timeout.ReadTimeoutHandler;
 import io.netty.handler.timeout.WriteTimeoutHandler;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.Profile;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.client.reactive.ReactorClientHttpConnector;
@@ -23,12 +23,12 @@ import java.util.Optional;
 
 /**
  * Spring configuration that exposes a tuned {@link WebClient} bean for the
- * {@link OperatorWalletGateway} (M6 Task 6.4). Only loaded under the {@code wallet-operator}
- * profile so the {@code spring-boot-starter-webflux} dependency stays optional for the rest of
- * the application.
+ * {@link OperatorWalletGateway} (M6 Task 6.4). Only loaded when {@code rgs.wallet.mode=operator}
+ * so the {@code spring-boot-starter-webflux} dependency stays dormant for the rest of the
+ * application.
  */
 @Configuration
-@Profile("wallet-operator")
+@ConditionalOnProperty(prefix = "rgs.wallet", name = "mode", havingValue = "operator")
 @EnableConfigurationProperties(OperatorWalletProperties.class)
 public class OperatorWalletConfiguration {
 

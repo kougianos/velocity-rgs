@@ -7,7 +7,7 @@ import com.velocity.rgs.config.PlayerContext;
 import com.velocity.rgs.wallet.service.InternalWalletService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.context.annotation.Profile;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -19,13 +19,13 @@ import org.springframework.web.bind.annotation.RestController;
 import static com.velocity.rgs.common.idempotency.IdempotencyAspect.HEADER_KEY;
 
 /**
- * Wallet REST surface. In {@code demo} / {@code wallet-internal} this is the live
- * wallet API; in {@code wallet-operator} the real wallet is external and this
- * controller is not exposed (gateway is the only call path).
+ * Wallet REST surface. With {@code rgs.wallet.mode=internal} (the default) this is
+ * the live wallet API; with {@code rgs.wallet.mode=operator} the real wallet is
+ * external and this controller is not exposed (the gateway is the only call path).
  */
 @RestController
 @RequestMapping("/api/v1/wallet")
-@Profile({"default", "demo", "wallet-internal", "test", "simulator"})
+@ConditionalOnProperty(prefix = "rgs.wallet", name = "mode", havingValue = "internal", matchIfMissing = true)
 @RequiredArgsConstructor
 public class WalletController {
 

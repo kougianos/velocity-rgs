@@ -4,20 +4,20 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
-import org.springframework.context.annotation.Profile;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
 import java.util.UUID;
 
 /**
- * CLI runner that invokes {@link RtpSimulationService} once on startup under the {@code simulator}
- * profile (M5 Task 5.9 / M7 Task 7.6). Spin counts and bet size are taken from
- * {@code rgs.simulator.*} properties.
+ * CLI runner that invokes {@link RtpSimulationService} once on startup when
+ * {@code rgs.simulator.cli-enabled=true} (M5 Task 5.9 / M7 Task 7.6). Spin counts and bet size are
+ * taken from {@code rgs.simulator.*} properties.
  */
 @Slf4j
 @Component
-@Profile("simulator")
+@ConditionalOnProperty(prefix = "rgs.simulator", name = "cli-enabled", havingValue = "true")
 @RequiredArgsConstructor
 public class RtpSimulator implements CommandLineRunner {
 

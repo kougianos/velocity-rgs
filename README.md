@@ -161,7 +161,10 @@ The `aztec-fire` slot (3×5 grid, 20 paylines) is fully playable end-to-end:
 | `RGS_REDIS_HOST` | `localhost` | Redis host |
 | `RGS_REDIS_PORT` | `6379` | Redis port |
 | `RGS_JWT_SECRET` | dev-only placeholder | HS256 signing secret — **override in any non-demo deployment** |
-| `RGS_WALLET_OPERATOR_URL` | `http://localhost:9090` | External wallet base URL (`wallet-operator` profile only) |
+| `RGS_MODE` | `demo` | Run mode: `demo` (QA helpers + relaxed auth) or `production` |
+| `RGS_WALLET_MODE` | `internal` | Wallet backend: `internal` (in-process) or `operator` (external HTTP) |
+| `RGS_WALLET_OPERATOR_URL` | `http://localhost:9090` | External wallet base URL (only when `RGS_WALLET_MODE=operator`) |
+| `RGS_WALLET_OPERATOR_TOKEN` | — | Optional static bearer token for the operator wallet |
 
 ## Client Environment Variables
 
@@ -178,15 +181,20 @@ The `aztec-fire` slot (3×5 grid, 20 paylines) is fully playable end-to-end:
 | `VITE_LOG_SINK_URL` | no | — | Optional remote log sink (via `sendBeacon`) |
 | `VITE_WALLET_REFRESH_MS` | no | `30000` | Balance refetch interval (ms) |
 
-## Server Profiles
+## Run Modes
 
-| Profile | Wallet | Notes |
+All configuration lives in a single `server/src/main/resources/application.yml`, driven
+by two switches (no Spring profiles). Set them in the file or override with `-Drgs.mode=…`
+/ env vars.
+
+| Switch | Values | Effect |
 |---|---|---|
-| `demo` (default) | Internal, seeded fake balance | Dev token + admin QA endpoints enabled; actuator anonymous; simulator HTTP endpoint exposed |
-| `wallet-internal` | Internal | Full audit logging; no QA helpers |
-| `wallet-operator` | External WebClient → `RGS_WALLET_OPERATOR_URL` | Actuator requires JWT |
-| `simulator` | Internal | Boots the RTP simulator CLI runner once |
-| `test` | Internal (Testcontainers) | CI / integration tests |
+| `rgs.mode` | `demo` (default) / `production` | `demo`: dev-token + admin QA + simulator HTTP endpoints registered, demo wallet auto-seeding, swagger/actuator/dev paths anonymous. `production`: helpers off, only health probes public. |
+| `rgs.wallet.mode` | `internal` (default) / `operator` | `internal`: in-process seeded wallet, no external calls. `operator`: external WebClient → `RGS_WALLET_OPERATOR_URL`. |
+| `rgs.simulator.cli-enabled` | `false` (default) / `true` | When `true`, runs one batch RTP simulation on startup. |
+
+The `test` Spring profile remains for the integration-test harness only (Testcontainers,
+deterministic JWT secret); it inherits demo + internal defaults.
 
 ## Build & Test
 

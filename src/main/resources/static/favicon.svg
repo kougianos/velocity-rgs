@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <defs>
+    <linearGradient id="chip" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#e0392b"/>
+      <stop offset="1" stop-color="#9c1b12"/>
+    </linearGradient>
+    <linearGradient id="gold" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffe27a"/>
+      <stop offset="1" stop-color="#e0a528"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.5" cy="0.4" r="0.6">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.35"/>
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <!-- chip body -->
+  <circle cx="32" cy="32" r="30" fill="url(#chip)"/>
+  <circle cx="32" cy="32" r="30" fill="url(#glow)"/>
+
+  <!-- edge spokes -->
+  <g fill="url(#gold)">
+    <rect x="29" y="1"  width="6" height="11" rx="2"/>
+    <rect x="29" y="52" width="6" height="11" rx="2"/>
+    <rect x="1"  y="29" width="11" height="6" rx="2"/>
+    <rect x="52" y="29" width="11" height="6" rx="2"/>
+    <rect x="9"  y="9"  width="6" height="11" rx="2" transform="rotate(45 12 14.5)"/>
+    <rect x="49" y="9"  width="6" height="11" rx="2" transform="rotate(-45 52 14.5)"/>
+    <rect x="9"  y="44" width="6" height="11" rx="2" transform="rotate(-45 12 49.5)"/>
+    <rect x="49" y="44" width="6" height="11" rx="2" transform="rotate(45 52 49.5)"/>
+  </g>
+
+  <!-- inner ring -->
+  <circle cx="32" cy="32" r="21" fill="none" stroke="url(#gold)" stroke-width="2.5" stroke-dasharray="2 4"/>
+  <circle cx="32" cy="32" r="18" fill="#120607"/>
+
+  <!-- lucky 7 -->
+  <text x="32" y="44" font-family="Georgia, 'Times New Roman', serif" font-size="30"
+        font-weight="bold" text-anchor="middle" fill="url(#gold)">7</text>
+</svg>

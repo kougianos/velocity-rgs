@@ -60,13 +60,13 @@ body {
 /* ===== Layout ===== */
 .layout {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 360px;
+  grid-template-columns: minmax(0, 1fr) 480px;
   gap: 20px;
   padding: 20px 24px;
-  max-width: 1280px;
+  max-width: 1440px;
   margin: 0 auto;
 }
-@media (max-width: 920px) {
+@media (max-width: 1040px) {
   .layout { grid-template-columns: 1fr; }
 }
 
@@ -333,9 +333,11 @@ input:focus, select:focus { outline: none; border-color: var(--accent); }
 .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
 .form-grid label { font-size: 11px; color: var(--text-dim); display: flex; flex-direction: column; gap: 4px; }
 .sim-report { margin-top: 12px; font-size: 12px; }
-.sim-report table { width: 100%; border-collapse: collapse; }
-.sim-report th, .sim-report td { text-align: left; padding: 5px 6px; border-bottom: 1px solid var(--border); }
+.sim-report table { width: 100%; border-collapse: collapse; table-layout: auto; }
+.sim-report th, .sim-report td { text-align: left; padding: 5px 6px; border-bottom: 1px solid var(--border); white-space: nowrap; }
 .sim-report th { color: var(--text-dim); font-weight: 600; font-size: 10px; text-transform: uppercase; }
+/* numeric columns (Spins, Total Bet, Total Win, RTP) — right-align with tabular figures */
+.sim-report th:not(:first-child), .sim-report td:not(:first-child) { text-align: right; font-variant-numeric: tabular-nums; }
 .sim-report .rtp { color: var(--gold); font-weight: 700; }
 .sim-report .row-overall td { border-top: 2px solid var(--border); border-bottom: none; }
 

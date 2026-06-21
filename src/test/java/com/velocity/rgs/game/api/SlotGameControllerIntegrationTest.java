@@ -111,6 +111,32 @@ class SlotGameControllerIntegrationTest {
     }
 
     @Test
+    void powerBetSpinDebitsMultipliedStake() throws Exception {
+        JsonNode init = initSession();
+        String sessionId = init.get("sessionId").asText();
+        long version = init.get("sessionVersion").asLong();
+        // aztec-fire powerBet.betMultiplier is 1.50, so a 1.00 base bet must wager 1.50.
+        assertThat(init.get("featureFlags").get("powerBetMultiplier").decimalValue())
+                .isEqualByComparingTo(new BigDecimal("1.50"));
+
+        String body = mapper.createObjectNode()
+                .put("gameId", GAME_ID)
+                .put("sessionId", sessionId)
+                .put("sessionVersion", version)
+                .put("betSize", "1.00")
+                .put("powerBetActive", true)
+                .toString();
+
+        JsonNode spin = postJson("/api/v1/slot/spin", "idem-power-1", body);
+        assertThat(spin.get("betDebited").decimalValue()).isEqualByComparingTo(new BigDecimal("1.50"));
+        assertThat(spin.get("featuresTriggered").get("isPowerBetActive").asBoolean()).isTrue();
+        // persisted round records the multiplied stake
+        var round = roundRepository.findByRoundId(spin.get("roundId").asText()).orElseThrow();
+        assertThat(round.getBetAmount()).isEqualByComparingTo(new BigDecimal("1.50"));
+        assertThat(round.isPowerBetActive()).isTrue();
+    }
+
+    @Test
     void spinIsIdempotentOnRetryWithSameKey() throws Exception {
         JsonNode init = initSession();
         String sessionId = init.get("sessionId").asText();

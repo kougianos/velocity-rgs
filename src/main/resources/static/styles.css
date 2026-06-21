@@ -204,6 +204,65 @@ input:focus, select:focus { outline: none; border-color: var(--accent); }
 .toggle-text { font-size: 13px; }
 .toggle-text small { color: var(--text-dim); }
 
+/* Power Bet active highlight */
+.toggle.is-active .toggle-text { color: var(--gold); font-weight: 700; }
+.toggle.is-active .toggle-text small { color: var(--gold); }
+
+.control-group.bet-locked input[type="number"] {
+  border-color: var(--gold);
+  color: var(--gold);
+  background: rgba(245, 197, 24, 0.08);
+  font-weight: 700;
+  box-shadow: 0 0 0 1px rgba(245, 197, 24, 0.35);
+  cursor: not-allowed;
+}
+.bet-power-hint {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--gold);
+  font-weight: 700;
+}
+
+/* Inline help tooltip (pick strategy etc.) */
+.label-row { display: inline-flex; align-items: center; gap: 6px; }
+.info {
+  position: relative;
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 15px; height: 15px;
+  font-size: 11px;
+  color: var(--text-dim);
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  cursor: help;
+}
+.info:hover, .info:focus { color: var(--accent); border-color: var(--accent); outline: none; }
+.info .tooltip {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 0;
+  z-index: 50;
+  width: 280px;
+  display: none;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 12px;
+  background: var(--bg-elev);
+  border: 1px solid var(--accent);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+  font-size: 11px;
+  line-height: 1.45;
+  text-transform: none;
+  letter-spacing: normal;
+  color: var(--text);
+  white-space: normal;
+}
+.info:hover .tooltip, .info:focus .tooltip { display: flex; }
+.info .tooltip strong { color: var(--gold); }
+.info .tooltip b { color: var(--accent); }
+.info .tooltip em { color: var(--text-dim); font-style: italic; }
+
 /* ===== Buttons ===== */
 .btn {
   border: 1px solid var(--border);
@@ -278,6 +337,7 @@ input:focus, select:focus { outline: none; border-color: var(--accent); }
 .sim-report th, .sim-report td { text-align: left; padding: 5px 6px; border-bottom: 1px solid var(--border); }
 .sim-report th { color: var(--text-dim); font-weight: 600; font-size: 10px; text-transform: uppercase; }
 .sim-report .rtp { color: var(--gold); font-weight: 700; }
+.sim-report .row-overall td { border-top: 2px solid var(--border); border-bottom: none; }
 
 /* ===== Log ===== */
 .log {

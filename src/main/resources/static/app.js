@@ -53,6 +53,12 @@ const state = {
   balance: 0,
   currentState: "BASE_GAME",
   availableActions: [],
+  // Power Bet: the multiplier comes from the server (init featureFlags); baseBet is the player's
+  // chosen per-spin stake before the multiplier is applied. While Power Bet is on, the Bet field is
+  // locked to baseBet × multiplier for display, but we always send baseBet to the server — the
+  // server is the single authority that applies the multiplier to the debit and the win.
+  powerMultiplier: 1.5,
+  baseBet: 1.0,
 };
 
 /** 2D array of cell elements [row][col]. */
@@ -69,7 +75,12 @@ const els = {
   winAmount: $("winAmount"),
   winLines: $("winLines"),
   betSize: $("betSize"),
+  betControl: $("betControl"),
+  betPowerHint: $("betPowerHint"),
+  betPowerMult: $("betPowerMult"),
   powerBet: $("powerBet"),
+  powerBetToggle: $("powerBetToggle"),
+  powerBetMultLabel: $("powerBetMultLabel"),
   spinBtn: $("spinBtn"),
   buyFreeSpins: $("buyFreeSpins"),
   buyPickCollect: $("buyPickCollect"),
@@ -82,6 +93,7 @@ const els = {
   resetSession: $("resetSession"),
   simBet: $("simBet"),
   simBase: $("simBase"),
+  simPower: $("simPower"),
   simFs: $("simFs"),
   simPc: $("simPc"),
   simStrategy: $("simStrategy"),
@@ -195,6 +207,41 @@ function setBusy(busy) {
   // FREE_SPINS_AWAITING where only START_FREE_SPINS is allowed.
   els.startFeature.disabled = false;
   renderActions();
+}
+
+/* -------------------------------------------------------------- power bet */
+
+/** The per-spin stake to send to the server — always the base bet; the server applies the ×N. */
+function betForRequest() {
+  return els.powerBet.checked ? state.baseBet : Number(els.betSize.value);
+}
+
+/** Push the live multiplier (from the server) into the on-screen labels. */
+function updatePowerMultLabels() {
+  const m = state.powerMultiplier;
+  if (els.powerBetMultLabel) els.powerBetMultLabel.textContent = m;
+  if (els.betPowerMult) els.betPowerMult.textContent = m;
+}
+
+/**
+ * Reflect the Power Bet toggle into the Bet field. While enabled the field is locked and shows the
+ * effective (multiplied) stake; we stash the chosen base bet so we can restore it when disabled and
+ * still send the base value to the server.
+ */
+function applyPowerBetState() {
+  const on = els.powerBet.checked;
+  if (on) {
+    state.baseBet = Number(els.betSize.value) || state.baseBet;
+    const effective = state.baseBet * state.powerMultiplier;
+    els.betSize.value = effective.toFixed(2);
+    els.betSize.readOnly = true;
+  } else {
+    els.betSize.readOnly = false;
+    els.betSize.value = Number(state.baseBet).toFixed(2);
+  }
+  els.betControl.classList.toggle("bet-locked", on);
+  els.powerBetToggle.classList.toggle("is-active", on);
+  els.betPowerHint.classList.toggle("hidden", !on);
 }
 
 /* ----------------------------------------------------------------- render */
@@ -387,6 +434,12 @@ async function bootSession() {
       body: { gameId: GAME_ID, currency: CURRENCY },
     });
     applySessionView(init);
+    const mult = init.featureFlags && init.featureFlags.powerBetMultiplier;
+    if (mult != null) state.powerMultiplier = Number(mult);
+    // Only read the base bet from the field when it isn't showing the locked (multiplied) value.
+    if (!els.powerBet.checked) state.baseBet = Number(els.betSize.value) || state.baseBet;
+    updatePowerMultLabels();
+    applyPowerBetState();
     renderHud();
     renderActions();
     renderPickBoard(init.activeFeatureView);
@@ -410,7 +463,7 @@ async function doSpin() {
         gameId: GAME_ID,
         sessionId: state.sessionId,
         sessionVersion: state.sessionVersion,
-        betSize: Number(els.betSize.value),
+        betSize: betForRequest(),
         powerBetActive: els.powerBet.checked,
       },
     });
@@ -447,7 +500,7 @@ async function buyFeature(buyType) {
         sessionId: state.sessionId,
         sessionVersion: state.sessionVersion,
         buyType,
-        betSize: Number(els.betSize.value),
+        betSize: betForRequest(),
       },
     });
     applySessionView(resp);
@@ -541,8 +594,10 @@ async function runFreeSpinsAutoplay() {
           gameId: GAME_ID,
           sessionId: state.sessionId,
           sessionVersion: state.sessionVersion,
-          betSize: Number(els.betSize.value),
-          powerBetActive: els.powerBet.checked,
+          // Free-spin bet is locked to the triggering bet server-side, and Power Bet does not
+          // persist into free spins for these games — always send the base bet without power.
+          betSize: betForRequest(),
+          powerBetActive: false,
         },
       });
       applySessionView(spin);
@@ -616,6 +671,7 @@ async function runSimulation() {
         mathVersion: "v1",
         bet: Number(els.simBet.value),
         spinsBaseGame: Number(els.simBase.value),
+        spinsPowerBet: Number(els.simPower.value),
         spinsBonusBuyFreeSpins: Number(els.simFs.value),
         spinsBonusBuyPickCollect: Number(els.simPc.value),
         pickStrategy: els.simStrategy.value,
@@ -633,23 +689,31 @@ async function runSimulation() {
 
 function renderSimReport(report) {
   const channels = report.channels || {};
-  const rows = Object.entries(channels).map(([name, ch]) => `
-    <tr>
-      <td>${name}</td>
-      <td>${Number(ch.spins).toLocaleString()}</td>
+  const row = (name, ch, strong = false) => {
+    if (!ch) return "";
+    const label = strong ? `<strong>${name}</strong>` : name;
+    return `
+    <tr${strong ? ' class="row-overall"' : ""}>
+      <td>${label}</td>
+      <td>${Number(ch.spins || 0).toLocaleString()}</td>
+      <td>${fmt(ch.totalBet)}</td>
+      <td>${fmt(ch.totalWin)}</td>
       <td class="rtp">${fmt(ch.rtpPercent)}%</td>
-    </tr>`).join("");
+    </tr>`;
+  };
+
+  // Skip channels that weren't sampled (0 spins) so the table only shows what was run.
+  const rows = Object.entries(channels)
+    .filter(([, ch]) => Number(ch.spins) > 0)
+    .map(([name, ch]) => row(name, ch))
+    .join("");
 
   els.simReport.innerHTML = `
     <table>
-      <thead><tr><th>Channel</th><th>Spins</th><th>RTP</th></tr></thead>
+      <thead><tr><th>Channel</th><th>Spins</th><th>Total Bet</th><th>Total Win</th><th>RTP</th></tr></thead>
       <tbody>
         ${rows}
-        <tr>
-          <td><strong>Overall</strong></td>
-          <td>${Number(report.overall?.spins || 0).toLocaleString()}</td>
-          <td class="rtp">${fmt(report.overall?.rtpPercent)}%</td>
-        </tr>
+        ${row("Overall", report.overall, true)}
       </tbody>
     </table>
     <p style="color:var(--text-dim);margin-top:8px">
@@ -686,6 +750,11 @@ function handleError(label, e) {
 
 function bindEvents() {
   els.spinBtn.addEventListener("click", doSpin);
+  els.powerBet.addEventListener("change", applyPowerBetState);
+  // Keep the remembered base bet in sync whenever the user edits the (unlocked) field.
+  els.betSize.addEventListener("input", () => {
+    if (!els.powerBet.checked) state.baseBet = Number(els.betSize.value) || state.baseBet;
+  });
   els.buyFreeSpins.addEventListener("click", () => buyFeature("FREE_SPINS_BUY"));
   els.buyPickCollect.addEventListener("click", () => buyFeature("PICK_COLLECT_BUY"));
   els.startFeature.addEventListener("click", () => {

@@ -18,6 +18,7 @@ public record RtpSimulationRequest(
         @NotBlank String mathVersion,
         @NotNull @DecimalMin(value = "0.0", inclusive = false) BigDecimal bet,
         @Min(0) long spinsBaseGame,
+        @Min(0) long spinsPowerBet,
         @Min(0) long spinsBonusBuyFreeSpins,
         @Min(0) long spinsBonusBuyPickCollect,
         PickStrategy pickStrategy

@@ -144,8 +144,9 @@ public class SlotEngineService {
                 .accumulatedFreeSpinsWin(session.getAccumulatedFreeSpinsWin())
                 .currentBet(session.getCurrentBet())
                 .availableActions(actions)
-                .featureFlags(Map.of(
+                .featureFlags(Map.<String, Object>of(
                         "powerBetEnabled", true,
+                        "powerBetMultiplier", math.powerBet().betMultiplier(),
                         "bonusBuyEnabled", !math.bonusBuyOptions().isEmpty()))
                 .activeFeatureView(view)
                 .build();
@@ -162,7 +163,8 @@ public class SlotEngineService {
             SlotMathDefinition math = mathRegistry.require(session.getGameId(), session.getMathVersion());
 
             SessionState currentState = rehydrate(session);
-            BigDecimal effectiveBet = effectiveBetForSpin(currentState, request.betSize(), math);
+            BigDecimal effectiveBet = effectiveBetForSpin(currentState, request.betSize(),
+                    request.powerBetActive(), math, session.getCurrency());
 
             TransitionContext ctx = new TransitionContext(math, session.getCurrency());
             TransitionResult transition = stateMachine.transition(currentState,
@@ -533,10 +535,19 @@ public class SlotEngineService {
     }
 
     private BigDecimal effectiveBetForSpin(SessionState state, BigDecimal requestedBet,
-                                           SlotMathDefinition math) {
+                                           boolean powerBetActive, SlotMathDefinition math,
+                                           String currency) {
         if (state instanceof SessionState.FreeSpinsLoop loop) {
             BigDecimal locked = math.freeSpins().betLockedToTriggerBet() ? loop.triggerBet() : requestedBet;
             return locked;
+        }
+        // Power Bet raises the actual stake by powerBet.betMultiplier (e.g. ×1.5). This single
+        // effective bet drives the wallet debit (via the FSM), the win evaluation, and the persisted
+        // round stake, so RTP stays consistent across all three. Only the base game opts into it —
+        // free spins already returned above and bonus-buy flows have their own cost path.
+        if (state instanceof SessionState.BaseGame && powerBetActive) {
+            return requestedBet.multiply(math.powerBet().betMultiplier())
+                    .setScale(Money.minorUnitScale(currency), RoundingMode.HALF_UP);
         }
         return requestedBet;
     }

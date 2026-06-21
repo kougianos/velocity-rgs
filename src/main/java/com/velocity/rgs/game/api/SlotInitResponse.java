@@ -28,7 +28,7 @@ public record SlotInitResponse(
         BigDecimal accumulatedFreeSpinsWin,
         BigDecimal currentBet,
         List<GameCommand> availableActions,
-        Map<String, Boolean> featureFlags,
+        Map<String, Object> featureFlags,
         PickCollectFeatureView activeFeatureView
 ) {
 }

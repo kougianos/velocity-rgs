@@ -54,6 +54,7 @@ public class RtpSimulationService {
         String effectiveRunId = runId != null && !runId.isBlank() ? runId : UUID.randomUUID().toString();
 
         Aggregator base = new Aggregator();
+        Aggregator powerBet = new Aggregator();
         Aggregator buyFs = new Aggregator();
         Aggregator buyPc = new Aggregator();
         LongAdder freeSpinTriggers = new LongAdder();
@@ -61,6 +62,9 @@ public class RtpSimulationService {
 
         for (long i = 0; i < request.spinsBaseGame(); i++) {
             simulateBaseSpin(math, newRng(), request.bet(), base, freeSpinTriggers);
+        }
+        for (long i = 0; i < request.spinsPowerBet(); i++) {
+            simulatePowerBetSpin(math, newRng(), request.bet(), powerBet, freeSpinTriggers);
         }
         for (long i = 0; i < request.spinsBonusBuyFreeSpins(); i++) {
             simulateBonusBuyFreeSpins(math, newRng(), request.bet(), buyFs);
@@ -72,15 +76,17 @@ public class RtpSimulationService {
 
         Map<String, RtpReport.Channel> channels = new LinkedHashMap<>();
         channels.put("BASE_GAME", base.snapshot());
+        channels.put("POWER_BET", powerBet.snapshot());
         channels.put("BONUS_BUY_FREE_SPINS", buyFs.snapshot());
         channels.put("BONUS_BUY_PICK_COLLECT", buyPc.snapshot());
 
-        RtpReport.Channel overall = overall(base, buyFs, buyPc);
+        RtpReport.Channel overall = overall(base, powerBet, buyFs, buyPc);
         long elapsed = System.currentTimeMillis() - start;
 
-        log.info("RTP simulation runId={} game={}/{} bet={} elapsedMs={} BASE={}% FS_BUY={}% PICK_BUY={}% OVERALL={}%",
+        log.info("RTP simulation runId={} game={}/{} bet={} elapsedMs={} BASE={}% POWER={}% FS_BUY={}% PICK_BUY={}% OVERALL={}%",
                 effectiveRunId, request.gameId(), request.mathVersion(), request.bet(), elapsed,
-                channels.get("BASE_GAME").rtpPercent(), channels.get("BONUS_BUY_FREE_SPINS").rtpPercent(),
+                channels.get("BASE_GAME").rtpPercent(), channels.get("POWER_BET").rtpPercent(),
+                channels.get("BONUS_BUY_FREE_SPINS").rtpPercent(),
                 channels.get("BONUS_BUY_PICK_COLLECT").rtpPercent(), overall.rtpPercent());
 
         return RtpReport.builder()
@@ -109,6 +115,26 @@ public class RtpSimulationService {
             freeSpinTriggers.increment();
             BigDecimal freeWin = simulateFreeSpins(math, rng, bet, math.scatterTriggers().freeSpinsAwarded());
             base.recordWinOnly(freeWin);
+        }
+    }
+
+    /**
+     * Power-bet base spins: stake is raised by {@code powerBet.betMultiplier} and the richer
+     * {@link ReelStripSet#POWER_BET} strip is used. Wins (line wins + any naturally triggered free
+     * spins) are evaluated against the same multiplied stake, mirroring the live spin path so the
+     * reported RTP reflects what the player actually experiences on a power bet.
+     */
+    private void simulatePowerBetSpin(SlotMathDefinition math, RandomNumberGenerator rng, BigDecimal bet,
+                                      Aggregator powerBet, LongAdder freeSpinTriggers) {
+        BigDecimal stake = bet.multiply(math.powerBet().betMultiplier());
+        GridGenerationResult grid = gridEngine.generate(math, ReelStripSet.POWER_BET, rng);
+        EvaluationResult eval = reelEvaluator.evaluate(grid.matrix(), stake, math);
+        powerBet.record(stake, eval.totalWin());
+        int scatters = countScatters(grid.matrix(), math);
+        if (scatters >= math.scatterTriggers().minCount()) {
+            freeSpinTriggers.increment();
+            BigDecimal freeWin = simulateFreeSpins(math, rng, stake, math.scatterTriggers().freeSpinsAwarded());
+            powerBet.recordWinOnly(freeWin);
         }
     }
 

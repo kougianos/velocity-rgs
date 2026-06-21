@@ -46,15 +46,16 @@
       </div>
 
       <div class="controls">
-        <div class="control-group">
+        <div class="control-group" id="betControl">
           <label for="betSize">Bet</label>
           <input id="betSize" type="number" min="0.10" step="0.10" value="1.00" />
+          <small id="betPowerHint" class="bet-power-hint hidden">Power Bet ×<span id="betPowerMult">1.5</span></small>
         </div>
 
-        <label class="toggle">
+        <label class="toggle" id="powerBetToggle">
           <input id="powerBet" type="checkbox" />
           <span class="toggle-track"><span class="toggle-thumb"></span></span>
-          <span class="toggle-text">Power Bet <small>(×1.5 stake)</small></span>
+          <span class="toggle-text">Power Bet <small>(×<span id="powerBetMultLabel">1.5</span> stake)</small></span>
         </label>
 
         <button id="spinBtn" class="btn btn-primary btn-spin">SPIN</button>
@@ -96,13 +97,32 @@
           <label>Base spins
             <input id="simBase" type="number" min="0" step="1000" value="100000" />
           </label>
+          <label>Power-bet spins
+            <input id="simPower" type="number" min="0" step="1000" value="0" />
+          </label>
           <label>Free-spin buys
             <input id="simFs" type="number" min="0" step="100" value="0" />
           </label>
           <label>Pick&amp;Collect buys
             <input id="simPc" type="number" min="0" step="100" value="0" />
           </label>
-          <label>Pick strategy
+          <label>
+            <span class="label-row">
+              Pick strategy
+              <span class="info" tabindex="0" aria-label="Pick strategy help">ⓘ
+                <span class="tooltip" role="tooltip">
+                  <strong>How the simulator opens Pick &amp; Collect tiles:</strong>
+                  <span><b>RANDOM_UNOPENED</b> — picks a random tile that hasn't been
+                  opened yet. Models a typical player clicking around at random.</span>
+                  <span><b>SEQUENTIAL</b> — opens tiles in board order, continuing from the
+                  last tile opened (1, 2, 3 …). Deterministic sweep of the board.</span>
+                  <span><b>COLLECT_FIRST</b> — always opens the lowest-index unopened tile
+                  (restarting the scan from the top each pick). A fixed, repeatable order.</span>
+                  <em>Tile values are fully random, so the strategy never changes the RTP —
+                  it only controls the order tiles are revealed.</em>
+                </span>
+              </span>
+            </span>
             <select id="simStrategy">
               <option value="RANDOM_UNOPENED">RANDOM_UNOPENED</option>
               <option value="SEQUENTIAL">SEQUENTIAL</option>

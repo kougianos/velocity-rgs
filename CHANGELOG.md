@@ -45,7 +45,7 @@ All notable changes to this project are documented here.
 
 ### Documentation (Milestone 7)
 
-- Added [`README.md`](../README.md) at the repository root and [`README.md`](README.md) in the server module. The `be-requirements.md` blueprint received `Milestone 7 — QA Readiness & Operational Tooling` (Section 7), `Appendix A.19 — RTP Simulator HTTP API`, and `Appendix A.20 — Dev & QA Helpers` ahead of implementation.
+- Added [`README.md`](README.md) at the repository root. The `be-requirements.md` blueprint received `Milestone 7 — QA Readiness & Operational Tooling` (Section 7), `Appendix A.19 — RTP Simulator HTTP API`, and `Appendix A.20 — Dev & QA Helpers` ahead of implementation.
 
 ### Deferred from Milestone 7
 

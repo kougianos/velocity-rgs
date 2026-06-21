@@ -1,6 +1,6 @@
 # Running Locally
 
-This guide walks you through spinning up the full Velocity RGS stack on your machine: Postgres, Redis, the Spring Boot server, and the React/PixiJS client.
+This guide walks you through spinning up the full Velocity RGS stack on your machine: Postgres, Redis, and the Spring Boot server. The server ships a built-in browser client (a self-contained HTML/CSS/JS app served directly by Spring Boot), so there is **no separate frontend build**.
 
 ---
 
@@ -11,10 +11,6 @@ This guide walks you through spinning up the full Velocity RGS stack on your mac
 | **Docker** + Docker Compose | Docker Desktop 4.x | https://www.docker.com/products/docker-desktop |
 | **JDK 21** | 21.0.x | https://adoptium.net or `sdk install java 21` |
 | **Maven** | 3.9+ | Bundled with most IDEs, or `brew install maven` |
-| **Node.js** | 20.10+ | https://nodejs.org or `nvm install 20` |
-| **pnpm** | 9.0+ | `npm install -g pnpm` |
-
-> **Note:** JDK and Maven are needed for the server only. Node.js and pnpm are needed for the client only.
 
 ---
 
@@ -43,14 +39,15 @@ Both should show `healthy` in the STATUS column.
 
 ## Step 2 — Start the Server
 
+From the **repository root**:
+
 ```bash
-cd server
 mvn spring-boot:run
 ```
 
 The server starts on **`http://localhost:8080`** in **demo mode** (the default — no flags
 needed). Flyway migrations run automatically on startup. To switch modes, edit the two
-switches at the top of [`server/src/main/resources/application.yml`](server/src/main/resources/application.yml)
+switches at the top of [`src/main/resources/application.yml`](src/main/resources/application.yml)
 (`rgs.mode` and `rgs.wallet.mode`) or override at launch, e.g.
 `mvn spring-boot:run -Drgs.mode=production -Drgs.wallet.mode=operator`.
 
@@ -58,6 +55,7 @@ Useful server URLs:
 
 | URL | Purpose |
 |---|---|
+| `http://localhost:8080/` | Built-in browser client (demo mode) |
 | `http://localhost:8080/swagger-ui.html` | Interactive API explorer |
 | `http://localhost:8080/v3/api-docs` | Raw OpenAPI JSON spec |
 | `http://localhost:8080/actuator/health` | Health check (`{"status":"UP"}`) |
@@ -79,11 +77,11 @@ export RGS_REDIS_PORT=6379
 
 ---
 
-## Built-in Demo Test Harness (no client build required)
+## Step 3 — Play the Demo
 
-The server ships a self-contained vanilla **HTML/CSS/JS** test harness under
-`server/src/main/resources/static/`. It is served directly by Spring Boot and
-needs **no Node.js, pnpm, or React build** — only the `demo` profile (Step 2).
+The built-in browser client is a self-contained vanilla **HTML/CSS/JS** app under
+[`src/main/resources/static/`](src/main/resources/static/). It is served directly by Spring
+Boot and needs **no Node.js, pnpm, or React build** — only the `demo` profile (Step 2).
 
 1. With the server running, open **`http://localhost:8080/`** in your browser.
 2. The page **auto-creates a demo player** (it mints a JWT with `PLAYER` + `ADMIN`
@@ -103,107 +101,26 @@ What you can do from the page:
 | **New Player** | re-mints a token + fresh session |
 
 The **Last Response** panel shows the raw JSON of every call for quick debugging.
-This harness is intended purely for exercising the backend; the full-featured
-player experience is the React/PixiJS client below.
-
----
-
-## Step 3 — Start the Client
-
-In a **new terminal**, from the repository root:
-
-```bash
-cd client
-
-# First time only — copy the example env file
-cp .env.example .env.local
-# .env.local is pre-configured for local development (VITE_API_BASE_URL=http://localhost:8080)
-
-# Install dependencies (first time only)
-pnpm install
-
-# Start the dev server
-pnpm dev
-```
-
-The client starts on **`http://localhost:5173`**.
-
-### `.env.local` defaults
-
-The `.env.example` already points to the local server. The most important variables:
-
-```env
-VITE_API_BASE_URL=http://localhost:8080
-VITE_DEFAULT_GAME_ID=aztec-fire
-VITE_DEFAULT_CURRENCY=EUR
-VITE_ENABLE_DEV_TOKEN=true   # show the login panel (needed for local demo)
-```
-
-Enable the debug HUD if you want to inspect trace IDs in the UI:
-
-```env
-VITE_ENABLE_DEBUG_HUD=true
-```
-
----
-
-## Step 4 — Play the Demo
-
-1. Open **`http://localhost:5173`** in your browser.
-2. You will be redirected to the login panel at `/auth`.
-3. Fill in any `Player ID` and `Session ID` (e.g. `p-1001` / `s-2001`), set currency to `EUR`, and click **Get Token**.
-   - This mints a JWT by calling the server's demo-only `POST /api/v1/dev/token` endpoint.
-4. You are redirected to `/play` — the slot canvas loads and you can spin.
 
 ### Demo starting balance
 
-The server seeds a **10,000 EUR** fake balance for every new player on first login. Use the admin panel to change it (see below).
-
----
-
-## Using the Admin Panel
-
-Navigate to `/admin` in the browser. You need a token with the `ADMIN` role:
-
-1. On the `/auth` login panel, add `ADMIN` to the **Roles** field (alongside `PLAYER`).
-2. Log in and navigate to `/admin`.
-
-Admin tabs:
-- **Wallet** — set an arbitrary balance for any player
-- **Session** — inspect the live session state (Postgres + Redis cache)
-- **Round** — view a round's matrix, RNG draws, and win lines
-- **Replay** — reconstruct a round server-side and verify it is bit-exact
-- **Simulator** — run the RTP simulator (up to 100k spins via HTTP)
+The server seeds a **10,000 EUR** fake balance for every new player on first login. Use the
+admin controls on the page to change it.
 
 ---
 
 ## Running Tests
 
-### Server tests
+From the **repository root**:
 
 ```bash
-cd server
 mvn -B verify
 ```
 
 Integration tests spin up Testcontainers (Docker required). Full suite takes ~2–3 minutes.
 
-### Client tests
-
 ```bash
-cd client
-pnpm test --run        # unit tests only (Vitest, jsdom)
-pnpm test:coverage     # with coverage report
-pnpm verify            # lint + typecheck + tests + production build
-```
-
-### Client E2E tests (Playwright)
-
-The E2E suite requires the full stack to be running (Steps 1–3 above):
-
-```bash
-cd client
-pnpm exec playwright test
+mvn -B test            # unit + integration tests only
 ```
 
 ---
@@ -211,8 +128,6 @@ pnpm exec playwright test
 ## Stopping Everything
 
 ```bash
-# Stop the client dev server — Ctrl+C in its terminal
-
 # Stop the server — Ctrl+C in its terminal
 
 # Stop and remove infra containers
@@ -232,8 +147,7 @@ docker compose down -v
 |---|---|---|
 | `5432` | Postgres | `RGS_DB_URL=jdbc:postgresql://localhost:<port>/rgs` |
 | `6379` | Redis | `RGS_REDIS_HOST=localhost RGS_REDIS_PORT=<port>` |
-| `8080` | Server | Edit `server.port` in `server/src/main/resources/application.yml` and update `VITE_API_BASE_URL` |
-| `5173` | Client dev server | Edit `server.port` in `client/vite.config.ts` |
+| `8080` | Server | Edit `server.port` in `src/main/resources/application.yml` |
 
 ### Server fails to start — "relation does not exist"
 
@@ -243,19 +157,13 @@ Flyway migrations did not run. Ensure Postgres is healthy before starting the se
 docker compose ps   # check Status = healthy
 ```
 
-### Client shows "Missing required env var VITE_API_BASE_URL"
-
-You have not created `.env.local`. Run:
-
-```bash
-cp client/.env.example client/.env.local
-```
-
 ### "AUTH_FAILED" on every request
 
-The client has no token or the token expired. Go to `http://localhost:5173/auth` and log in again.
-Make sure the server is running with `--profiles=demo` so the `/api/v1/dev/token` endpoint is available.
+The token expired or the server is not in demo mode. Reload `http://localhost:8080/` to mint a
+fresh token, and make sure the server is running with `rgs.mode=demo` so the
+`/api/v1/dev/token` endpoint is available.
 
 ### Testcontainers integration tests fail on Windows
 
-Ensure Docker Desktop is running and the Docker socket is accessible. Use the default Docker Desktop settings (WSL 2 backend recommended).
+Ensure Docker Desktop is running and the Docker socket is accessible. Use the default Docker
+Desktop settings (WSL 2 backend recommended).

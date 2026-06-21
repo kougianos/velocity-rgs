@@ -1,28 +1,26 @@
-name: Server CI
+name: CI
 
 on:
   push:
     paths:
-      - "server/**"
-      - ".github/workflows/server-ci.yml"
+      - "src/**"
+      - "pom.xml"
+      - ".github/workflows/ci.yml"
   pull_request:
     paths:
-      - "server/**"
-      - ".github/workflows/server-ci.yml"
+      - "src/**"
+      - "pom.xml"
+      - ".github/workflows/ci.yml"
   workflow_dispatch:
 
 concurrency:
-  group: server-ci-${{ github.ref }}
+  group: ci-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
   verify:
     name: mvn verify
     runs-on: ubuntu-latest
-
-    defaults:
-      run:
-        working-directory: server
 
     steps:
       - name: Checkout
@@ -43,6 +41,6 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: surefire-reports
-          path: server/target/surefire-reports/
+          path: target/surefire-reports/
           if-no-files-found: ignore
           retention-days: 7

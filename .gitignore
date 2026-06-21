@@ -68,7 +68,7 @@ temp/
 secrets/
 
 # ──────────────────────────────────────────────────────────────────────
-# Backend: Java / Maven / Gradle (server/)
+# Java / Maven / Gradle
 # ──────────────────────────────────────────────────────────────────────
 target/
 build/
@@ -98,63 +98,6 @@ gradle-app.setting
 **/target/site/
 **/target/jacoco.exec
 **/target/jacoco-it.exec
-
-# ──────────────────────────────────────────────────────────────────────
-# Frontend: Node / TypeScript / React / PixiJS (client/)
-# ──────────────────────────────────────────────────────────────────────
-node_modules/
-.pnp
-.pnp.js
-.pnp.cjs
-.yarn/cache
-.yarn/unplugged
-.yarn/build-state.yml
-.yarn/install-state.gz
-.pnpm-store/
-
-# Build output
-dist/
-dist-ssr/
-build/
-out/
-.next/
-.nuxt/
-.svelte-kit/
-.vite/
-.turbo/
-.rollup.cache/
-storybook-static/
-
-# TypeScript
-*.tsbuildinfo
-.tsc-cache/
-
-# Test / coverage
-coverage/
-.nyc_output/
-*.lcov
-junit.xml
-playwright-report/
-test-results/
-.cypress/videos/
-.cypress/screenshots/
-
-# Lint / format caches
-.eslintcache
-.stylelintcache
-.prettiercache
-
-# Package manager artifacts (lockfiles kept on purpose)
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
-lerna-debug.log*
-
-# PixiJS / asset processing (generated)
-**/assets/generated/
-**/public/assets/atlas/*.json.gz
-*.spine.atlas.gz
 
 # ──────────────────────────────────────────────────────────────────────
 # Docker / infra

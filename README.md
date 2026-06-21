@@ -28,7 +28,7 @@ Boot at `http://localhost:8080/` in demo mode — no separate frontend build, no
                      │ Idempotency-Key: <UUID>
                      │ X-Trace-Id: <UUID>
 ┌────────────────────▼────────────────────────────────┐
-│                 Spring Boot RGS                      │
+│                 Spring Boot RGS                     │
 │                                                     │
 │  Slot Game API  ─── Session FSM ─── Math Engine     │
 │  Wallet API     ─── Audit/Replay ─── RTP Simulator  │
@@ -111,8 +111,8 @@ Each is a 3×5, 20-payline slot, fully playable end-to-end with these mechanics:
 | **Base Game Spin** | Spin button | Reel grid generated from `BASE` strips, payline eval, debit + optional credit |
 | **Free Spins** | 3+ Scatter symbols or Bonus Buy | `FREE_SPINS_BUY` (80× bet); 10 free spins on high-RTP `FREE_SPINS` reel strips; re-triggers add 5 spins; single accumulated credit on settlement |
 | **Power Bet** | Toggle in HUD | Sends `powerBetActive=true`; server switches to `POWER_BET` reel strips; bet multiplied by 1.5× |
-| **Bonus Buy** | Buy panel | `FREE_SPINS_BUY` (80× bet) or `PICK_COLLECT_BUY` (120× bet); server debit → saga entry |
-| **Pick & Collect** | Natural trigger or Bonus Buy | Deterministic 12-tile board generated at feature start; CREDITS / MULTIPLIER / COLLECT / BLANK tiles; 5 picks; single credit on completion |
+| **Bonus Buy** | Buy panel | `FREE_SPINS_BUY` only; server debit → saga entry (Pick & Collect is no longer buyable) |
+| **Pick & Collect** | Organic in-spin trigger (`~1 in triggerOneInN`) | Deterministic 12-tile board generated at feature start; CREDITS / MULTIPLIER / COLLECT / END tiles; keep picking until an END tile forfeits the unbanked pot (only COLLECT-banked wins survive); single credit on completion |
 
 ---
 

@@ -37,8 +37,10 @@ class SlotMathLoaderTest {
         assertThat(def.reelStrips().get(ReelStripSet.BASE)).hasSize(5);
         def.reelStrips().values().forEach(strips ->
                 strips.forEach(strip -> assertThat(strip.length()).isGreaterThanOrEqualTo(30)));
-        assertThat(def.bonusBuyOptions()).hasSize(2);
+        // Free Spins is the only purchasable feature; Pick & Collect is organic-trigger-only.
+        assertThat(def.bonusBuyOptions()).hasSize(1);
         assertThat(def.bonusBuyOptions().get(0).targetState()).isEqualTo(GameState.FREE_SPINS_AWAITING);
+        assertThat(def.pickCollect().organicTriggerEnabled()).isTrue();
         assertThat(def.limits().maxWinPerRoundMultiplier()).isEqualTo(10000);
     }
 

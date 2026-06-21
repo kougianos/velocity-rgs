@@ -42,7 +42,7 @@ public class GameCatalogController {
                 .maxWinMultiplier(math.limits().maxWinPerRoundMultiplier())
                 .freeSpinsAwarded(math.scatterTriggers().freeSpinsAwarded())
                 .freeSpinsBuyCostMultiplier(buyCost(math, BonusBuyType.FREE_SPINS_BUY))
-                .pickCollectBuyCostMultiplier(buyCost(math, BonusBuyType.PICK_COLLECT_BUY))
+                .pickCollectTriggerOneInN(math.pickCollect().triggerOneInN())
                 .build();
     }
 
@@ -62,6 +62,6 @@ public class GameCatalogController {
             int maxWinMultiplier,
             int freeSpinsAwarded,
             BigDecimal freeSpinsBuyCostMultiplier,
-            BigDecimal pickCollectBuyCostMultiplier
+            int pickCollectTriggerOneInN
     ) {}
 }

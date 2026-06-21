@@ -191,7 +191,7 @@ public class SlotEngineService {
             List<String> reasonCodes = new ArrayList<>(evaluation.reasonCodes());
 
             SpinPostProcessing post = postProcessSpin(transition.newState(), session, math, evaluation,
-                    grid, effectiveBet, request.powerBetActive());
+                    grid, effectiveBet, request.powerBetActive(), rng);
             reasonCodes.addAll(post.reasonCodes());
             SessionState newState = post.newState();
 
@@ -565,7 +565,7 @@ public class SlotEngineService {
     private SpinPostProcessing postProcessSpin(SessionState afterFsm, GameSession session,
                                                SlotMathDefinition math, EvaluationResult evaluation,
                                                GridGenerationResult grid, BigDecimal bet,
-                                               boolean powerBetActive) {
+                                               boolean powerBetActive, RandomNumberGenerator rng) {
         int scatterCount = countScatters(grid.matrix(), math);
         List<String> reasonCodes = new ArrayList<>();
         BigDecimal creditAmount = BigDecimal.ZERO;
@@ -583,6 +583,15 @@ public class SlotEngineService {
                 freeSpinsAwarded = math.scatterTriggers().freeSpinsAwarded();
                 newState = new SessionState.FreeSpinsAwaiting(freeSpinsAwarded, bet);
                 reasonCodes.add("TRIGGERED_BY_SCATTER");
+            } else if (rollPickCollectTrigger(math, rng)) {
+                // Organic Pick & Collect trigger (1 in triggerOneInN), mutually exclusive with a
+                // free-spins award on the same spin. The board is generated later when the player
+                // begins the feature via /feature/start, mirroring the free-spins awaiting flow.
+                newState = new SessionState.PickCollectAwaiting(Map.of(
+                        "boardSize", math.pickCollect().boardSize(),
+                        "trigger", "ORGANIC"));
+                pickCollectTriggered = true;
+                reasonCodes.add("PICK_COLLECT_TRIGGERED");
             }
         } else if (afterFsm instanceof SessionState.FreeSpinsLoop loop) {
             BigDecimal acc = loop.accumulatedWin().add(evaluation.totalWin());
@@ -603,6 +612,17 @@ public class SlotEngineService {
         }
         return new SpinPostProcessing(newState, creditAmount, creditType, reasonCodes,
                 freeSpinsAwarded, pickCollectTriggered, false);
+    }
+
+    /**
+     * One per-spin draw of the organic Pick &amp; Collect trigger ({@code 1 in triggerOneInN}). The draw
+     * is taken from the spin RNG so it is captured in the round's draw log and replays deterministically.
+     */
+    private boolean rollPickCollectTrigger(SlotMathDefinition math, RandomNumberGenerator rng) {
+        if (!math.pickCollect().organicTriggerEnabled()) {
+            return false;
+        }
+        return rng.nextIndex(math.pickCollect().triggerOneInN()) == 0;
     }
 
     private int countScatters(int[][] matrix, SlotMathDefinition math) {

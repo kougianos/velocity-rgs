@@ -83,7 +83,6 @@ const els = {
   powerBetMultLabel: $("powerBetMultLabel"),
   spinBtn: $("spinBtn"),
   buyFreeSpins: $("buyFreeSpins"),
-  buyPickCollect: $("buyPickCollect"),
   startFeature: $("startFeature"),
   pickPanel: $("pickPanel"),
   pickBoard: $("pickBoard"),
@@ -95,7 +94,6 @@ const els = {
   simBase: $("simBase"),
   simPower: $("simPower"),
   simFs: $("simFs"),
-  simPc: $("simPc"),
   simStrategy: $("simStrategy"),
   runSim: $("runSim"),
   simReport: $("simReport"),
@@ -108,7 +106,6 @@ const els = {
   gameName: $("gameName"),
   gameTagline: $("gameTagline"),
   buyFreeSpinsCost: $("buyFreeSpinsCost"),
-  buyPickCollectCost: $("buyPickCollectCost"),
   fsModal: $("fsModal"),
   fsModalIcon: $("fsModalIcon"),
   fsModalTitle: $("fsModalTitle"),
@@ -338,7 +335,6 @@ function renderActions() {
   const can = (a) => actions.includes(a);
   els.spinBtn.disabled = !can("SPIN");
   els.buyFreeSpins.disabled = !can("BUY_FEATURE");
-  els.buyPickCollect.disabled = !can("BUY_FEATURE");
 
   const needsStart = can("START_FREE_SPINS") || can("START_PICK_COLLECT");
   els.startFeature.classList.toggle("hidden", !needsStart);
@@ -673,7 +669,6 @@ async function runSimulation() {
         spinsBaseGame: Number(els.simBase.value),
         spinsPowerBet: Number(els.simPower.value),
         spinsBonusBuyFreeSpins: Number(els.simFs.value),
-        spinsBonusBuyPickCollect: Number(els.simPc.value),
         pickStrategy: els.simStrategy.value,
       },
     });
@@ -756,7 +751,6 @@ function bindEvents() {
     if (!els.powerBet.checked) state.baseBet = Number(els.betSize.value) || state.baseBet;
   });
   els.buyFreeSpins.addEventListener("click", () => buyFeature("FREE_SPINS_BUY"));
-  els.buyPickCollect.addEventListener("click", () => buyFeature("PICK_COLLECT_BUY"));
   els.startFeature.addEventListener("click", () => {
     const feature = els.startFeature.dataset.feature || "FREE_SPINS";
     // Free spins auto-play; Pick & Collect still enters its interactive board.
@@ -786,9 +780,6 @@ async function applyGameInfo() {
     if (!info) return;
     if (info.freeSpinsBuyCostMultiplier != null) {
       els.buyFreeSpinsCost.textContent = `(×${Number(info.freeSpinsBuyCostMultiplier)})`;
-    }
-    if (info.pickCollectBuyCostMultiplier != null) {
-      els.buyPickCollectCost.textContent = `(×${Number(info.pickCollectBuyCostMultiplier)})`;
     }
   } catch (e) {
     // non-fatal — labels just keep their placeholder

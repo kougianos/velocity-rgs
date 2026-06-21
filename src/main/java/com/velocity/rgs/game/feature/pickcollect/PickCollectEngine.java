@@ -55,7 +55,8 @@ public class PickCollectEngine {
             tiles.add(new PickCollectTile(selected.type(), value));
         }
 
-        int picks = initialRemainingPicks > 0 ? initialRemainingPicks : resolveInitialPicks(config.completion());
+        int picks = initialRemainingPicks > 0 ? initialRemainingPicks
+                : resolveInitialPicks(config.completion(), boardSize);
         return new PickCollectState(tiles, betSize, config.completion(), picks);
     }
 
@@ -95,6 +96,10 @@ public class PickCollectEngine {
             }
             case BLANK -> { /* no-op */ }
             case END -> {
+                // Hitting END ends the feature and forfeits the unbanked pot — only amounts
+                // already banked via a COLLECT tile (totalFeatureWin) survive. This is what makes
+                // COLLECT a genuine bank-vs-risk decision (classic hold-&-win semantics).
+                state.setCurrentCollected(BigDecimal.ZERO);
                 state.markCompleted();
                 reasons.add("END_TILE_REVEALED");
             }
@@ -102,6 +107,8 @@ public class PickCollectEngine {
         state.recordReveal(new PickCollectState.RevealedPick(position, tile.type(), tile.value()));
 
         if (state.status() != PickCollectState.Status.COMPLETED && isCompleted(state, config)) {
+            // Board exhausted (or fixed-pick / threshold rule met) without hitting END: the player
+            // keeps whatever is currently unbanked, so currentCollected is NOT forfeited here.
             state.markCompleted();
             reasons.add("PICK_COMPLETED");
         }
@@ -150,8 +157,9 @@ public class PickCollectEngine {
     private boolean isCompleted(PickCollectState state, PickCollectConfig config) {
         PickCollectCompletion completion = config.completion();
         return switch (completion.type()) {
-            case FIXED_PICKS -> state.remainingPicks() <= 0;
-            case END_TILE -> false; // handled inline when END is revealed
+            // END_TILE ends inline when an END is revealed; this is the board-exhaustion fallback
+            // (every tile opened without hitting END) so the feature always terminates.
+            case FIXED_PICKS, END_TILE -> state.remainingPicks() <= 0;
             case COLLECT_THRESHOLD -> {
                 BigDecimal threshold = BigDecimal.valueOf(completion.value());
                 yield state.totalFeatureWin().add(state.currentCollected()).compareTo(threshold) >= 0;
@@ -159,11 +167,13 @@ public class PickCollectEngine {
         };
     }
 
-    private int resolveInitialPicks(PickCollectCompletion completion) {
+    private int resolveInitialPicks(PickCollectCompletion completion, int boardSize) {
+        // END_TILE has no fixed pick count — the player may open every tile until an END appears,
+        // so the natural ceiling is the board size (also yields a sane "picks left" countdown).
         if (completion.type() == PickCollectCompletion.CompletionType.FIXED_PICKS) {
             return completion.value();
         }
-        return Integer.MAX_VALUE;
+        return boardSize;
     }
 
     /** Result of a single {@link #applyPick} call. */

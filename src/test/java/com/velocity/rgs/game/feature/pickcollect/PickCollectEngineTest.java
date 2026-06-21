@@ -39,7 +39,8 @@ class PickCollectEngineTest {
                         new PickTileWeight(PickTileType.COLLECT, 15, null),
                         new PickTileWeight(PickTileType.BLANK, 10, null)
                 ),
-                5000);
+                5000,
+                0);
     }
 
     @Test

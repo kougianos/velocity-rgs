@@ -30,11 +30,11 @@ import java.util.concurrent.atomic.LongAdder;
  * Pure-math RTP simulator harness exposed both as a CLI runner ({@link RtpSimulator}) and as the
  * synchronous service backing {@code POST /api/v1/admin/simulator/run} (M7 Task 7.6 / A.19).
  *
- * <p>Bypasses wallet/session persistence so 100k+ rounds complete in seconds. Three channels are
- * sampled independently: BASE_GAME (with naturally triggered free spins folded into the win-only
- * column), BONUS_BUY_FREE_SPINS (free-spins purchase) and BONUS_BUY_PICK_COLLECT (Pick &amp; Collect
- * purchase). Each channel's RTP = totalWin / totalBet * 100. The {@code overall} channel is the
- * wager-weighted aggregate across all non-empty channels.
+ * <p>Bypasses wallet/session persistence so 100k+ rounds complete in seconds. Channels are sampled
+ * independently: BASE_GAME and POWER_BET (each with naturally triggered free spins <em>and</em>
+ * organically triggered Pick &amp; Collect folded into the win-only column) and BONUS_BUY_FREE_SPINS
+ * (the one remaining purchasable feature). Each channel's RTP = totalWin / totalBet * 100. The
+ * {@code overall} channel is the wager-weighted aggregate across all non-empty channels.
  */
 @Slf4j
 @Service
@@ -56,38 +56,33 @@ public class RtpSimulationService {
         Aggregator base = new Aggregator();
         Aggregator powerBet = new Aggregator();
         Aggregator buyFs = new Aggregator();
-        Aggregator buyPc = new Aggregator();
         LongAdder freeSpinTriggers = new LongAdder();
         LongAdder pickEntries = new LongAdder();
 
         for (long i = 0; i < request.spinsBaseGame(); i++) {
-            simulateBaseSpin(math, newRng(), request.bet(), base, freeSpinTriggers);
+            simulateBaseSpin(math, newRng(), request.bet(), base, freeSpinTriggers, pickEntries,
+                    request.pickStrategy());
         }
         for (long i = 0; i < request.spinsPowerBet(); i++) {
-            simulatePowerBetSpin(math, newRng(), request.bet(), powerBet, freeSpinTriggers);
+            simulatePowerBetSpin(math, newRng(), request.bet(), powerBet, freeSpinTriggers, pickEntries,
+                    request.pickStrategy());
         }
         for (long i = 0; i < request.spinsBonusBuyFreeSpins(); i++) {
             simulateBonusBuyFreeSpins(math, newRng(), request.bet(), buyFs);
-        }
-        for (long i = 0; i < request.spinsBonusBuyPickCollect(); i++) {
-            simulateBonusBuyPickCollect(math, newRng(), request.bet(),
-                    request.pickStrategy(), buyPc, pickEntries);
         }
 
         Map<String, RtpReport.Channel> channels = new LinkedHashMap<>();
         channels.put("BASE_GAME", base.snapshot());
         channels.put("POWER_BET", powerBet.snapshot());
         channels.put("BONUS_BUY_FREE_SPINS", buyFs.snapshot());
-        channels.put("BONUS_BUY_PICK_COLLECT", buyPc.snapshot());
 
-        RtpReport.Channel overall = overall(base, powerBet, buyFs, buyPc);
+        RtpReport.Channel overall = overall(base, powerBet, buyFs);
         long elapsed = System.currentTimeMillis() - start;
 
-        log.info("RTP simulation runId={} game={}/{} bet={} elapsedMs={} BASE={}% POWER={}% FS_BUY={}% PICK_BUY={}% OVERALL={}%",
+        log.info("RTP simulation runId={} game={}/{} bet={} elapsedMs={} BASE={}% POWER={}% FS_BUY={}% OVERALL={}% pickEntries={}",
                 effectiveRunId, request.gameId(), request.mathVersion(), request.bet(), elapsed,
                 channels.get("BASE_GAME").rtpPercent(), channels.get("POWER_BET").rtpPercent(),
-                channels.get("BONUS_BUY_FREE_SPINS").rtpPercent(),
-                channels.get("BONUS_BUY_PICK_COLLECT").rtpPercent(), overall.rtpPercent());
+                channels.get("BONUS_BUY_FREE_SPINS").rtpPercent(), overall.rtpPercent(), pickEntries.sum());
 
         return RtpReport.builder()
                 .runId(effectiveRunId)
@@ -106,7 +101,8 @@ public class RtpSimulationService {
     // ------------------------------------------------------------------ channels
 
     private void simulateBaseSpin(SlotMathDefinition math, RandomNumberGenerator rng, BigDecimal bet,
-                                  Aggregator base, LongAdder freeSpinTriggers) {
+                                  Aggregator base, LongAdder freeSpinTriggers, LongAdder pickEntries,
+                                  RtpSimulationRequest.PickStrategy strategy) {
         GridGenerationResult grid = gridEngine.generate(math, ReelStripSet.BASE, rng);
         EvaluationResult eval = reelEvaluator.evaluate(grid.matrix(), bet, math);
         base.record(bet, eval.totalWin());
@@ -115,6 +111,11 @@ public class RtpSimulationService {
             freeSpinTriggers.increment();
             BigDecimal freeWin = simulateFreeSpins(math, rng, bet, math.scatterTriggers().freeSpinsAwarded());
             base.recordWinOnly(freeWin);
+        } else if (rollPickCollectTrigger(math, rng)) {
+            // Pick & Collect is triggered organically (and never on the same spin that awards free
+            // spins). Its win is funded by base wagers, so it folds into the BASE_GAME channel.
+            pickEntries.increment();
+            base.recordWinOnly(simulatePickCollect(math, rng, bet, strategy));
         }
     }
 
@@ -125,7 +126,8 @@ public class RtpSimulationService {
      * reported RTP reflects what the player actually experiences on a power bet.
      */
     private void simulatePowerBetSpin(SlotMathDefinition math, RandomNumberGenerator rng, BigDecimal bet,
-                                      Aggregator powerBet, LongAdder freeSpinTriggers) {
+                                      Aggregator powerBet, LongAdder freeSpinTriggers, LongAdder pickEntries,
+                                      RtpSimulationRequest.PickStrategy strategy) {
         BigDecimal stake = bet.multiply(math.powerBet().betMultiplier());
         GridGenerationResult grid = gridEngine.generate(math, ReelStripSet.POWER_BET, rng);
         EvaluationResult eval = reelEvaluator.evaluate(grid.matrix(), stake, math);
@@ -135,6 +137,9 @@ public class RtpSimulationService {
             freeSpinTriggers.increment();
             BigDecimal freeWin = simulateFreeSpins(math, rng, stake, math.scatterTriggers().freeSpinsAwarded());
             powerBet.recordWinOnly(freeWin);
+        } else if (rollPickCollectTrigger(math, rng)) {
+            pickEntries.increment();
+            powerBet.recordWinOnly(simulatePickCollect(math, rng, stake, strategy));
         }
     }
 
@@ -145,22 +150,25 @@ public class RtpSimulationService {
         agg.record(cost, win);
     }
 
-    private void simulateBonusBuyPickCollect(SlotMathDefinition math, RandomNumberGenerator rng,
-                                             BigDecimal bet, RtpSimulationRequest.PickStrategy strategy,
-                                             Aggregator agg, LongAdder pickEntries) {
-        BigDecimal cost = buyCost(math, BonusBuyType.PICK_COLLECT_BUY, bet);
-        PickCollectState pickState = pickCollectEngine.startFeature(math.pickCollect(), bet, rng,
-                math.pickCollect().completion().value());
-        pickEntries.increment();
+    /** One per-spin draw of the organic Pick &amp; Collect trigger ({@code 1 in triggerOneInN}). */
+    private boolean rollPickCollectTrigger(SlotMathDefinition math, RandomNumberGenerator rng) {
+        if (!math.pickCollect().organicTriggerEnabled()) {
+            return false;
+        }
+        return rng.nextIndex(math.pickCollect().triggerOneInN()) == 0;
+    }
+
+    /** Plays one Pick &amp; Collect feature to completion and returns the finalized win amount. */
+    private BigDecimal simulatePickCollect(SlotMathDefinition math, RandomNumberGenerator rng,
+                                           BigDecimal bet, RtpSimulationRequest.PickStrategy strategy) {
+        PickCollectState pickState = pickCollectEngine.startFeature(math.pickCollect(), bet, rng, 0);
         int seqCursor = 0;
         while (pickState.status() == PickCollectState.Status.ACTIVE) {
             int next = nextPick(pickState, rng, strategy, seqCursor);
             seqCursor = next + 1;
             pickCollectEngine.applyPick(pickState, next, math.pickCollect());
         }
-        PickCollectEngine.FinalizationResult fin = pickCollectEngine.finalizeFeature(pickState,
-                math.pickCollect(), "EUR");
-        agg.record(cost, fin.finalWin().amount());
+        return pickCollectEngine.finalizeFeature(pickState, math.pickCollect(), "EUR").finalWin().amount();
     }
 
     private BigDecimal simulateFreeSpins(SlotMathDefinition math, RandomNumberGenerator rng,

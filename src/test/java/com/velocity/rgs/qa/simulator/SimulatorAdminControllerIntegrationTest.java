@@ -45,7 +45,6 @@ class SimulatorAdminControllerIntegrationTest {
                 .put("bet", "1.00")
                 .put("spinsBaseGame", 25)
                 .put("spinsBonusBuyFreeSpins", 5)
-                .put("spinsBonusBuyPickCollect", 5)
                 .put("pickStrategy", "RANDOM_UNOPENED")
                 .toString();
 
@@ -61,7 +60,6 @@ class SimulatorAdminControllerIntegrationTest {
         assertThat(out.get("channels")).isNotNull();
         assertThat(out.get("channels").get("BASE_GAME").get("spins").asLong()).isEqualTo(25);
         assertThat(out.get("channels").get("BONUS_BUY_FREE_SPINS").get("spins").asLong()).isEqualTo(5);
-        assertThat(out.get("channels").get("BONUS_BUY_PICK_COLLECT").get("spins").asLong()).isEqualTo(5);
         assertThat(out.get("overall").get("totalBet").decimalValue()).isPositive();
         assertThat(out.get("elapsedMillis").asLong()).isGreaterThanOrEqualTo(0);
         assertThat(auditRepo.findByRunId(out.get("runId").asText())).isPresent();
@@ -71,7 +69,7 @@ class SimulatorAdminControllerIntegrationTest {
     void runRequiresAdminRole() throws Exception {
         String body = mapper.createObjectNode()
                 .put("gameId", "aztec-fire").put("mathVersion", "v1").put("bet", "1.00")
-                .put("spinsBaseGame", 1).put("spinsBonusBuyFreeSpins", 0).put("spinsBonusBuyPickCollect", 0)
+                .put("spinsBaseGame", 1).put("spinsBonusBuyFreeSpins", 0)
                 .put("pickStrategy", "RANDOM_UNOPENED").toString();
         MvcResult res = mockMvc.perform(post("/api/v1/admin/simulator/run")
                         .header(HttpHeaders.AUTHORIZATION, "Bearer "
@@ -85,7 +83,7 @@ class SimulatorAdminControllerIntegrationTest {
     void rejectsInvalidRequest() throws Exception {
         String body = mapper.createObjectNode()
                 .put("gameId", "").put("mathVersion", "v1").put("bet", "1.00")
-                .put("spinsBaseGame", 1).put("spinsBonusBuyFreeSpins", 0).put("spinsBonusBuyPickCollect", 0)
+                .put("spinsBaseGame", 1).put("spinsBonusBuyFreeSpins", 0)
                 .put("pickStrategy", "RANDOM_UNOPENED").toString();
         MvcResult res = mockMvc.perform(post("/api/v1/admin/simulator/run")
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + JwtTestFactory.adminToken("p-admin"))
@@ -98,7 +96,7 @@ class SimulatorAdminControllerIntegrationTest {
     void serviceProducesNonZeroOverallRtpOverLargerSample() {
         RtpSimulationRequest req = RtpSimulationRequest.builder()
                 .gameId("aztec-fire").mathVersion("v1").bet(new BigDecimal("1.00"))
-                .spinsBaseGame(2000).spinsBonusBuyFreeSpins(0).spinsBonusBuyPickCollect(0)
+                .spinsBaseGame(2000).spinsBonusBuyFreeSpins(0)
                 .pickStrategy(RtpSimulationRequest.PickStrategy.RANDOM_UNOPENED)
                 .build();
         RtpReport report = simulationService.run(req, null);

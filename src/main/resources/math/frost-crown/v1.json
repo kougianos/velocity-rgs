@@ -38,15 +38,15 @@
     { "id": 20, "coords": [[0,0],[2,1],[2,2],[2,3],[0,4]] }
   ],
   "payTable": {
-    "1": { "3": 8.8712,  "4": 19.2209, "5": 35.4866 },
-    "2": { "3": 8.1319,  "4": 16.2638, "5": 31.0490 },
-    "3": { "3": 6.6534,  "4": 13.3068, "5": 26.6135 },
-    "4": { "3": 5.9141,  "4": 11.0890, "5": 22.1779 },
-    "5": { "3": 5.1748,  "4": 8.8712,  "5": 17.7423 },
-    "6": { "3": 5.1748,  "4": 8.8712,  "5": 17.7423 },
-    "7": { "3": 11.8282, "4": 26.6135, "5": 53.2270 },
-    "8": { "3": 9.6304,  "4": 20.7034, "5": 41.4068 },
-    "9": { "3": 13.3068, "4": 29.5705, "5": 66.5337 }
+    "1": { "3": 8.5101, "4": 18.4384, "5": 34.042 },
+    "2": { "3": 7.8009, "4": 15.6017, "5": 29.785 },
+    "3": { "3": 6.3825, "4": 12.7651, "5": 25.5301 },
+    "4": { "3": 5.6733, "4": 10.6376, "5": 21.2751 },
+    "5": { "3": 4.9641, "4": 8.5101, "5": 17.02 },
+    "6": { "3": 4.9641, "4": 8.5101, "5": 17.02 },
+    "7": { "3": 11.3467, "4": 25.5301, "5": 51.0602 },
+    "8": { "3": 9.2384, "4": 19.8606, "5": 39.7212 },
+    "9": { "3": 12.7651, "4": 28.3667, "5": 63.8252 }
   },
   "reelStrips": {
     "BASE": [
@@ -80,22 +80,17 @@
       "costMultiplier": 8,
       "targetState": "FREE_SPINS_AWAITING",
       "initialFeaturePayload": { "freeSpinsAwarded": 10 }
-    },
-    {
-      "buyType": "PICK_COLLECT_BUY",
-      "costMultiplier": 120,
-      "targetState": "PICK_COLLECT_AWAITING",
-      "initialFeaturePayload": { "boardSize": 12, "maxPicks": 5 }
     }
   ],
   "pickCollect": {
     "boardSize": 12,
-    "completion": { "type": "FIXED_PICKS", "value": 5 },
+    "completion": { "type": "END_TILE" },
+    "triggerOneInN": 369,
     "tileDistribution": [
-      { "type": "CREDITS",    "weight": 55, "valueRange": [1, 40] },
-      { "type": "MULTIPLIER", "weight": 18, "valueRange": [2, 4]  },
-      { "type": "COLLECT",    "weight": 19 },
-      { "type": "BLANK",      "weight": 8  }
+      { "type": "CREDITS",    "weight": 50, "valueRange": [1, 8] },
+      { "type": "MULTIPLIER", "weight": 12, "valueRange": [2, 2] },
+      { "type": "COLLECT",    "weight": 26 },
+      { "type": "END",        "weight": 12 }
     ],
     "maxFeatureWinMultiplier": 1500
   },

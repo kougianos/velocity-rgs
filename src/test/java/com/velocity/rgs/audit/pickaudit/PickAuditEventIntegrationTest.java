@@ -7,10 +7,10 @@ import com.velocity.rgs.common.idempotency.IdempotencyRecordRepository;
 import com.velocity.rgs.game.persistence.FeaturePurchaseEventRepository;
 import com.velocity.rgs.game.persistence.GameRoundRepository;
 import com.velocity.rgs.game.persistence.PickCollectSnapshotRepository;
-import com.velocity.rgs.math.domain.BonusBuyType;
 import com.velocity.rgs.session.persistence.GameSessionRepository;
 import com.velocity.rgs.session.service.SessionStore;
 import com.velocity.rgs.testsupport.JwtTestFactory;
+import com.velocity.rgs.testsupport.PickCollectTestSupport;
 import com.velocity.rgs.testsupport.RgsIntegrationTest;
 import com.velocity.rgs.wallet.persistence.WalletBalanceRepository;
 import com.velocity.rgs.wallet.persistence.WalletTransactionRepository;
@@ -73,16 +73,9 @@ class PickAuditEventIntegrationTest {
         JsonNode init = postJson("/api/v1/slot/init", null,
                 mapper.createObjectNode().put("gameId", GAME_ID).put("currency", CURRENCY).toString());
         String sessionId = init.get("sessionId").asText();
-        long version = init.get("sessionVersion").asLong();
 
-        // Buy Pick & Collect
-        JsonNode buy = postJson("/api/v1/slot/feature/buy", "idem-pa-buy",
-                mapper.createObjectNode()
-                        .put("gameId", GAME_ID).put("sessionId", sessionId)
-                        .put("sessionVersion", version)
-                        .put("buyType", BonusBuyType.PICK_COLLECT_BUY.name())
-                        .put("betSize", "1.00").toString());
-        version = buy.get("sessionVersion").asLong();
+        // Drop into PICK_COLLECT_AWAITING as the organic in-spin trigger would (no longer buyable).
+        long version = PickCollectTestSupport.forcePickCollectAwaiting(sessionStore, sessionId);
 
         // Start feature
         JsonNode start = postJson("/api/v1/slot/feature/start", "idem-pa-start",
@@ -93,8 +86,9 @@ class PickAuditEventIntegrationTest {
         version = start.get("sessionVersion").asLong();
         assertThat(listener.events).isEmpty();
 
+        int boardSize = start.get("activeFeatureView").get("boardSize").asInt();
         int picks = 0;
-        for (int i = 0; i < 5; i++) {
+        for (int i = 0; i < boardSize; i++) {
             JsonNode pick = postJson("/api/v1/slot/feature/pick", "idem-pa-pick-" + i,
                     mapper.createObjectNode()
                             .put("gameId", GAME_ID).put("sessionId", sessionId)

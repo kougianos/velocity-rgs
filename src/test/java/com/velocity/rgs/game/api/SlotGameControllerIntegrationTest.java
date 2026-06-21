@@ -11,6 +11,7 @@ import com.velocity.rgs.math.domain.BonusBuyType;
 import com.velocity.rgs.session.persistence.GameSessionRepository;
 import com.velocity.rgs.session.service.SessionStore;
 import com.velocity.rgs.testsupport.JwtTestFactory;
+import com.velocity.rgs.testsupport.PickCollectTestSupport;
 import com.velocity.rgs.testsupport.RgsIntegrationTest;
 import com.velocity.rgs.wallet.persistence.WalletBalanceRepository;
 import com.velocity.rgs.wallet.persistence.WalletTransactionRepository;
@@ -186,22 +187,13 @@ class SlotGameControllerIntegrationTest {
     }
 
     @Test
-    void pickCollectEndToEnd_buyThenStartThenAllPicksCreditFeatureWin() throws Exception {
+    void pickCollectEndToEnd_triggerThenStartThenAllPicksCreditFeatureWin() throws Exception {
         JsonNode init = initSession();
         String sessionId = init.get("sessionId").asText();
-        long version = init.get("sessionVersion").asLong();
 
-        // 1. Buy Pick & Collect bonus
-        String buyBody = mapper.createObjectNode()
-                .put("gameId", GAME_ID)
-                .put("sessionId", sessionId)
-                .put("sessionVersion", version)
-                .put("buyType", BonusBuyType.PICK_COLLECT_BUY.name())
-                .put("betSize", "1.00")
-                .toString();
-        JsonNode buy = postJson("/api/v1/slot/feature/buy", "idem-pick-buy", buyBody);
-        assertThat(buy.get("enteredState").asText()).isEqualTo("PICK_COLLECT_AWAITING");
-        version = buy.get("sessionVersion").asLong();
+        // 1. Drop into PICK_COLLECT_AWAITING as the organic in-spin trigger would (the feature is no
+        //    longer buyable, and the random trigger can't be forced over HTTP).
+        long version = PickCollectTestSupport.forcePickCollectAwaiting(sessionStore, sessionId);
 
         // 2. Transition into PICK_COLLECT_LOOP
         String startBody = mapper.createObjectNode()
@@ -215,8 +207,9 @@ class SlotGameControllerIntegrationTest {
         assertThat(start.get("activeFeatureView")).isNotNull();
         version = start.get("sessionVersion").asLong();
 
-        // 3. Execute 5 picks (fixed-picks completion = 5)
-        for (int i = 0; i < 5; i++) {
+        // 3. Pick until the feature completes (END tile revealed, or the 12-tile board is exhausted).
+        int boardSize = start.get("activeFeatureView").get("boardSize").asInt();
+        for (int i = 0; i < boardSize; i++) {
             String pickBody = mapper.createObjectNode()
                     .put("gameId", GAME_ID)
                     .put("sessionId", sessionId)
@@ -232,6 +225,7 @@ class SlotGameControllerIntegrationTest {
                 return;
             }
         }
+        throw new AssertionError("Pick & Collect did not complete within " + boardSize + " picks");
     }
 
     @Test

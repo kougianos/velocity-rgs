@@ -182,7 +182,7 @@ class GridGenerationEngineTest {
                 new PickCollectConfig(12,
                         new PickCollectCompletion(PickCollectCompletion.CompletionType.FIXED_PICKS, 5),
                         List.of(new PickTileWeight(PickTileType.BLANK, 10, null)),
-                        5000),
+                        5000, 0),
                 new Limits(10_000)
         );
     }

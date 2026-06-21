@@ -244,9 +244,12 @@ Required RGS -> Wallet Call Sequence:
 
 ### 4. Bonus Buy Feature
 * A configurable paid shortcut that allows a player to directly enter a feature state without waiting for a natural trigger.
-* The backend must support at least two buy types via config:
+* The backend supports buy types via config. As shipped, the only purchasable feature is:
   * `FREE_SPINS_BUY` (directly awards configured free spins)
-  * `PICK_COLLECT_BUY` (directly enters Pick & Collect feature loop)
+* `PICK_COLLECT_BUY` was retired (2026-06): a fixed-price buy into Pick & Collect made the feature's
+  high standalone RTP a guaranteed-profit exploit. Pick & Collect is now organic-trigger-only (see #5).
+  No game's `bonusBuyOptions` offers it; the `BonusBuyType.PICK_COLLECT_BUY` enum constant is retained
+  only so historical `FeaturePurchaseEvent` rows still deserialize.
 * Buy prices must be configurable as a bet multiplier (e.g., `80x`, `120x`) and calculated from the active base bet.
 * Bonus Buy must be gated by explicit game policy flags:
   * `bonusBuyEnabled` global game flag

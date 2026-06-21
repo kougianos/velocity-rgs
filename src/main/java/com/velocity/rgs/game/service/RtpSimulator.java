@@ -29,9 +29,6 @@ public class RtpSimulator implements CommandLineRunner {
     @Value("${rgs.simulator.bonusBuyFreeSpins:0}")
     private long bonusBuyFreeSpins;
 
-    @Value("${rgs.simulator.bonusBuyPickCollect:0}")
-    private long bonusBuyPickCollect;
-
     @Value("${rgs.simulator.gameId:aztec-fire}")
     private String gameId;
 
@@ -44,14 +41,12 @@ public class RtpSimulator implements CommandLineRunner {
     @Override
     public void run(String... args) {
         long buyFs = bonusBuyFreeSpins == 0 ? Math.max(1, spins / 50) : bonusBuyFreeSpins;
-        long buyPc = bonusBuyPickCollect == 0 ? Math.max(1, spins / 50) : bonusBuyPickCollect;
         RtpSimulationRequest req = RtpSimulationRequest.builder()
                 .gameId(gameId)
                 .mathVersion(mathVersion)
                 .bet(bet)
                 .spinsBaseGame(spins)
                 .spinsBonusBuyFreeSpins(buyFs)
-                .spinsBonusBuyPickCollect(buyPc)
                 .pickStrategy(RtpSimulationRequest.PickStrategy.RANDOM_UNOPENED)
                 .build();
         RtpReport report = simulationService.run(req, "cli-" + UUID.randomUUID());

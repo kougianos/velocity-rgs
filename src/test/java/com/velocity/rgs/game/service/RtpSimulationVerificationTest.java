@@ -19,8 +19,10 @@ import static org.assertj.core.api.Assertions.assertThat;
  * Long-running statistical verification that every game in the catalog returns its declared
  * {@code targetRtp} in the base game. The three shipped games deliberately share identical reel
  * strips but carry distinct, volatility-shaped pay tables (Frost Crown = low volatility / 2,000x cap,
- * Aztec Fire = medium / 10,000x, Inferno Riches = high / 25,000x). Each pay table is normalized so the
- * simulated base-game RTP converges to the same 96% — this test is what guards that contract.
+ * Aztec Fire = medium / 10,000x, Inferno Riches = high / 25,000x). The BASE_GAME channel folds in both
+ * naturally-triggered free spins and the organically-triggered Pick &amp; Collect feature (~4% RTP
+ * each); each pay table is scaled so the combined base-game RTP converges to the same 96% — this test
+ * is what guards that contract.
  *
  * <p>Tagged {@code slow} so it is excluded from the default {@code mvn test} / {@code mvn verify}
  * runs (each 1M-spin simulation takes several seconds). Run it explicitly with:
@@ -62,7 +64,6 @@ class RtpSimulationVerificationTest {
                 .bet(new BigDecimal("1.00"))
                 .spinsBaseGame(BASE_SPINS)
                 .spinsBonusBuyFreeSpins(0)
-                .spinsBonusBuyPickCollect(0)
                 .pickStrategy(RtpSimulationRequest.PickStrategy.RANDOM_UNOPENED)
                 .build();
 

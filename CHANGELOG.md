@@ -4,6 +4,14 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+### Pick & Collect — organic trigger only, real END-tile risk (2026-06)
+
+- **Removed the Pick & Collect buy.** A fixed-price buy (`PICK_COLLECT_BUY`, 120–200× bet) into a feature whose standalone RTP is intentionally high made it a guaranteed-profit exploit — the simulator showed ~188% buy RTP. The buy option was dropped from all three games' `bonusBuyOptions`, the `BONUS_BUY_PICK_COLLECT` simulator channel and `spinsBonusBuyPickCollect` request field were removed, and the client's "Buy Pick & Collect" button is gone. (`BonusBuyType.PICK_COLLECT_BUY` is kept only so historical purchase rows still deserialize.)
+- **Pick & Collect is now triggered organically** from a base/power spin via a configurable `pickCollect.triggerOneInN` (drawn from the spin RNG, so it stays replay-deterministic). Per game: aztec-fire 1-in-433, frost-crown 1-in-369, inferno-riches 1-in-571.
+- **Real bank-vs-risk mechanic.** Completion switched from `FIXED_PICKS` to `END_TILE`: the player keeps revealing tiles until an `END` tile is hit, which **forfeits the unbanked pot** — only amounts banked via a `COLLECT` tile survive. The inert `BLANK` tiles were removed. Volatility is shaped per game (frost-crown: 44% bust / consistent; inferno-riches: 79% bust / boom-or-bust).
+- **Rebalanced base pay tables** so each game's total base-game RTP stays at 96% with the new feature folded in: every pay-table coefficient scaled by `(96 − featureContribution) / measuredLineRtp` (≈4% feature contribution each). Verified via `RtpSimulationVerificationTest` over 2M spins (aztec 95.93%, frost 96.26%, inferno 96.28% — all within 0.6pp).
+- **Widened the RTP simulator panel** (sidebar 360px → 480px) and right-aligned the numeric columns with tabular figures so large totals fit without overflowing the panel.
+
 ### RTP Tuning & Per-Line Bet Model
 
 - **Fixed critical RTP inflation bug in `ReelEvaluator`:** The payout model was incorrectly paying `bet × coefficient` on **every payline independently**, inflating the effective RTP ~20×. The engine now implements the standard fixed-payline model: `lineBet = bet ÷ paylines`, and each line payout is `lineBet × payTableCoefficient`. This dramatically reduces per-spin variance (~20×) and makes RTP convergence tests tractable.

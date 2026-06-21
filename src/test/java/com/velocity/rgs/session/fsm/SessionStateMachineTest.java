@@ -72,18 +72,8 @@ class SessionStateMachineTest {
         assertThat(res.availableActions()).containsExactly(GameCommand.START_FREE_SPINS);
     }
 
-    @Test
-    void baseGameBuyPickCollectEntersPickAwaiting() {
-        TransitionResult res = machine.transition(
-                new SessionState.BaseGame(),
-                new SessionCommand.BuyFeatureCommand(BonusBuyType.PICK_COLLECT_BUY, new BigDecimal("1.00")),
-                ctx);
-
-        assertThat(res.newState()).isInstanceOf(SessionState.PickCollectAwaiting.class);
-        assertThat(((MonetaryEffect.Debit) res.monetaryEffect()).amount())
-                .isEqualTo(Money.of(new BigDecimal("155.00"), "EUR"));
-        assertThat(res.availableActions()).containsExactly(GameCommand.START_PICK_COLLECT);
-    }
+    // Note: there is no "buy Pick & Collect" test — the feature is organic-trigger-only (no game
+    // offers PICK_COLLECT_BUY), so the FSM is never asked to enter Pick & Collect via a purchase.
 
     @Test
     void startFreeSpinsMovesAwaitingToLoop() {

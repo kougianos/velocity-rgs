@@ -38,15 +38,15 @@
     { "id": 20, "coords": [[0,0],[2,1],[2,2],[2,3],[0,4]] }
   ],
   "payTable": {
-    "1": { "3": 8,  "4": 20, "5": 55  },
-    "2": { "3": 7,  "4": 17, "5": 42  },
-    "3": { "3": 5,  "4": 13, "5": 35  },
-    "4": { "3": 4,  "4": 10, "5": 29  },
-    "5": { "3": 4,  "4": 7,  "5": 21  },
-    "6": { "3": 4,  "4": 8,  "5": 21  },
-    "7": { "3": 20, "4": 55, "5": 140 },
-    "8": { "3": 14, "4": 35, "5": 85  },
-    "9": { "3": 28, "4": 70, "5": 200 }
+    "1": { "3": 7.683, "4": 19.2075, "5": 52.8206 },
+    "2": { "3": 6.7226, "4": 16.3264, "5": 40.3357 },
+    "3": { "3": 4.8019, "4": 12.4849, "5": 33.6131 },
+    "4": { "3": 3.8415, "4": 9.6037, "5": 27.8509 },
+    "5": { "3": 3.8415, "4": 6.7226, "5": 20.1679 },
+    "6": { "3": 3.8415, "4": 7.683, "5": 20.1679 },
+    "7": { "3": 19.2075, "4": 52.8206, "5": 134.4525 },
+    "8": { "3": 13.4452, "4": 33.6131, "5": 81.6319 },
+    "9": { "3": 26.8905, "4": 67.2262, "5": 192.075 }
   },
   "reelStrips": {
     "BASE": [
@@ -80,22 +80,17 @@
       "costMultiplier": 9,
       "targetState": "FREE_SPINS_AWAITING",
       "initialFeaturePayload": { "freeSpinsAwarded": 10 }
-    },
-    {
-      "buyType": "PICK_COLLECT_BUY",
-      "costMultiplier": 155,
-      "targetState": "PICK_COLLECT_AWAITING",
-      "initialFeaturePayload": { "boardSize": 12, "maxPicks": 5 }
     }
   ],
   "pickCollect": {
     "boardSize": 12,
-    "completion": { "type": "FIXED_PICKS", "value": 5 },
+    "completion": { "type": "END_TILE" },
+    "triggerOneInN": 433,
     "tileDistribution": [
-      { "type": "CREDITS",    "weight": 50, "valueRange": [1, 50] },
-      { "type": "MULTIPLIER", "weight": 20, "valueRange": [2, 5]  },
-      { "type": "COLLECT",    "weight": 20 },
-      { "type": "BLANK",      "weight": 10 }
+      { "type": "CREDITS",    "weight": 45, "valueRange": [1, 12] },
+      { "type": "MULTIPLIER", "weight": 15, "valueRange": [2, 3]  },
+      { "type": "COLLECT",    "weight": 22 },
+      { "type": "END",        "weight": 18 }
     ],
     "maxFeatureWinMultiplier": 5000
   },

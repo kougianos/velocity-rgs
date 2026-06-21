@@ -152,6 +152,11 @@ body {
 }
 .win-label { font-size: 14px; letter-spacing: 2px; color: var(--gold); }
 .win-amount { font-size: 28px; font-weight: 800; color: var(--gold); }
+/* Kept fully visible in the layout even with no win so the SPIN button never
+   jumps; only the gold accent is muted to a neutral tone. */
+.win-banner.is-empty { background: rgba(255, 255, 255, 0.03); border-color: var(--border); }
+.win-banner.is-empty .win-label,
+.win-banner.is-empty .win-amount { color: var(--text-dim); }
 
 /* ===== Controls ===== */
 .controls {
@@ -310,6 +315,36 @@ input:focus, select:focus { outline: none; border-color: var(--accent); }
 .toast.success { border-left-color: var(--primary-hi); }
 
 .hidden { display: none !important; }
+
+/* ===== Modal (free-spins intro / summary) ===== */
+.modal {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(4, 6, 14, 0.72);
+  backdrop-filter: blur(3px);
+  z-index: 100;
+}
+.modal-card {
+  width: min(420px, 88vw);
+  text-align: center;
+  padding: 28px 26px 22px;
+  border-radius: 16px;
+  background: linear-gradient(160deg, #1a1f33, #11142099);
+  border: 1px solid rgba(245, 197, 24, 0.35);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.55);
+  animation: modalPop 0.22s ease-out;
+}
+@keyframes modalPop {
+  from { transform: scale(0.9); opacity: 0; }
+  to   { transform: scale(1); opacity: 1; }
+}
+.modal-icon { font-size: 46px; line-height: 1; }
+.modal-card h3 { margin: 12px 0 6px; font-size: 22px; color: var(--gold); }
+.modal-message { margin: 0 0 20px; color: var(--text); font-size: 15px; }
+.modal-actions { display: flex; gap: 12px; justify-content: center; }
 
 /* =========================================================================
  * Lobby (landing page)

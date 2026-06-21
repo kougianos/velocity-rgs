@@ -24,6 +24,12 @@
 spring:
   application:
     name: velocity-rgs
+  output:
+    ansi:
+      # Force colored console output even when the process is forked (e.g. via
+      # `mvn spring-boot:run`), where ANSI auto-detection would otherwise disable
+      # it. Only affects the human-readable console pattern; JSON logs are unaffected.
+      enabled: ${RGS_LOG_ANSI:always}
   main:
     web-application-type: servlet
   web:

@@ -1,25 +1,58 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <configuration>
-    <appender name="JSON" class="ch.qos.logback.core.ConsoleAppender">
-        <encoder class="net.logstash.logback.encoder.LogstashEncoder">
-            <includeMdcKeyName>traceId</includeMdcKeyName>
-            <includeMdcKeyName>playerId</includeMdcKeyName>
-            <includeMdcKeyName>sessionId</includeMdcKeyName>
-            <includeMdcKeyName>roundId</includeMdcKeyName>
-            <includeMdcKeyName>gameId</includeMdcKeyName>
-            <fieldNames>
-                <timestamp>@timestamp</timestamp>
-                <message>message</message>
-                <thread>thread</thread>
-                <logger>logger</logger>
-                <level>level</level>
-            </fieldNames>
-        </encoder>
-    </appender>
+    <!--
+        Two output formats, selected by Spring profile:
 
-    <root level="INFO">
-        <appender-ref ref="JSON"/>
-    </root>
+          (default)   Human-readable, colored console output. This is what you get
+                      from `mvn spring-boot:run`, the IDE, or any local run — easy to
+                      scan while iterating.
+
+          json        Structured JSON (Logstash encoder) for log aggregation in
+                      production. Enable with:  SPRING_PROFILES_ACTIVE=json
+                      (or -Dspring.profiles.active=json).
+    -->
+
+    <!-- Spring Boot's %clr color converter + sensible base properties. -->
+    <include resource="org/springframework/boot/logging/logback/defaults.xml"/>
+
+    <!-- The trace/session context we attach via MDC, rendered only when present. -->
+    <property name="MDC_PATTERN"
+              value="%clr([%X{traceId:-},%X{gameId:-},%X{playerId:-},%X{roundId:-}]){faint}"/>
+
+    <springProfile name="json">
+        <appender name="JSON" class="ch.qos.logback.core.ConsoleAppender">
+            <encoder class="net.logstash.logback.encoder.LogstashEncoder">
+                <includeMdcKeyName>traceId</includeMdcKeyName>
+                <includeMdcKeyName>playerId</includeMdcKeyName>
+                <includeMdcKeyName>sessionId</includeMdcKeyName>
+                <includeMdcKeyName>roundId</includeMdcKeyName>
+                <includeMdcKeyName>gameId</includeMdcKeyName>
+                <fieldNames>
+                    <timestamp>@timestamp</timestamp>
+                    <message>message</message>
+                    <thread>thread</thread>
+                    <logger>logger</logger>
+                    <level>level</level>
+                </fieldNames>
+            </encoder>
+        </appender>
+
+        <root level="INFO">
+            <appender-ref ref="JSON"/>
+        </root>
+    </springProfile>
+
+    <springProfile name="!json">
+        <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+            <encoder>
+                <pattern>%clr(%d{HH:mm:ss.SSS}){faint} %clr(%5p) ${MDC_PATTERN} %clr(%-40.40logger{39}){cyan} %clr(:){faint} %m%n%wEx</pattern>
+            </encoder>
+        </appender>
+
+        <root level="INFO">
+            <appender-ref ref="CONSOLE"/>
+        </root>
+    </springProfile>
 
     <logger name="com.velocity.rgs" level="INFO"/>
 </configuration>

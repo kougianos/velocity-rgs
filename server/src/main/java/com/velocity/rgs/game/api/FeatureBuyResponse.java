@@ -23,6 +23,7 @@ public record FeatureBuyResponse(
         BigDecimal cost,
         String currency,
         GameState enteredState,
+        int remainingFreeSpins,
         Map<String, Object> featureInitPayload,
         PickCollectFeatureView activeFeatureView,
         List<GameCommand> availableActions

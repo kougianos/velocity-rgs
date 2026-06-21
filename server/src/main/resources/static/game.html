@@ -40,7 +40,7 @@
 
       <div id="reels" class="reels" aria-label="Slot grid"></div>
 
-      <div id="winBanner" class="win-banner hidden">
+      <div id="winBanner" class="win-banner is-empty">
         <span class="win-label">WIN</span>
         <span id="winAmount" class="win-amount">0.00</span>
       </div>
@@ -136,6 +136,19 @@
   </main>
 
   <div id="toast" class="toast hidden"></div>
+
+  <!-- Free-spins intro / summary dialog -->
+  <div id="fsModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="fsModalTitle">
+    <div class="modal-card">
+      <div id="fsModalIcon" class="modal-icon">🎁</div>
+      <h3 id="fsModalTitle">Free Spins</h3>
+      <p id="fsModalMessage" class="modal-message"></p>
+      <div class="modal-actions">
+        <button id="fsModalCancel" class="btn btn-ghost">Later</button>
+        <button id="fsModalConfirm" class="btn btn-primary">Start</button>
+      </div>
+    </div>
+  </div>
 
   <script src="/games.js"></script>
   <script src="/app.js"></script>

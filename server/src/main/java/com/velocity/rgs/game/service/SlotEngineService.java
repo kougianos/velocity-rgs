@@ -354,6 +354,7 @@ public class SlotEngineService {
                     .cost(cost)
                     .currency(saved.getCurrency())
                     .enteredState(saved.getCurrentState())
+                    .remainingFreeSpins(saved.getRemainingFreeSpins())
                     .featureInitPayload(option.initialFeaturePayload())
                     .activeFeatureView(pcState != null ? PickCollectFeatureView.of(pcState) : null)
                     .availableActions(transition.availableActions())
@@ -506,18 +507,29 @@ public class SlotEngineService {
     }
 
     private SessionState rehydrate(GameSession session) {
+        // Money values round-trip through NUMERIC(19,4) columns, so they come back with scale 4.
+        // Re-normalize to currency minor units before they flow back into Money, which rejects scale > 2.
+        BigDecimal bet = toCurrencyScale(session.getCurrentBet(), session.getCurrency());
+        BigDecimal accumulated = toCurrencyScale(session.getAccumulatedFreeSpinsWin(), session.getCurrency());
         return switch (session.getCurrentState()) {
             case BASE_GAME -> new SessionState.BaseGame();
             case FREE_SPINS_AWAITING -> new SessionState.FreeSpinsAwaiting(
-                    Math.max(1, session.getRemainingFreeSpins()), session.getCurrentBet());
+                    Math.max(1, session.getRemainingFreeSpins()), bet);
             case FREE_SPINS_LOOP -> new SessionState.FreeSpinsLoop(
-                    session.getRemainingFreeSpins(), session.getAccumulatedFreeSpinsWin(),
-                    session.getCurrentBet());
+                    session.getRemainingFreeSpins(), accumulated, bet);
             case PICK_COLLECT_AWAITING -> new SessionState.PickCollectAwaiting(
                     deserializeMap(session.getActiveFeaturePayload()));
             case PICK_COLLECT_LOOP -> new SessionState.PickCollectLoop(
                     deserializeMap(session.getActiveFeaturePayload()));
         };
+    }
+
+    /** Brings a persisted money value back to the currency's minor-unit scale (trailing zeros only). */
+    private static BigDecimal toCurrencyScale(BigDecimal value, String currency) {
+        if (value == null) {
+            return null;
+        }
+        return value.setScale(Money.minorUnitScale(currency), RoundingMode.HALF_UP);
     }
 
     private BigDecimal effectiveBetForSpin(SessionState state, BigDecimal requestedBet,

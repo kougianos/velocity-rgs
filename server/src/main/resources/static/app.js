@@ -97,7 +97,43 @@ const els = {
   gameTagline: $("gameTagline"),
   buyFreeSpinsCost: $("buyFreeSpinsCost"),
   buyPickCollectCost: $("buyPickCollectCost"),
+  fsModal: $("fsModal"),
+  fsModalIcon: $("fsModalIcon"),
+  fsModalTitle: $("fsModalTitle"),
+  fsModalMessage: $("fsModalMessage"),
+  fsModalConfirm: $("fsModalConfirm"),
+  fsModalCancel: $("fsModalCancel"),
 };
+
+const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+/**
+ * Show a centered modal and resolve to true (confirm) / false (cancel).
+ * The cancel button is hidden unless a `cancelLabel` is supplied.
+ */
+function showModal({ icon = "🎁", title, message, confirmLabel = "OK", cancelLabel }) {
+  return new Promise((resolve) => {
+    els.fsModalIcon.textContent = icon;
+    els.fsModalTitle.textContent = title;
+    els.fsModalMessage.textContent = message;
+    els.fsModalConfirm.textContent = confirmLabel;
+    if (cancelLabel) {
+      els.fsModalCancel.textContent = cancelLabel;
+      els.fsModalCancel.classList.remove("hidden");
+    } else {
+      els.fsModalCancel.classList.add("hidden");
+    }
+    els.fsModal.classList.remove("hidden");
+    const close = (value) => {
+      els.fsModal.classList.add("hidden");
+      els.fsModalConfirm.onclick = null;
+      els.fsModalCancel.onclick = null;
+      resolve(value);
+    };
+    els.fsModalConfirm.onclick = () => close(true);
+    els.fsModalCancel.onclick = () => close(false);
+  });
+}
 
 /* ----------------------------------------------------------------- helpers */
 
@@ -147,10 +183,18 @@ function toast(message, kind = "") {
 }
 
 function setBusy(busy) {
-  els.spinBtn.disabled = busy;
-  els.buyFreeSpins.disabled = busy;
-  els.buyPickCollect.disabled = busy;
-  els.startFeature.disabled = busy;
+  if (busy) {
+    els.spinBtn.disabled = true;
+    els.buyFreeSpins.disabled = true;
+    els.buyPickCollect.disabled = true;
+    els.startFeature.disabled = true;
+    return;
+  }
+  // When clearing the busy state, re-derive enablement from the legal actions
+  // instead of blanket-enabling — otherwise SPIN becomes clickable in states like
+  // FREE_SPINS_AWAITING where only START_FREE_SPINS is allowed.
+  els.startFeature.disabled = false;
+  renderActions();
 }
 
 /* ----------------------------------------------------------------- render */
@@ -169,11 +213,22 @@ function buildGrid() {
     }
     els.reels.appendChild(reel);
   }
-  renderMatrix(emptyMatrix());
+  renderMatrix(randomMatrix());
 }
 
-function emptyMatrix() {
-  return Array.from({ length: ROWS }, () => new Array(COLS).fill(1));
+/** Symbol ids used to dress the idle reels — wild/scatter excluded so the resting grid looks natural. */
+const FILLER_SYMBOL_IDS = Object.keys(SYMBOLS)
+  .map(Number)
+  .filter((id) => !/wild|scatter/i.test((SYMBOLS[id] && SYMBOLS[id].name) || ""));
+
+function randomFillerId() {
+  return FILLER_SYMBOL_IDS[Math.floor(Math.random() * FILLER_SYMBOL_IDS.length)];
+}
+
+/** A purely decorative random grid for the initial/idle reels (never evaluated). */
+function randomMatrix() {
+  return Array.from({ length: ROWS }, () =>
+    Array.from({ length: COLS }, () => randomFillerId()));
 }
 
 function renderMatrix(matrix, winLines = []) {
@@ -212,12 +267,10 @@ function flashSpinning() {
 
 function renderWin(totalWin, winLines = []) {
   const amount = Number(totalWin ?? 0);
-  if (amount > 0) {
-    els.winAmount.textContent = fmt(amount);
-    els.winBanner.classList.remove("hidden");
-  } else {
-    els.winBanner.classList.add("hidden");
-  }
+  // The WIN box stays mounted in the layout at all times so it never shifts the
+  // controls below it; we only toggle a dimmed "empty" state when there's no win.
+  els.winAmount.textContent = fmt(amount);
+  els.winBanner.classList.toggle("is-empty", amount <= 0);
   els.winLines.innerHTML = "";
   for (const w of winLines || []) {
     const chip = document.createElement("span");
@@ -369,6 +422,7 @@ async function doSpin() {
     renderPickBoard(null);
     logResponse("spin", resp);
     announceFeatures(resp.featuresTriggered);
+    await maybeOfferFreeSpins();
   } catch (e) {
     handleError("Spin failed", e);
   } finally {
@@ -402,6 +456,7 @@ async function buyFeature(buyType) {
     renderPickBoard(resp.activeFeatureView);
     logResponse("feature/buy", resp);
     toast(`Bought ${buyType} for ${fmt(resp.cost)} ${CURRENCY}`, "success");
+    await maybeOfferFreeSpins();
   } catch (e) {
     handleError("Feature buy failed", e);
   } finally {
@@ -429,6 +484,94 @@ async function startFeature(featureType) {
     logResponse("feature/start", resp);
   } catch (e) {
     handleError("Feature start failed", e);
+  } finally {
+    setBusy(false);
+  }
+}
+
+/**
+ * Industry-standard free-spins entry: once free spins are awarded (by buying the
+ * feature or landing scatters), ask the player whether to start now. On confirm we
+ * auto-play every free spin and present the cumulative win at the end.
+ */
+async function maybeOfferFreeSpins() {
+  if (!(state.availableActions || []).includes("START_FREE_SPINS")) return;
+  const spins = Number(els.freeSpins.textContent) || 0;
+  const start = await showModal({
+    icon: "🎉",
+    title: "Free Spins Awarded!",
+    message: `You have ${spins} free spin${spins === 1 ? "" : "s"} ready. Start them now?`,
+    confirmLabel: "Start Free Spins",
+    cancelLabel: "Later",
+  });
+  if (start) await runFreeSpinsAutoplay();
+}
+
+async function runFreeSpinsAutoplay() {
+  try {
+    setBusy(true);
+    els.startFeature.classList.add("hidden");
+
+    // 1. Enter the free-spins loop.
+    const startResp = await api("/api/v1/slot/feature/start", {
+      method: "POST",
+      idempotency: true,
+      body: {
+        gameId: GAME_ID,
+        sessionId: state.sessionId,
+        sessionVersion: state.sessionVersion,
+        featureType: "FREE_SPINS",
+      },
+    });
+    applySessionView(startResp);
+    renderPickBoard(startResp.activeFeatureView);
+    logResponse("feature/start", startResp);
+
+    // 2. Auto-play until the loop settles (server locks the bet to the trigger bet).
+    let totalWin = 0;
+    let spinsPlayed = 0;
+    while ((state.availableActions || []).includes("SPIN")
+        && state.currentState === "FREE_SPINS_LOOP") {
+      flashSpinning();
+      await delay(650);
+      const spin = await api("/api/v1/slot/spin", {
+        method: "POST",
+        idempotency: true,
+        body: {
+          gameId: GAME_ID,
+          sessionId: state.sessionId,
+          sessionVersion: state.sessionVersion,
+          betSize: Number(els.betSize.value),
+          powerBetActive: els.powerBet.checked,
+        },
+      });
+      applySessionView(spin);
+      renderMatrix(spin.matrix, spin.winLines);
+      renderWin(spin.totalWin, spin.winLines);
+      logResponse(`free spin ${++spinsPlayed}`, spin);
+
+      // On the settling spin the server credits and reports the whole feature win.
+      if (state.currentState !== "FREE_SPINS_LOOP") {
+        totalWin = Number(spin.totalWin ?? 0);
+      }
+    }
+
+    await refreshBalance();
+    renderActions();
+    renderPickBoard(null);
+
+    // 3. Present the cumulative result.
+    await showModal({
+      icon: "🏆",
+      title: "Free Spins Complete",
+      message: `${spinsPlayed} free spin${spinsPlayed === 1 ? "" : "s"} played · `
+        + `Total win ${fmt(totalWin)} ${CURRENCY}`,
+      confirmLabel: "Collect",
+    });
+    renderWin(totalWin);
+    toast(`Free spins won ${fmt(totalWin)} ${CURRENCY}`, "success");
+  } catch (e) {
+    handleError("Free spins failed", e);
   } finally {
     setBusy(false);
   }
@@ -545,8 +688,12 @@ function bindEvents() {
   els.spinBtn.addEventListener("click", doSpin);
   els.buyFreeSpins.addEventListener("click", () => buyFeature("FREE_SPINS_BUY"));
   els.buyPickCollect.addEventListener("click", () => buyFeature("PICK_COLLECT_BUY"));
-  els.startFeature.addEventListener("click", () =>
-    startFeature(els.startFeature.dataset.feature || "FREE_SPINS"));
+  els.startFeature.addEventListener("click", () => {
+    const feature = els.startFeature.dataset.feature || "FREE_SPINS";
+    // Free spins auto-play; Pick & Collect still enters its interactive board.
+    if (feature === "FREE_SPINS") runFreeSpinsAutoplay();
+    else startFeature(feature);
+  });
   els.resetSession.addEventListener("click", bootSession);
   els.runSim.addEventListener("click", runSimulation);
   els.setBalanceBtn.addEventListener("click", setBalance);

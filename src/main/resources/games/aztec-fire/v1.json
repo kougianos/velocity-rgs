@@ -6,6 +6,7 @@
     "logo": "🔥",
     "theme": "fire",
     "volatility": "Medium",
+    "spinDurationMillis": 400,
     "symbols": {
       "1":  { "glyph": "A",  "name": "Ace"     },
       "2":  { "glyph": "K",  "name": "King"    },

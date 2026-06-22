@@ -50,6 +50,7 @@ public class GameCatalogController {
                 .logo(p.logo())
                 .theme(p.theme())
                 .volatility(p.volatility())
+                .spinDurationMillis(p.spinDurationMillis())
                 // Headline math facts
                 .targetRtp(math.targetRtp())
                 .maxWinMultiplier(math.limits().maxWinPerRoundMultiplier())
@@ -97,6 +98,7 @@ public class GameCatalogController {
             String logo,
             String theme,
             String volatility,
+            int spinDurationMillis,
             BigDecimal targetRtp,
             int maxWinMultiplier,
             int freeSpinsAwarded,

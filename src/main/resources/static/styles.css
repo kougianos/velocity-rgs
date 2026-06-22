@@ -100,7 +100,11 @@ body {
   border-radius: var(--radius);
   padding: 10px;
 }
-.reel { display: grid; grid-template-rows: repeat(3, 1fr); gap: 8px; }
+.reel { display: grid; grid-template-rows: repeat(3, 1fr); gap: 8px; position: relative; }
+/* While a reel is spinning we clip the scrolling strip to the reel window. We only
+   add overflow during the spin so the resting win glow (which extends past the cell)
+   is never clipped. */
+.reel.spinning { overflow: hidden; }
 
 .cell {
   aspect-ratio: 1 / 1;
@@ -123,8 +127,32 @@ body {
   box-shadow: 0 0 14px rgba(245, 197, 24, 0.6);
   transform: scale(1.04);
 }
-.cell.spinning { animation: flicker 0.4s linear infinite; }
-@keyframes flicker { 0%,100% { opacity: 1; } 50% { opacity: 0.35; } }
+/* ===== Spin animation ===== */
+/* A tall strip of symbols laid over the reel that scrolls top→bottom while the
+   server resolves the spin. The strip duplicates its symbol list (the JS builds
+   list+list), so translating it by half its height loops seamlessly. */
+.reel-strip {
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  z-index: 2;
+  filter: blur(0.7px);
+  will-change: transform;
+  animation: strip-roll 0.45s linear infinite;
+}
+@keyframes strip-roll {
+  from { transform: translateY(-50%); }
+  to   { transform: translateY(0); }
+}
+/* Per-column landing bounce, triggered as each reel stops left→right. */
+.reel.landed .cell { animation: cell-land 0.32s cubic-bezier(0.18, 0.9, 0.32, 1.2); }
+@keyframes cell-land {
+  0%   { transform: translateY(-22%); }
+  60%  { transform: translateY(4%); }
+  100% { transform: translateY(0); }
+}
 
 /* symbol palette */
 .sym-1 { background: #b5651d; }

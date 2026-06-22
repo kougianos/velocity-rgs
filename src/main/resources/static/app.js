@@ -20,6 +20,8 @@ let SYMBOLS = {};     // { symbolId: { glyph, name } }
 let PAYLINES = {};    // { lineId: [[row, col], …] } used for win highlighting
 let ROWS = 0;
 let COLS = 0;
+// How long the reels visibly roll before settling — server-driven per game (catalog), with a safe default.
+let SPIN_MS = 600;
 
 /**
  * Load the active game's config from the backend catalog and populate the module state above. Resolves the
@@ -35,6 +37,7 @@ async function loadGameConfig() {
   PAYLINES = buildPaylineMap(game);
   ROWS = game.rows;
   COLS = game.cols;
+  if (Number(game.spinDurationMillis) > 0) SPIN_MS = Number(game.spinDurationMillis);
   // Filler symbols (wild/scatter excluded) used to dress the idle reels — derived from the live symbol set.
   FILLER_SYMBOL_IDS = Object.keys(SYMBOLS)
     .map(Number)
@@ -268,17 +271,24 @@ function randomMatrix() {
     Array.from({ length: COLS }, () => randomFillerId()));
 }
 
-function renderMatrix(matrix, winLines = []) {
-  for (let r = 0; r < ROWS; r++) {
-    for (let c = 0; c < COLS; c++) {
-      const id = matrix[r][c];
-      const meta = SYMBOLS[id] || { glyph: "?", name: id };
-      const cell = gridCells[r][c];
-      cell.className = `cell sym-${id}`;
-      cell.innerHTML = `<span>${meta.glyph}</span><small>${meta.name}</small>`;
-    }
-  }
-  // Highlight winning positions.
+/** Inner markup for a single symbol cell — shared by the resting grid and the spin strip. */
+function symbolCellHTML(id) {
+  const meta = SYMBOLS[id] || { glyph: "?", name: id };
+  return `<div class="cell sym-${id}"><span>${meta.glyph}</span><small>${meta.name}</small></div>`;
+}
+
+/** Paint one resting grid cell with the given symbol (clears any prior win state). */
+function paintCell(r, c, id) {
+  const meta = SYMBOLS[id] || { glyph: "?", name: id };
+  const cell = gridCells[r][c];
+  cell.className = `cell sym-${id}`;
+  cell.innerHTML = `<span>${meta.glyph}</span><small>${meta.name}</small>`;
+}
+
+/** Toggle the gold win highlight on the positions covered by the given win lines. */
+function applyWins(winLines = []) {
+  for (let r = 0; r < ROWS; r++)
+    for (let c = 0; c < COLS; c++) gridCells[r][c].classList.remove("win");
   const wins = new Set();
   for (const w of winLines) {
     const coords = PAYLINES[w.lineId];
@@ -293,13 +303,53 @@ function renderMatrix(matrix, winLines = []) {
   }
 }
 
-function flashSpinning() {
+function renderMatrix(matrix, winLines = []) {
   for (let r = 0; r < ROWS; r++)
-    for (let c = 0; c < COLS; c++) gridCells[r][c].classList.add("spinning");
-  setTimeout(() => {
-    for (let r = 0; r < ROWS; r++)
-      for (let c = 0; c < COLS; c++) gridCells[r][c].classList.remove("spinning");
-  }, 350);
+    for (let c = 0; c < COLS; c++) paintCell(r, c, matrix[r][c]);
+  applyWins(winLines);
+}
+
+/* ----------------------------------------------------------------- spin animation */
+
+/** Lay a scrolling, motion-blurred symbol strip over every reel to fake the spin. */
+function startSpin() {
+  applyWins([]); // clear any prior win highlight before the reels move
+  for (let c = 0; c < COLS; c++) {
+    const reel = els.reels.children[c];
+    reel.classList.remove("landed");
+    reel.classList.add("spinning");
+    const strip = document.createElement("div");
+    strip.className = "reel-strip";
+    // A handful of random fillers, duplicated so translateY(-50%) loops seamlessly.
+    const ids = Array.from({ length: ROWS + 4 }, randomFillerId);
+    const html = ids.map(symbolCellHTML).join("");
+    strip.innerHTML = html + html;
+    reel.appendChild(strip);
+  }
+}
+
+/** Tear down all spin strips immediately (used on error). */
+function stopSpin() {
+  for (let c = 0; c < COLS; c++) {
+    const reel = els.reels.children[c];
+    reel.classList.remove("spinning", "landed");
+    const strip = reel.querySelector(".reel-strip");
+    if (strip) strip.remove();
+  }
+}
+
+/** Stop the reels left→right, dropping each column onto its final symbols with a bounce. */
+async function settleReels(matrix, winLines = []) {
+  for (let c = 0; c < COLS; c++) {
+    await delay(110);
+    for (let r = 0; r < ROWS; r++) paintCell(r, c, matrix[r][c]);
+    const reel = els.reels.children[c];
+    const strip = reel.querySelector(".reel-strip");
+    if (strip) strip.remove();
+    reel.classList.remove("spinning");
+    reel.classList.add("landed");
+  }
+  applyWins(winLines);
 }
 
 function renderWin(totalWin, winLines = []) {
@@ -444,20 +494,24 @@ async function bootSession() {
 async function doSpin() {
   try {
     setBusy(true);
-    flashSpinning();
-    const resp = await api("/api/v1/slot/spin", {
-      method: "POST",
-      idempotency: true,
-      body: {
-        gameId: GAME_ID,
-        sessionId: state.sessionId,
-        sessionVersion: state.sessionVersion,
-        betSize: betForRequest(),
-        powerBetActive: els.powerBet.checked,
-      },
-    });
+    startSpin();
+    // Spin for at least a beat even if the server replies instantly, then stop the reels.
+    const [resp] = await Promise.all([
+      api("/api/v1/slot/spin", {
+        method: "POST",
+        idempotency: true,
+        body: {
+          gameId: GAME_ID,
+          sessionId: state.sessionId,
+          sessionVersion: state.sessionVersion,
+          betSize: betForRequest(),
+          powerBetActive: els.powerBet.checked,
+        },
+      }),
+      delay(SPIN_MS),
+    ]);
     applySessionView(resp);
-    renderMatrix(resp.matrix, resp.winLines);
+    await settleReels(resp.matrix, resp.winLines);
     renderWin(resp.totalWin, resp.winLines);
     await refreshBalance();
     renderActions();
@@ -466,6 +520,7 @@ async function doSpin() {
     announceFeatures(resp.featuresTriggered);
     await maybeOfferFreeSpins();
   } catch (e) {
+    stopSpin();
     handleError("Spin failed", e);
   } finally {
     setBusy(false);
@@ -574,23 +629,25 @@ async function runFreeSpinsAutoplay() {
     let spinsPlayed = 0;
     while ((state.availableActions || []).includes("SPIN")
         && state.currentState === "FREE_SPINS_LOOP") {
-      flashSpinning();
-      await delay(650);
-      const spin = await api("/api/v1/slot/spin", {
-        method: "POST",
-        idempotency: true,
-        body: {
-          gameId: GAME_ID,
-          sessionId: state.sessionId,
-          sessionVersion: state.sessionVersion,
-          // Free-spin bet is locked to the triggering bet server-side, and Power Bet does not
-          // persist into free spins for these games — always send the base bet without power.
-          betSize: betForRequest(),
-          powerBetActive: false,
-        },
-      });
+      startSpin();
+      const [spin] = await Promise.all([
+        api("/api/v1/slot/spin", {
+          method: "POST",
+          idempotency: true,
+          body: {
+            gameId: GAME_ID,
+            sessionId: state.sessionId,
+            sessionVersion: state.sessionVersion,
+            // Free-spin bet is locked to the triggering bet server-side, and Power Bet does not
+            // persist into free spins for these games — always send the base bet without power.
+            betSize: betForRequest(),
+            powerBetActive: false,
+          },
+        }),
+        delay(SPIN_MS),
+      ]);
       applySessionView(spin);
-      renderMatrix(spin.matrix, spin.winLines);
+      await settleReels(spin.matrix, spin.winLines);
       renderWin(spin.totalWin, spin.winLines);
       logResponse(`free spin ${++spinsPlayed}`, spin);
 
@@ -615,6 +672,7 @@ async function runFreeSpinsAutoplay() {
     renderWin(totalWin);
     toast(`Free spins won ${fmt(totalWin)} ${CURRENCY}`, "success");
   } catch (e) {
+    stopSpin();
     handleError("Free spins failed", e);
   } finally {
     setBusy(false);

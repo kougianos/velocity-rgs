@@ -339,10 +339,14 @@ function setupBetSliders() {
 
 function buildGrid() {
   els.reels.innerHTML = "";
+  // The grid shape is server-driven (catalog rows/cols), so the reel layout is sized from it rather
+  // than a fixed 5×3 — a 4-reel (Frost) or 6-reel (Inferno) board renders with no other changes.
+  els.reels.style.gridTemplateColumns = `repeat(${COLS}, 1fr)`;
   gridCells = Array.from({ length: ROWS }, () => new Array(COLS));
   for (let c = 0; c < COLS; c++) {
     const reel = document.createElement("div");
     reel.className = "reel";
+    reel.style.gridTemplateRows = `repeat(${ROWS}, 1fr)`;
     for (let r = 0; r < ROWS; r++) {
       const cell = document.createElement("div");
       cell.className = "cell";

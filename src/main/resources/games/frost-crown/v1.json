@@ -2,44 +2,37 @@
   "presentation": {
     "title": "Frost Crown",
     "tagline": "Steady, frequent wins beneath the northern lights.",
-    "description": "A calm climb through the frozen north. Low volatility with steady, frequent wins and a 2,000× ceiling.",
+    "description": "A calm climb through the frozen north on a cosy four-reel board. Low volatility with the most frequent wins of the realm and a 2,000x ceiling.",
     "logo": "❄️",
     "theme": "frost",
     "volatility": "Low",
     "spinDurationMillis": 600,
     "symbols": {
-      "1":  { "glyph": "A",  "name": "Ace"     },
-      "2":  { "glyph": "K",  "name": "King"    },
-      "3":  { "glyph": "Q",  "name": "Queen"   },
-      "4":  { "glyph": "J",  "name": "Jack"    },
-      "5":  { "glyph": "10", "name": "Ten"     },
-      "6":  { "glyph": "9",  "name": "Nine"    },
-      "7":  { "glyph": "🦉", "name": "Owl"     },
-      "8":  { "glyph": "👑", "name": "Crown"   },
-      "9":  { "glyph": "❄️", "name": "Wild"    },
-      "12": { "glyph": "💠", "name": "Scatter" }
+      "1": {"glyph": "A", "name": "Ace"},
+      "2": {"glyph": "K", "name": "King"},
+      "3": {"glyph": "Q", "name": "Queen"},
+      "4": {"glyph": "J", "name": "Jack"},
+      "5": {"glyph": "🦉", "name": "Owl"},
+      "6": {"glyph": "👑", "name": "Crown"},
+      "9": {"glyph": "❄️", "name": "Wild"},
+      "12": {"glyph": "💠", "name": "Scatter"}
     },
     "info": {
-      "paragraphs": [
-        "Beneath the shimmering northern lights, Frost Crown glides across five reels and twenty paylines with a calm, steady rhythm and the most frequent wins of the realm.",
-        "Snowy Owls and jewelled Crowns drift over icy reels, while three or more Scatter crystals summon the Free Spins feature. Frozen Wilds lock in extra ways to win, and Power Bet adds a frosty bite to every stake.",
-        "Trigger the Pick & Collect and choose to bank your glittering credits or brave the blizzard — all the way up to a crisp 2,000× crown win."
-      ],
+      "paragraphs": ["Beneath the shimmering northern lights, Frost Crown glides across a compact four-reel board with a calm, steady rhythm and the most frequent wins of the realm.", "Snowy Owls and jewelled Crowns drift over icy reels, while three or more Scatter crystals summon the Free Spins feature. Frozen Wilds stack thick across the inner reels, and Power Bet adds a frosty bite to every stake.", "Trigger the Pick & Collect and choose to bank your glittering credits or brave the blizzard - all the way up to a crisp 2,000x crown win."],
       "stats": [
-        { "label": "Game Theme", "value": "Winter, Royal, Aurora" },
-        { "label": "Volatility", "value": "Low" },
-        { "label": "RTP", "value": "96.00%" }
+        {"label": "Game Theme", "value": "Winter, Royal, Aurora"},
+        {"label": "Volatility", "value": "Low"},
+        {"label": "RTP", "value": "96.00%"}
       ],
       "specs": [
-        { "label": "Game Type", "values": ["Video Slot Game"] },
-        { "label": "Lines", "values": ["20 paylines"] },
-        { "label": "Reel Type", "values": ["5×3"] },
-        { "label": "Winning Functionality", "values": ["Left to right on adjacent reels"] },
-        { "label": "Special Features", "values": ["Free Spins", "Pick & Collect", "Power Bet"] },
-        { "label": "Free Spins Symbol", "values": ["Scatter 💠"] },
-        { "label": "Hit Frequency", "values": ["31.20% — for RTP 96.00%"] },
-        { "label": "Max Exposure", "values": ["Max multiplier: 2,000×", "Max win: €200,000"] },
-        { "label": "Bet Values", "values": ["Min — €0.10", "Default — €0.40", "Max — €50.00"] }
+        {"label": "Game Type", "values": ["Video Slot Game"]},
+        {"label": "Lines", "values": ["10 paylines"]},
+        {"label": "Reel Type", "values": ["4x3"]},
+        {"label": "Winning Functionality", "values": ["Left to right on adjacent reels"]},
+        {"label": "Special Features", "values": ["Free Spins", "Pick & Collect", "Power Bet"]},
+        {"label": "Free Spins Symbol", "values": ["Scatter 💠"]},
+        {"label": "Max Exposure", "values": ["Max multiplier: 2,000x", "Max win: €200,000"]},
+        {"label": "Bet Values", "values": ["Min - €0.10", "Default - €0.40", "Max - €50.00"]}
       ]
     }
   },
@@ -47,102 +40,82 @@
     "gameId": "frost-crown",
     "mathVersion": "v1",
     "targetRtp": 96.0,
-    "grid": { "rows": 3, "cols": 5 },
+    "grid": {"rows": 3, "cols": 4},
     "symbols": [
-      { "id": 1, "name": "ACE",     "type": "STANDARD" },
-      { "id": 2, "name": "KING",    "type": "STANDARD" },
-      { "id": 3, "name": "QUEEN",   "type": "STANDARD" },
-      { "id": 4, "name": "JACK",    "type": "STANDARD" },
-      { "id": 5, "name": "TEN",     "type": "STANDARD" },
-      { "id": 6, "name": "NINE",    "type": "STANDARD" },
-      { "id": 7, "name": "OWL",     "type": "STANDARD" },
-      { "id": 8, "name": "CROWN",   "type": "STANDARD" },
-      { "id": 9, "name": "WILD",    "type": "WILD",    "substitutes": "STANDARD" },
-      { "id": 12, "name": "SCATTER","type": "SCATTER" }
+      {"id": 1, "name": "ACE", "type": "STANDARD"},
+      {"id": 2, "name": "KING", "type": "STANDARD"},
+      {"id": 3, "name": "QUEEN", "type": "STANDARD"},
+      {"id": 4, "name": "JACK", "type": "STANDARD"},
+      {"id": 5, "name": "OWL", "type": "STANDARD"},
+      {"id": 6, "name": "CROWN", "type": "STANDARD"},
+      {"id": 9, "name": "WILD", "type": "WILD", "substitutes": "STANDARD"},
+      {"id": 12, "name": "SCATTER", "type": "SCATTER"}
     ],
     "paylines": [
-      { "id": 1,  "coords": [[0,0],[0,1],[0,2],[0,3],[0,4]] },
-      { "id": 2,  "coords": [[1,0],[1,1],[1,2],[1,3],[1,4]] },
-      { "id": 3,  "coords": [[2,0],[2,1],[2,2],[2,3],[2,4]] },
-      { "id": 4,  "coords": [[0,0],[1,1],[2,2],[1,3],[0,4]] },
-      { "id": 5,  "coords": [[2,0],[1,1],[0,2],[1,3],[2,4]] },
-      { "id": 6,  "coords": [[0,0],[0,1],[1,2],[2,3],[2,4]] },
-      { "id": 7,  "coords": [[2,0],[2,1],[1,2],[0,3],[0,4]] },
-      { "id": 8,  "coords": [[1,0],[0,1],[1,2],[2,3],[1,4]] },
-      { "id": 9,  "coords": [[1,0],[2,1],[1,2],[0,3],[1,4]] },
-      { "id": 10, "coords": [[0,0],[1,1],[1,2],[1,3],[0,4]] },
-      { "id": 11, "coords": [[2,0],[1,1],[1,2],[1,3],[2,4]] },
-      { "id": 12, "coords": [[1,0],[0,1],[0,2],[0,3],[1,4]] },
-      { "id": 13, "coords": [[1,0],[2,1],[2,2],[2,3],[1,4]] },
-      { "id": 14, "coords": [[0,0],[1,1],[0,2],[1,3],[0,4]] },
-      { "id": 15, "coords": [[2,0],[1,1],[2,2],[1,3],[2,4]] },
-      { "id": 16, "coords": [[0,0],[2,1],[0,2],[2,3],[0,4]] },
-      { "id": 17, "coords": [[2,0],[0,1],[2,2],[0,3],[2,4]] },
-      { "id": 18, "coords": [[1,0],[1,1],[0,2],[1,3],[1,4]] },
-      { "id": 19, "coords": [[1,0],[1,1],[2,2],[1,3],[1,4]] },
-      { "id": 20, "coords": [[0,0],[2,1],[2,2],[2,3],[0,4]] }
+      {"id": 1, "coords": [[1, 0], [1, 1], [1, 2], [1, 3]]},
+      {"id": 2, "coords": [[0, 0], [0, 1], [0, 2], [0, 3]]},
+      {"id": 3, "coords": [[2, 0], [2, 1], [2, 2], [2, 3]]},
+      {"id": 4, "coords": [[0, 0], [1, 1], [2, 2], [1, 3]]},
+      {"id": 5, "coords": [[2, 0], [1, 1], [0, 2], [1, 3]]},
+      {"id": 6, "coords": [[1, 0], [0, 1], [0, 2], [1, 3]]},
+      {"id": 7, "coords": [[1, 0], [2, 1], [2, 2], [1, 3]]},
+      {"id": 8, "coords": [[0, 0], [0, 1], [1, 2], [2, 3]]},
+      {"id": 9, "coords": [[2, 0], [2, 1], [1, 2], [0, 3]]},
+      {"id": 10, "coords": [[1, 0], [0, 1], [1, 2], [2, 3]]}
     ],
     "payTable": {
-      "1": { "3": 8.5101, "4": 18.4384, "5": 34.042 },
-      "2": { "3": 7.8009, "4": 15.6017, "5": 29.785 },
-      "3": { "3": 6.3825, "4": 12.7651, "5": 25.5301 },
-      "4": { "3": 5.6733, "4": 10.6376, "5": 21.2751 },
-      "5": { "3": 4.9641, "4": 8.5101, "5": 17.02 },
-      "6": { "3": 4.9641, "4": 8.5101, "5": 17.02 },
-      "7": { "3": 11.3467, "4": 25.5301, "5": 51.0602 },
-      "8": { "3": 9.2384, "4": 19.8606, "5": 39.7212 },
-      "9": { "3": 12.7651, "4": 28.3667, "5": 63.8252 }
+      "1": {"3": 7.0715, "4": 21.2145},
+      "2": {"3": 7.0715, "4": 21.2145},
+      "3": {"3": 11.3144, "4": 28.286},
+      "4": {"3": 11.3144, "4": 28.286},
+      "5": {"3": 21.2145, "4": 56.572},
+      "6": {"3": 35.3575, "4": 106.0725},
+      "9": {"3": 35.3575, "4": 106.0725}
     },
     "reelStrips": {
       "BASE": [
-        [6,2,12,3,4,5,6,1,2,8,3,4,5,6,1,2,3,4,5,6,1,2,3,4,5,6,8,7,1,3,4,5],
-        [6,2,9,12,3,4,5,9,6,1,2,8,9,3,4,5,9,6,1,2,7,9,3,4,5,6,9,8,1,3,4,9,5],
-        [6,2,9,12,3,4,5,9,6,1,2,8,9,3,4,5,9,6,1,2,7,9,3,4,5,6,9,8,1,3,4,9,5],
-        [6,2,9,12,3,4,5,9,6,1,2,8,9,3,4,5,9,6,1,2,7,9,3,4,5,6,9,8,1,3,4,9,5],
-        [6,2,12,3,4,5,6,1,2,8,3,4,5,6,1,2,3,4,5,6,1,2,3,4,5,6,8,7,1,3,4,5]
+        [3, 4, 1, 4, 4, 2, 5, 2, 1, 1, 3, 4, 6, 1, 5, 6, 3, 1, 2, 2, 3, 2, 2, 5, 4, 1, 5, 6, 3, 12],
+        [4, 1, 9, 6, 3, 2, 9, 4, 5, 5, 3, 1, 4, 6, 9, 2, 2, 1, 2, 4, 5, 1, 2, 12, 4, 3, 1, 5, 3, 3, 2, 1, 6],
+        [9, 2, 4, 5, 5, 2, 9, 5, 2, 4, 3, 6, 12, 2, 1, 3, 3, 4, 1, 4, 3, 3, 1, 6, 1, 9, 4, 5, 6, 1, 2, 2, 1],
+        [5, 1, 1, 3, 3, 4, 3, 4, 5, 1, 1, 6, 3, 4, 2, 5, 5, 2, 2, 1, 4, 4, 3, 1, 2, 2, 6, 6, 12, 2]
       ],
       "POWER_BET": [
-        [6,2,12,3,4,5,6,1,2,8,3,4,5,6,1,2,3,4,5,6,1,2,3,4,5,6,8,7,1,3,4,5],
-        [6,2,9,12,3,4,5,9,6,1,2,8,9,3,4,5,9,6,1,2,7,9,3,4,5,6,9,8,1,3,4,9,5],
-        [6,2,9,12,3,4,5,9,6,1,2,8,9,3,4,5,9,6,1,2,7,9,3,4,5,6,9,8,1,3,4,9,5],
-        [6,2,9,12,3,4,5,9,6,1,2,8,9,3,4,5,9,6,1,2,7,9,3,4,5,6,9,8,1,3,4,9,5],
-        [6,2,12,3,4,5,6,1,2,8,3,4,5,6,1,2,3,4,5,6,1,2,3,4,5,6,8,7,1,3,4,5]
+        [3, 4, 1, 4, 4, 2, 5, 2, 1, 1, 3, 4, 6, 1, 5, 6, 3, 1, 2, 2, 3, 2, 2, 5, 4, 1, 5, 6, 3, 12],
+        [4, 1, 9, 6, 3, 2, 9, 4, 5, 5, 3, 1, 4, 6, 9, 2, 2, 1, 2, 4, 5, 1, 2, 12, 4, 3, 1, 5, 3, 3, 2, 1, 6],
+        [9, 2, 4, 5, 5, 2, 9, 5, 2, 4, 3, 6, 12, 2, 1, 3, 3, 4, 1, 4, 3, 3, 1, 6, 1, 9, 4, 5, 6, 1, 2, 2, 1],
+        [5, 1, 1, 3, 3, 4, 3, 4, 5, 1, 1, 6, 3, 4, 2, 5, 5, 2, 2, 1, 4, 4, 3, 1, 2, 2, 6, 6, 12, 2]
       ],
       "FREE_SPINS": [
-        [5,6,7,7,1,2,3,4,5,6,8,1,2,3,4,5,6,8,7,1,2,3,4,5,6,8,1,2,3,4,5,6,8,7,1,2,3,4,5,6,8,1,2,3,4],
-        [5,6,8,9,7,1,2,3,4,9,5,6,8,7,1,9,2,3,4,5,6,9,8,7,1,2,9,3,4,5,6,8,9,1,2,3,4,5,9,6,8,7,1,2,9,3,4],
-        [5,6,8,9,7,1,2,3,4,9,5,6,8,7,1,9,2,3,4,5,6,9,8,7,1,2,9,3,4,5,6,8,9,1,2,3,4,5,9,6,8,7,1,2,9,3,4],
-        [5,6,8,9,7,1,2,3,4,9,5,6,8,7,1,9,2,3,4,5,6,9,8,7,1,2,9,3,4,5,6,8,9,1,2,3,4,5,9,6,8,7,1,2,9,3,4],
-        [5,6,7,7,1,2,3,4,5,6,8,1,2,3,4,5,6,8,7,1,2,3,4,5,6,8,1,2,3,4,5,6,8,7,1,2,3,4,5,6,8,1,2,3,4]
+        [2, 5, 1, 5, 1, 6, 6, 3, 3, 4, 9, 2, 2, 3, 1, 4, 9, 2, 3, 4, 1, 3, 5, 2, 5, 1, 4, 4, 6, 1, 9, 2, 12],
+        [2, 2, 6, 1, 4, 1, 4, 1, 4, 9, 3, 1, 9, 9, 1, 4, 5, 5, 3, 5, 6, 2, 12, 2, 6, 3, 3, 2, 9, 5, 4, 1, 3, 2],
+        [9, 1, 1, 2, 3, 5, 4, 6, 1, 12, 3, 3, 1, 3, 4, 9, 4, 6, 1, 4, 4, 2, 9, 3, 5, 2, 9, 1, 6, 2, 5, 5, 2, 2],
+        [1, 5, 9, 3, 2, 1, 5, 6, 3, 3, 2, 6, 2, 2, 5, 1, 4, 12, 3, 6, 2, 1, 3, 4, 1, 1, 4, 4, 5, 9, 4, 9, 2]
       ]
     },
-    "scatterTriggers": { "minCount": 3, "freeSpinsAwarded": 10, "retriggerAwards": 5 },
-    "freeSpins":       { "betLockedToTriggerBet": true, "powerBetPersists": false, "maxRetriggerStack": 50 },
-    "powerBet":        { "betMultiplier": 1.50 },
+    "scatterTriggers": {"minCount": 3, "freeSpinsAwarded": 10, "retriggerAwards": 5},
+    "freeSpins": {"betLockedToTriggerBet": true, "powerBetPersists": false, "maxRetriggerStack": 50},
+    "powerBet": {"betMultiplier": 1.5},
     "bonusBuyOptions": [
       {
         "buyType": "FREE_SPINS_BUY",
         "costMultiplier": 8,
         "targetState": "FREE_SPINS_AWAITING",
-        "initialFeaturePayload": { "freeSpinsAwarded": 10 }
+        "initialFeaturePayload": {"freeSpinsAwarded": 10}
       }
     ],
     "pickCollect": {
       "boardSize": 12,
-      "completion": { "type": "END_TILE" },
+      "completion": {"type": "END_TILE"},
       "triggerOneInN": 369,
       "tileDistribution": [
-        { "type": "CREDITS",    "weight": 50, "valueRange": [1, 8] },
-        { "type": "MULTIPLIER", "weight": 12, "valueRange": [2, 2] },
-        { "type": "COLLECT",    "weight": 26 },
-        { "type": "END",        "weight": 12 }
+        {"type": "CREDITS", "weight": 50, "valueRange": [1, 8]},
+        {"type": "MULTIPLIER", "weight": 12, "valueRange": [2, 2]},
+        {"type": "COLLECT", "weight": 26},
+        {"type": "END", "weight": 12}
       ],
       "maxFeatureWinMultiplier": 1500
     },
-    "limits": { "maxWinPerRoundMultiplier": 2000 },
-    "betConfig": {
-      "values": [0.10, 0.20, 0.40, 0.60, 1.00, 2.00, 4.00, 10.00, 20.00, 50.00],
-      "defaultBet": 0.40
-    }
+    "limits": {"maxWinPerRoundMultiplier": 2000},
+    "betConfig": {"values": [0.1, 0.2, 0.4, 0.6, 1.0, 2.0, 4.0, 10.0, 20.0, 50.0], "defaultBet": 0.4}
   }
 }

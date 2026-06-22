@@ -91,6 +91,9 @@ body {
 .side { display: flex; flex-direction: column; gap: 20px; }
 
 /* ===== Reels ===== */
+/* The column/row counts below are fallbacks only — buildGrid() overrides grid-template-columns
+   (reels) and grid-template-rows (reel) per game from the server-driven grid shape, so 4/5/6-reel
+   boards render without touching this file. Don't re-hardcode the shape here. */
 .reels {
   display: grid;
   grid-template-columns: repeat(5, 1fr);

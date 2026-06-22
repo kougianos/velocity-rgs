@@ -109,6 +109,9 @@ public class SlotEngineService {
     private final ObjectMapper objectMapper;
     private final ApplicationEventPublisher eventPublisher;
 
+    /** Key under which a bought free-spins round stashes its win multiplier in {@code active_feature_payload}. */
+    private static final String FREE_SPINS_WIN_MULTIPLIER_KEY = "buyFsWinMultiplier";
+
     // ---------------------------------------------------------------- /init
 
     @Transactional
@@ -340,6 +343,14 @@ public class SlotEngineService {
             }
 
             applyStateToSession(session, newState, request.betSize(), true);
+            // A bought free-spins round is made richer per spin (not longer): stash its win multiplier so
+            // the FREE_SPINS_LOOP settlement can boost the payout. Survives via the preserved feature
+            // payload (see applyStateToSession); organic free spins never carry it.
+            if (option.targetState() == GameState.FREE_SPINS_AWAITING
+                    && option.freeSpinsWinMultiplier().compareTo(BigDecimal.ONE) > 0) {
+                session.setActiveFeaturePayload(serializeToJson(Map.of(
+                        FREE_SPINS_WIN_MULTIPLIER_KEY, option.freeSpinsWinMultiplier().toPlainString())));
+            }
             session.setUpdatedAt(Instant.now());
             GameSession saved = sessionStore.save(session);
 
@@ -610,9 +621,18 @@ public class SlotEngineService {
                 reasonCodes.add("RETRIGGERED_FREE_SPINS");
             }
             if (remaining <= 0) {
-                creditAmount = acc;
+                // A bought free-spins round pays a per-spin-equivalent boost applied to the whole feature
+                // win at settlement (the marker is set at purchase and cleared when we return to base).
+                // Organic free spins carry no marker, so the multiplier is 1. Credit and the persisted
+                // round win are set together below, keeping wallet credit == round.totalWin.
+                BigDecimal multiplier = boughtFreeSpinsMultiplier(session);
+                creditAmount = acc.multiply(multiplier)
+                        .setScale(Money.minorUnitScale(session.getCurrency()), RoundingMode.HALF_UP);
                 creditType = WalletTransactionType.FEATURE_WIN;
                 reasonCodes.add("FREE_SPINS_SETTLED");
+                if (multiplier.compareTo(BigDecimal.ONE) > 0) {
+                    reasonCodes.add("BONUS_BUY_MULTIPLIER_APPLIED");
+                }
                 newState = new SessionState.BaseGame();
             } else {
                 newState = new SessionState.FreeSpinsLoop(remaining, acc, loop.triggerBet());
@@ -631,6 +651,24 @@ public class SlotEngineService {
             return false;
         }
         return rng.nextIndex(math.pickCollect().triggerOneInN()) == 0;
+    }
+
+    /**
+     * Win multiplier for the currently active free-spins round, read from the bought-feature marker in
+     * {@code active_feature_payload}. Returns {@code 1} for organically triggered free spins (no marker)
+     * or any unparseable/legacy payload.
+     */
+    private BigDecimal boughtFreeSpinsMultiplier(GameSession session) {
+        String payload = session.getActiveFeaturePayload();
+        if (payload == null || payload.isBlank()) {
+            return BigDecimal.ONE;
+        }
+        try {
+            Object raw = deserializeMap(payload).get(FREE_SPINS_WIN_MULTIPLIER_KEY);
+            return raw == null ? BigDecimal.ONE : new BigDecimal(raw.toString());
+        } catch (RuntimeException ex) {
+            return BigDecimal.ONE;
+        }
     }
 
     private int countScatters(int[][] matrix, SlotMathDefinition math) {
@@ -699,13 +737,15 @@ public class SlotEngineService {
             case SessionState.FreeSpinsAwaiting awaiting -> {
                 session.setRemainingFreeSpins(awaiting.remainingFreeSpins());
                 session.setAccumulatedFreeSpinsWin(BigDecimal.ZERO);
-                session.setActiveFeaturePayload(null);
+                // Preserve the feature payload across the free-spins lifecycle: a bought feature stores its
+                // win-multiplier marker here at purchase, and it must survive START_FREE_SPINS and every
+                // loop spin until settlement (where the BaseGame branch clears it). Organic free spins
+                // arrive from the base game with a null payload, so this is a no-op for them.
                 session.setNextActionAllowed(GameCommand.START_FREE_SPINS.name());
             }
             case SessionState.FreeSpinsLoop loop -> {
                 session.setRemainingFreeSpins(loop.remainingFreeSpins());
                 session.setAccumulatedFreeSpinsWin(loop.accumulatedWin());
-                session.setActiveFeaturePayload(null);
                 session.setNextActionAllowed(GameCommand.SPIN.name());
             }
             case SessionState.PickCollectAwaiting awaiting -> {

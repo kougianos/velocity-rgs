@@ -98,9 +98,10 @@
     "bonusBuyOptions": [
       {
         "buyType": "FREE_SPINS_BUY",
-        "costMultiplier": 8,
+        "costMultiplier": 80,
+        "freeSpinsWinMultiplier": 3.8255,
         "targetState": "FREE_SPINS_AWAITING",
-        "initialFeaturePayload": {"freeSpinsAwarded": 10}
+        "initialFeaturePayload": {"freeSpinsAwarded": 12}
       }
     ],
     "pickCollect": {

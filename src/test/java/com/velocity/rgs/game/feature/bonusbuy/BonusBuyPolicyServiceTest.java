@@ -88,6 +88,6 @@ class BonusBuyPolicyServiceTest {
 
         assertThat(option.buyType()).isEqualTo(BonusBuyType.FREE_SPINS_BUY);
         assertThat(option.targetState()).isEqualTo(GameState.FREE_SPINS_AWAITING);
-        assertThat(option.costMultiplier()).isEqualByComparingTo("9");
+        assertThat(option.costMultiplier()).isEqualByComparingTo("100");
     }
 }

@@ -112,9 +112,9 @@ Each is a 3×5, 20-payline slot, fully playable end-to-end with these mechanics:
 | Feature | Entry path | Server mechanic |
 |---|---|---|
 | **Base Game Spin** | Spin button | Reel grid generated from `BASE` strips, payline eval, debit + optional credit |
-| **Free Spins** | 3+ Scatter symbols or Bonus Buy | `FREE_SPINS_BUY` (80× bet); 10 free spins on high-RTP `FREE_SPINS` reel strips; re-triggers add 5 spins; single accumulated credit on settlement |
+| **Free Spins** | 3+ Scatter symbols (organic) or Bonus Buy | Organic trigger awards 10 free spins on high-RTP `FREE_SPINS` reel strips; re-triggers add 5 spins; single accumulated credit on settlement |
 | **Power Bet** | Toggle in HUD | Sends `powerBetActive=true`; server switches to `POWER_BET` reel strips; bet multiplied by 1.5× |
-| **Bonus Buy** | Buy panel | `FREE_SPINS_BUY` only; server debit → saga entry (Pick & Collect is no longer buyable) |
+| **Bonus Buy** | Buy panel | `FREE_SPINS_BUY` only; an industry-standard 12-spin feature priced by volatility — Frost 80× / Aztec 100× / Inferno 150× bet. The bought round is made *richer per spin* (not longer) via a per-game `freeSpinsWinMultiplier` applied to the feature win at settlement, calibrated so the buy returns the game's 96% RTP; organic free spins are unaffected. Server debit → saga entry (Pick & Collect is no longer buyable) |
 | **Pick & Collect** | Organic in-spin trigger (`~1 in triggerOneInN`) | Deterministic 12-tile board generated at feature start; CREDITS / MULTIPLIER / COLLECT / END tiles; keep picking until an END tile forfeits the unbanked pot (only COLLECT-banked wins survive); single credit on completion |
 
 ---

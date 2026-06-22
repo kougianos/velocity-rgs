@@ -2,6 +2,7 @@ package com.velocity.rgs.game.service;
 
 import com.velocity.rgs.game.feature.pickcollect.PickCollectEngine;
 import com.velocity.rgs.game.feature.pickcollect.PickCollectState;
+import com.velocity.rgs.math.config.BonusBuyOption;
 import com.velocity.rgs.math.config.SlotMathDefinition;
 import com.velocity.rgs.math.config.SlotMathRegistry;
 import com.velocity.rgs.math.domain.BonusBuyType;
@@ -145,9 +146,33 @@ public class RtpSimulationService {
 
     private void simulateBonusBuyFreeSpins(SlotMathDefinition math, RandomNumberGenerator rng,
                                            BigDecimal bet, Aggregator agg) {
-        BigDecimal cost = buyCost(math, BonusBuyType.FREE_SPINS_BUY, bet);
-        BigDecimal win = simulateFreeSpins(math, rng, bet, math.scatterTriggers().freeSpinsAwarded());
+        BonusBuyOption option = freeSpinsBuyOption(math);
+        BigDecimal cost = bet.multiply(option.costMultiplier());
+        int spins = bonusBuyFreeSpins(math, option);
+        BigDecimal win = simulateFreeSpins(math, rng, bet, spins)
+                .multiply(option.freeSpinsWinMultiplier());
         agg.record(cost, win);
+    }
+
+    private BonusBuyOption freeSpinsBuyOption(SlotMathDefinition math) {
+        return math.bonusBuyOptions().stream()
+                .filter(o -> o.buyType() == BonusBuyType.FREE_SPINS_BUY)
+                .findFirst()
+                .orElseThrow(() -> new IllegalStateException(
+                        "No bonus-buy option configured for " + BonusBuyType.FREE_SPINS_BUY));
+    }
+
+    /**
+     * Free spins awarded by the {@code FREE_SPINS_BUY} bonus buy. Read from the buy option's
+     * {@code initialFeaturePayload.freeSpinsAwarded}, exactly as the live path does
+     * ({@code SessionStateMachine.extractFreeSpinsAwarded}). The bought feature keeps an industry-standard
+     * spin count (~10–15) and is made richer per spin via {@code freeSpinsWinMultiplier} rather than
+     * longer, mirroring {@code SlotEngineService}'s settlement boost. Falls back to the organic count if
+     * no payload is present.
+     */
+    private int bonusBuyFreeSpins(SlotMathDefinition math, BonusBuyOption option) {
+        Object raw = option.initialFeaturePayload().get("freeSpinsAwarded");
+        return raw instanceof Number n ? n.intValue() : math.scatterTriggers().freeSpinsAwarded();
     }
 
     /** One per-spin draw of the organic Pick &amp; Collect trigger ({@code 1 in triggerOneInN}). */
@@ -189,14 +214,6 @@ public class RtpSimulationService {
     }
 
     // ------------------------------------------------------------------ helpers
-
-    private BigDecimal buyCost(SlotMathDefinition math, BonusBuyType type, BigDecimal bet) {
-        return math.bonusBuyOptions().stream()
-                .filter(o -> o.buyType() == type)
-                .findFirst()
-                .map(o -> bet.multiply(o.costMultiplier()))
-                .orElseThrow(() -> new IllegalStateException("No bonus-buy option configured for " + type));
-    }
 
     private int nextPick(PickCollectState state, RandomNumberGenerator rng,
                          RtpSimulationRequest.PickStrategy strategy, int seqCursor) {

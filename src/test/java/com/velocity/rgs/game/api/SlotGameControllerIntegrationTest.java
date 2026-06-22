@@ -179,7 +179,7 @@ class SlotGameControllerIntegrationTest {
 
         JsonNode buy = postJson("/api/v1/slot/feature/buy", "idem-buy-1", body);
         assertThat(buy.get("buyType").asText()).isEqualTo(BonusBuyType.FREE_SPINS_BUY.name());
-        assertThat(buy.get("cost").decimalValue()).isEqualByComparingTo(new BigDecimal("9"));
+        assertThat(buy.get("cost").decimalValue()).isEqualByComparingTo(new BigDecimal("100"));
         assertThat(buy.get("enteredState").asText()).isEqualTo("FREE_SPINS_AWAITING");
         assertThat(featurePurchaseRepository.findAll()).hasSize(1);
         assertThat(walletTransactionRepository.findAll())

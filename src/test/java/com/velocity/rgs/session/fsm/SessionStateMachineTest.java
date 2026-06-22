@@ -62,18 +62,15 @@ class SessionStateMachineTest {
 
         assertThat(res.newState()).isInstanceOf(SessionState.FreeSpinsAwaiting.class);
         SessionState.FreeSpinsAwaiting awaiting = (SessionState.FreeSpinsAwaiting) res.newState();
-        assertThat(awaiting.remainingFreeSpins()).isEqualTo(10);
+        assertThat(awaiting.remainingFreeSpins()).isEqualTo(12);
         assertThat(awaiting.triggerBet()).isEqualByComparingTo(new BigDecimal("1.00"));
         assertThat(res.monetaryEffect()).isInstanceOf(MonetaryEffect.Debit.class);
         MonetaryEffect.Debit debit = (MonetaryEffect.Debit) res.monetaryEffect();
         assertThat(debit.type()).isEqualTo(WalletTransactionType.BONUS_BUY);
-        assertThat(debit.amount()).isEqualTo(Money.of(new BigDecimal("9.00"), "EUR"));
+        assertThat(debit.amount()).isEqualTo(Money.of(new BigDecimal("100.00"), "EUR"));
         assertThat(res.reasonCodes()).containsExactly("ENTERED_VIA_BUY");
         assertThat(res.availableActions()).containsExactly(GameCommand.START_FREE_SPINS);
     }
-
-    // Note: there is no "buy Pick & Collect" test — the feature is organic-trigger-only (no game
-    // offers PICK_COLLECT_BUY), so the FSM is never asked to enter Pick & Collect via a purchase.
 
     @Test
     void startFreeSpinsMovesAwaitingToLoop() {

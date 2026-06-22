@@ -195,7 +195,6 @@ function setBusy(busy) {
   if (busy) {
     els.spinBtn.disabled = true;
     els.buyFreeSpins.disabled = true;
-    els.buyPickCollect.disabled = true;
     els.startFeature.disabled = true;
     return;
   }

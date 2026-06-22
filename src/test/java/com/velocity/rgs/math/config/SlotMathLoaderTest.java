@@ -52,6 +52,24 @@ class SlotMathLoaderTest {
         assertThat(def.bonusBuyOptions().get(0).targetState()).isEqualTo(GameState.FREE_SPINS_AWAITING);
         assertThat(def.pickCollect().organicTriggerEnabled()).isTrue();
         assertThat(def.limits().maxWinPerRoundMultiplier()).isEqualTo(10000);
+
+        // Bet config: server-driven stakes, default within the list, derived bounds, scale-insensitive match.
+        BetConfig bet = def.betConfig();
+        assertThat(bet.defaultBet()).isEqualByComparingTo("1.00");
+        assertThat(bet.minBet()).isEqualByComparingTo("0.20");
+        assertThat(bet.maxBet()).isEqualByComparingTo("100.00");
+        assertThat(bet.isValidBet(new java.math.BigDecimal("1.0"))).isTrue();
+        assertThat(bet.isValidBet(new java.math.BigDecimal("0.30"))).isFalse();
+    }
+
+    @Test
+    void rejectsDefaultBetOutsideValues() {
+        // defaultBet must be one of the configured stakes — compact-constructor validation must trip.
+        assertThatThrownBy(() -> new BetConfig(
+                java.util.List.of(new java.math.BigDecimal("0.20"), new java.math.BigDecimal("1.00")),
+                new java.math.BigDecimal("0.50")))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("defaultBet");
     }
 
     @Test
@@ -112,7 +130,8 @@ class SlotMathLoaderTest {
                     "tileDistribution": [ { "type": "BLANK", "weight": 10 } ],
                     "maxFeatureWinMultiplier": 5000
                   },
-                  "limits": { "maxWinPerRoundMultiplier": 10000 }
+                  "limits": { "maxWinPerRoundMultiplier": 10000 },
+                  "betConfig": { "values": [1.0], "defaultBet": 1.0 }
                 }
                 """;
         assertThatThrownBy(() -> STRICT.readValue(json, SlotMathDefinition.class))

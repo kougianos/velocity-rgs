@@ -37,7 +37,10 @@
   <main class="layout">
     <!-- ===== Game column ===== -->
     <section class="panel game-panel">
-      <h2 class="panel-title">Reels</h2>
+      <h2 class="panel-title">
+        Reels
+        <button id="showInfo" class="btn btn-ghost tiny info-btn">ⓘ Show Game Info</button>
+      </h2>
 
       <div id="reels" class="reels" aria-label="Slot grid"></div>
 
@@ -47,10 +50,16 @@
       </div>
 
       <div class="controls">
-        <div class="control-group" id="betControl">
-          <label for="betSize">Bet</label>
-          <input id="betSize" type="number" min="0.10" step="0.10" value="1.00" />
-          <small id="betPowerHint" class="bet-power-hint hidden">Power Bet ×<span id="betPowerMult">1.5</span></small>
+        <div class="control-group bet-control" id="betControl">
+          <label for="betSlider">Bet <strong id="betValue" class="bet-value">—</strong></label>
+          <input id="betSlider" class="bet-slider" type="range" min="0" max="0" step="1" value="0" />
+          <div class="bet-scale">
+            <span id="betMin">—</span>
+            <span id="betMax">—</span>
+          </div>
+          <small id="betPowerHint" class="bet-power-hint hidden">
+            Power Bet ×<span id="betPowerMult">1.5</span> = <span id="betEffective">—</span>
+          </small>
         </div>
 
         <label class="toggle" id="powerBetToggle">
@@ -89,8 +98,13 @@
       <section class="panel">
         <h2 class="panel-title">RTP Simulator</h2>
         <div class="form-grid">
-          <label>Bet
-            <input id="simBet" type="number" min="0.10" step="0.10" value="1.00" />
+          <label class="sim-bet" for="simSlider">
+            <span class="sim-bet-row">Bet <strong id="simBetValue" class="bet-value">—</strong></span>
+            <input id="simSlider" class="bet-slider" type="range" min="0" max="0" step="1" value="0" />
+            <span class="bet-scale">
+              <span id="simBetMin">—</span>
+              <span id="simBetMax">—</span>
+            </span>
           </label>
           <label>Base spins
             <input id="simBase" type="number" min="0" step="1000" value="100000" />
@@ -151,6 +165,23 @@
   </main>
 
   <div id="toast" class="toast hidden"></div>
+
+  <!-- Game info modal — spans the reels + simulator width over the main game area -->
+  <div id="infoModal" class="info-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="infoTitle">
+    <div class="info-card">
+      <button id="infoClose" class="info-close" aria-label="Close game info">×</button>
+      <header class="info-head">
+        <span class="info-logo" id="infoLogo">🔥</span>
+        <div>
+          <h2 class="info-title" id="infoTitle">Game</h2>
+          <p class="info-tagline" id="infoTagline"></p>
+        </div>
+      </header>
+      <div class="info-stats" id="infoStats"></div>
+      <div class="info-body" id="infoParagraphs"></div>
+      <div class="info-specs" id="infoSpecs"></div>
+    </div>
+  </div>
 
   <!-- Free-spins intro / summary dialog -->
   <div id="fsModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="fsModalTitle">

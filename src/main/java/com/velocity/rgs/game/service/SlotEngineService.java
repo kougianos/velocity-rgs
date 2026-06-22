@@ -94,8 +94,6 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class SlotEngineService {
 
-    private static final BigDecimal DEFAULT_BET = new BigDecimal("1.00");
-
     private final SessionStateMachine stateMachine;
     private final GridGenerationEngine gridEngine;
     private final ReelEvaluator reelEvaluator;
@@ -163,6 +161,16 @@ public class SlotEngineService {
             SlotMathDefinition math = mathRegistry.require(session.getGameId(), session.getMathVersion());
 
             SessionState currentState = rehydrate(session);
+            // The player only chooses a stake in the base game; free spins lock to the trigger bet and
+            // bonus-buy flows have their own cost path. When the player does pick the stake, it must be one
+            // of the game's configured bet values — the server is the authority, so a tampered or stale
+            // client cannot wager an off-grid amount. Power Bet multiplies this validated base stake.
+            if (currentState instanceof SessionState.BaseGame
+                    && !math.betConfig().isValidBet(request.betSize())) {
+                throw new RgsException(ErrorCode.VALIDATION_ERROR,
+                        "Bet " + request.betSize() + " is not an allowed stake for game "
+                                + session.getGameId());
+            }
             BigDecimal effectiveBet = effectiveBetForSpin(currentState, request.betSize(),
                     request.powerBetActive(), math, session.getCurrency());
 
@@ -462,7 +470,7 @@ public class SlotEngineService {
                 .mathVersion(math.mathVersion())
                 .currency(currency)
                 .currentState(GameState.BASE_GAME)
-                .currentBet(DEFAULT_BET)
+                .currentBet(math.betConfig().defaultBet())
                 .remainingFreeSpins(0)
                 .accumulatedFreeSpinsWin(BigDecimal.ZERO)
                 .activeFeaturePayload(null)

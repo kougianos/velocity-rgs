@@ -51,9 +51,15 @@ public class GameCatalogController {
                 .theme(p.theme())
                 .volatility(p.volatility())
                 .spinDurationMillis(p.spinDurationMillis())
+                .info(p.info())
                 // Headline math facts
                 .targetRtp(math.targetRtp())
                 .maxWinMultiplier(math.limits().maxWinPerRoundMultiplier())
+                // Staking — the client renders these as the bet selector; the server re-validates every spin
+                .betValues(math.betConfig().values())
+                .defaultBet(math.betConfig().defaultBet())
+                .minBet(math.betConfig().minBet())
+                .maxBet(math.betConfig().maxBet())
                 .freeSpinsAwarded(math.scatterTriggers().freeSpinsAwarded())
                 .freeSpinsBuyCostMultiplier(buyCost(math, BonusBuyType.FREE_SPINS_BUY))
                 .pickCollectTriggerOneInN(math.pickCollect().triggerOneInN())
@@ -99,8 +105,13 @@ public class GameCatalogController {
             String theme,
             String volatility,
             int spinDurationMillis,
+            GamePresentation.GameInfo info,
             BigDecimal targetRtp,
             int maxWinMultiplier,
+            List<BigDecimal> betValues,
+            BigDecimal defaultBet,
+            BigDecimal minBet,
+            BigDecimal maxBet,
             int freeSpinsAwarded,
             BigDecimal freeSpinsBuyCostMultiplier,
             int pickCollectTriggerOneInN,

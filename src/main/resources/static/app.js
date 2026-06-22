@@ -22,6 +22,14 @@ let ROWS = 0;
 let COLS = 0;
 // How long the reels visibly roll before settling — server-driven per game (catalog), with a safe default.
 let SPIN_MS = 600;
+// The discrete stakes a player may wager — fully server-driven (catalog betValues). The bet slider steps
+// through these by index; DEFAULT_BET seeds the initial selection. The server re-validates every spin, so
+// these are only a convenience for the UI.
+let BET_VALUES = [];
+let DEFAULT_BET = 1.0;
+// Bet-selector component instances (see createBetSlider) — one for the main game, one for the simulator.
+let mainBetSlider = null;
+let simBetSlider = null;
 
 /**
  * Load the active game's config from the backend catalog and populate the module state above. Resolves the
@@ -38,6 +46,9 @@ async function loadGameConfig() {
   ROWS = game.rows;
   COLS = game.cols;
   if (Number(game.spinDurationMillis) > 0) SPIN_MS = Number(game.spinDurationMillis);
+  BET_VALUES = (game.betValues || []).map(Number).filter((v) => v > 0).sort((a, b) => a - b);
+  DEFAULT_BET = Number(game.defaultBet) || BET_VALUES[0] || 1.0;
+  state.baseBet = DEFAULT_BET;
   // Filler symbols (wild/scatter excluded) used to dress the idle reels — derived from the live symbol set.
   FILLER_SYMBOL_IDS = Object.keys(SYMBOLS)
     .map(Number)
@@ -73,10 +84,14 @@ const els = {
   winBanner: $("winBanner"),
   winAmount: $("winAmount"),
   winLines: $("winLines"),
-  betSize: $("betSize"),
+  betSlider: $("betSlider"),
+  betValue: $("betValue"),
+  betMin: $("betMin"),
+  betMax: $("betMax"),
   betControl: $("betControl"),
   betPowerHint: $("betPowerHint"),
   betPowerMult: $("betPowerMult"),
+  betEffective: $("betEffective"),
   powerBet: $("powerBet"),
   powerBetToggle: $("powerBetToggle"),
   powerBetMultLabel: $("powerBetMultLabel"),
@@ -89,7 +104,10 @@ const els = {
   pickTotal: $("pickTotal"),
   pickRemaining: $("pickRemaining"),
   resetSession: $("resetSession"),
-  simBet: $("simBet"),
+  simSlider: $("simSlider"),
+  simBetValue: $("simBetValue"),
+  simBetMin: $("simBetMin"),
+  simBetMax: $("simBetMax"),
   simBase: $("simBase"),
   simPower: $("simPower"),
   simFs: $("simFs"),
@@ -111,6 +129,15 @@ const els = {
   fsModalMessage: $("fsModalMessage"),
   fsModalConfirm: $("fsModalConfirm"),
   fsModalCancel: $("fsModalCancel"),
+  showInfo: $("showInfo"),
+  infoModal: $("infoModal"),
+  infoClose: $("infoClose"),
+  infoLogo: $("infoLogo"),
+  infoTitle: $("infoTitle"),
+  infoTagline: $("infoTagline"),
+  infoStats: $("infoStats"),
+  infoParagraphs: $("infoParagraphs"),
+  infoSpecs: $("infoSpecs"),
 };
 
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -204,11 +231,61 @@ function setBusy(busy) {
   renderActions();
 }
 
+/* ----------------------------------------------------------------- bet slider */
+
+/** Nearest index into BET_VALUES for a stake — used to seed a slider from the default/session bet. */
+function betIndexFor(value) {
+  if (!BET_VALUES.length) return 0;
+  let best = 0;
+  for (let i = 1; i < BET_VALUES.length; i++) {
+    if (Math.abs(BET_VALUES[i] - value) < Math.abs(BET_VALUES[best] - value)) best = i;
+  }
+  return best;
+}
+
+/**
+ * Reusable bet-selector component shared by the main game and the RTP simulator. Binds a range input so it
+ * steps through the server-driven BET_VALUES by index, mirrors the chosen stake into a readout (and optional
+ * min/max scale), and notifies `onChange`. Returns `{ value, setValue() }` — `value` is the live stake.
+ */
+function createBetSlider({ slider, valueEl, minEl, maxEl, initial, onChange }) {
+  const max = Math.max(0, BET_VALUES.length - 1);
+  slider.min = "0";
+  slider.max = String(max);
+  slider.step = "1";
+  slider.disabled = BET_VALUES.length <= 1;
+  if (BET_VALUES.length) {
+    if (minEl) minEl.textContent = fmt(BET_VALUES[0]);
+    if (maxEl) maxEl.textContent = fmt(BET_VALUES[max]);
+  }
+
+  const component = {
+    get value() {
+      if (!BET_VALUES.length) return Number(initial) || 0;
+      const idx = Math.min(BET_VALUES.length - 1, Math.max(0, Number(slider.value) | 0));
+      return BET_VALUES[idx];
+    },
+    setValue(stake) {
+      slider.value = String(betIndexFor(stake));
+      refresh();
+    },
+  };
+
+  function refresh() {
+    if (valueEl) valueEl.textContent = fmt(component.value);
+    if (onChange) onChange(component.value);
+  }
+
+  slider.addEventListener("input", refresh);
+  component.setValue(initial);
+  return component;
+}
+
 /* -------------------------------------------------------------- power bet */
 
-/** The per-spin stake to send to the server — always the base bet; the server applies the ×N. */
+/** The per-spin base stake to send to the server — always one of the configured bet values; server ×N. */
 function betForRequest() {
-  return els.powerBet.checked ? state.baseBet : Number(els.betSize.value);
+  return state.baseBet;
 }
 
 /** Push the live multiplier (from the server) into the on-screen labels. */
@@ -218,25 +295,44 @@ function updatePowerMultLabels() {
   if (els.betPowerMult) els.betPowerMult.textContent = m;
 }
 
+/** Show the multiplied effective stake while Power Bet is on (the base stake shows in the slider readout). */
+function updateBetEffective() {
+  const on = els.powerBet.checked;
+  if (els.betEffective) els.betEffective.textContent = fmt(state.baseBet * (on ? state.powerMultiplier : 1));
+}
+
 /**
- * Reflect the Power Bet toggle into the Bet field. While enabled the field is locked and shows the
- * effective (multiplied) stake; we stash the chosen base bet so we can restore it when disabled and
- * still send the base value to the server.
+ * Reflect the Power Bet toggle. The slider always selects the base stake (sent to the server); when Power
+ * Bet is on we surface the multiplied effective stake in the readout instead of locking the control.
  */
 function applyPowerBetState() {
   const on = els.powerBet.checked;
-  if (on) {
-    state.baseBet = Number(els.betSize.value) || state.baseBet;
-    const effective = state.baseBet * state.powerMultiplier;
-    els.betSize.value = effective.toFixed(2);
-    els.betSize.readOnly = true;
-  } else {
-    els.betSize.readOnly = false;
-    els.betSize.value = Number(state.baseBet).toFixed(2);
-  }
   els.betControl.classList.toggle("bet-locked", on);
   els.powerBetToggle.classList.toggle("is-active", on);
   els.betPowerHint.classList.toggle("hidden", !on);
+  updateBetEffective();
+}
+
+/** Build the main-game and simulator bet selectors from the shared slider component (server-driven values). */
+function setupBetSliders() {
+  mainBetSlider = createBetSlider({
+    slider: els.betSlider,
+    valueEl: els.betValue,
+    minEl: els.betMin,
+    maxEl: els.betMax,
+    initial: state.baseBet,
+    onChange: (stake) => {
+      state.baseBet = stake;
+      updateBetEffective();
+    },
+  });
+  simBetSlider = createBetSlider({
+    slider: els.simSlider,
+    valueEl: els.simBetValue,
+    minEl: els.simBetMin,
+    maxEl: els.simBetMax,
+    initial: DEFAULT_BET,
+  });
 }
 
 /* ----------------------------------------------------------------- render */
@@ -475,8 +571,11 @@ async function bootSession() {
     applySessionView(init);
     const mult = init.featureFlags && init.featureFlags.powerBetMultiplier;
     if (mult != null) state.powerMultiplier = Number(mult);
-    // Only read the base bet from the field when it isn't showing the locked (multiplied) value.
-    if (!els.powerBet.checked) state.baseBet = Number(els.betSize.value) || state.baseBet;
+    // Seed the slider from the resumed session's stake when it's one of the configured bet values;
+    // otherwise keep the catalog default already set during loadGameConfig.
+    if (init.currentBet != null && BET_VALUES.some((v) => Math.abs(v - Number(init.currentBet)) < 1e-9)) {
+      mainBetSlider.setValue(Number(init.currentBet));
+    }
     updatePowerMultLabels();
     applyPowerBetState();
     renderHud();
@@ -716,7 +815,7 @@ async function runSimulation() {
       body: {
         gameId: GAME_ID,
         mathVersion: "v1",
-        bet: Number(els.simBet.value),
+        bet: simBetSlider.value,
         spinsBaseGame: Number(els.simBase.value),
         spinsPowerBet: Number(els.simPower.value),
         spinsBonusBuyFreeSpins: Number(els.simFs.value),
@@ -797,10 +896,6 @@ function handleError(label, e) {
 function bindEvents() {
   els.spinBtn.addEventListener("click", doSpin);
   els.powerBet.addEventListener("change", applyPowerBetState);
-  // Keep the remembered base bet in sync whenever the user edits the (unlocked) field.
-  els.betSize.addEventListener("input", () => {
-    if (!els.powerBet.checked) state.baseBet = Number(els.betSize.value) || state.baseBet;
-  });
   els.buyFreeSpins.addEventListener("click", () => buyFeature("FREE_SPINS_BUY"));
   els.startFeature.addEventListener("click", () => {
     const feature = els.startFeature.dataset.feature || "FREE_SPINS";
@@ -812,6 +907,15 @@ function bindEvents() {
   els.runSim.addEventListener("click", runSimulation);
   els.setBalanceBtn.addEventListener("click", setBalance);
   els.clearLog.addEventListener("click", () => (els.log.textContent = ""));
+  els.showInfo.addEventListener("click", openInfoModal);
+  els.infoClose.addEventListener("click", closeInfoModal);
+  // Click the dim backdrop (but not the card) to dismiss.
+  els.infoModal.addEventListener("click", (e) => {
+    if (e.target === els.infoModal) closeInfoModal();
+  });
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && !els.infoModal.classList.contains("hidden")) closeInfoModal();
+  });
 }
 
 /** Apply the active game's theme + branding to the page chrome. */
@@ -828,6 +932,77 @@ function applyGameInfo() {
   if (META && META.freeSpinsBuyCostMultiplier != null) {
     els.buyFreeSpinsCost.textContent = `(×${Number(META.freeSpinsBuyCostMultiplier)})`;
   }
+  buildInfoModal();
+}
+
+/**
+ * Populate the "Show Game Info" modal entirely from the server-driven catalog (META.info). Everything —
+ * marketing copy, the stat cards and the spec sheet — is authored in the game JSON, so this only lays the
+ * provided strings into the DOM. If a game ships no info block, the button is hidden.
+ */
+function buildInfoModal() {
+  const info = META && META.info;
+  const hasInfo =
+    info && ((info.paragraphs && info.paragraphs.length) ||
+             (info.stats && info.stats.length) ||
+             (info.specs && info.specs.length));
+  if (els.showInfo) els.showInfo.classList.toggle("hidden", !hasInfo);
+  if (!hasInfo) return;
+
+  els.infoLogo.textContent = META.logo || "🎰";
+  els.infoTitle.textContent = META.title || "";
+  els.infoTagline.textContent = META.tagline || "";
+
+  els.infoStats.replaceChildren(
+    ...(info.stats || []).map((s) => {
+      const card = document.createElement("div");
+      card.className = "info-stat";
+      const label = document.createElement("span");
+      label.className = "info-stat-label";
+      label.textContent = s.label;
+      const value = document.createElement("strong");
+      value.className = "info-stat-value";
+      value.textContent = s.value;
+      card.append(label, value);
+      return card;
+    })
+  );
+
+  els.infoParagraphs.replaceChildren(
+    ...(info.paragraphs || []).map((text) => {
+      const p = document.createElement("p");
+      p.textContent = text;
+      return p;
+    })
+  );
+
+  els.infoSpecs.replaceChildren(
+    ...(info.specs || []).map((spec) => {
+      const row = document.createElement("div");
+      row.className = "info-spec";
+      const label = document.createElement("span");
+      label.className = "info-spec-label";
+      label.textContent = spec.label;
+      const values = document.createElement("span");
+      values.className = "info-spec-values";
+      for (const v of spec.values || []) {
+        const line = document.createElement("span");
+        line.className = "info-spec-line";
+        line.textContent = v;
+        values.appendChild(line);
+      }
+      row.append(label, values);
+      return row;
+    })
+  );
+}
+
+function openInfoModal() {
+  els.infoModal.classList.remove("hidden");
+}
+
+function closeInfoModal() {
+  els.infoModal.classList.add("hidden");
 }
 
 async function main() {
@@ -840,6 +1015,7 @@ async function main() {
   }
   applyGameChrome();
   applyGameInfo();
+  setupBetSliders();
   buildGrid();
   bootSession();
 }

@@ -1,5 +1,6 @@
 package com.velocity.rgs.math.engine;
 
+import com.velocity.rgs.math.config.BetConfig;
 import com.velocity.rgs.math.config.FreeSpinsConfig;
 import com.velocity.rgs.math.config.Grid;
 import com.velocity.rgs.math.config.Limits;
@@ -183,7 +184,8 @@ class GridGenerationEngineTest {
                         new PickCollectCompletion(PickCollectCompletion.CompletionType.FIXED_PICKS, 5),
                         List.of(new PickTileWeight(PickTileType.BLANK, 10, null)),
                         5000, 0),
-                new Limits(10_000)
+                new Limits(10_000),
+                new BetConfig(List.of(new BigDecimal("0.20"), new BigDecimal("1.00")), new BigDecimal("1.00"))
         );
     }
 }

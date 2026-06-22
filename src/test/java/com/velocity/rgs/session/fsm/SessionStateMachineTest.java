@@ -211,7 +211,8 @@ class SessionStateMachineTest {
                 math.powerBet(),
                 List.of(),
                 math.pickCollect(),
-                math.limits());
+                math.limits(),
+                math.betConfig());
         TransitionContext localCtx = new TransitionContext(stripped, "EUR");
 
         TransitionResult res = machine.transition(
@@ -238,7 +239,8 @@ class SessionStateMachineTest {
                 math.powerBet(),
                 List.of(),
                 math.pickCollect(),
-                math.limits());
+                math.limits(),
+                math.betConfig());
         TransitionContext localCtx = new TransitionContext(stripped, "EUR");
 
         assertThatThrownBy(() -> machine.transition(

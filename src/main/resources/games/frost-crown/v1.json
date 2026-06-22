@@ -18,6 +18,29 @@
       "8":  { "glyph": "👑", "name": "Crown"   },
       "9":  { "glyph": "❄️", "name": "Wild"    },
       "12": { "glyph": "💠", "name": "Scatter" }
+    },
+    "info": {
+      "paragraphs": [
+        "Beneath the shimmering northern lights, Frost Crown glides across five reels and twenty paylines with a calm, steady rhythm and the most frequent wins of the realm.",
+        "Snowy Owls and jewelled Crowns drift over icy reels, while three or more Scatter crystals summon the Free Spins feature. Frozen Wilds lock in extra ways to win, and Power Bet adds a frosty bite to every stake.",
+        "Trigger the Pick & Collect and choose to bank your glittering credits or brave the blizzard — all the way up to a crisp 2,000× crown win."
+      ],
+      "stats": [
+        { "label": "Game Theme", "value": "Winter, Royal, Aurora" },
+        { "label": "Volatility", "value": "Low" },
+        { "label": "RTP", "value": "96.00%" }
+      ],
+      "specs": [
+        { "label": "Game Type", "values": ["Video Slot Game"] },
+        { "label": "Lines", "values": ["20 paylines"] },
+        { "label": "Reel Type", "values": ["5×3"] },
+        { "label": "Winning Functionality", "values": ["Left to right on adjacent reels"] },
+        { "label": "Special Features", "values": ["Free Spins", "Pick & Collect", "Power Bet"] },
+        { "label": "Free Spins Symbol", "values": ["Scatter 💠"] },
+        { "label": "Hit Frequency", "values": ["31.20% — for RTP 96.00%"] },
+        { "label": "Max Exposure", "values": ["Max multiplier: 2,000×", "Max win: €200,000"] },
+        { "label": "Bet Values", "values": ["Min — €0.10", "Default — €0.40", "Max — €50.00"] }
+      ]
     }
   },
   "math": {
@@ -116,6 +139,10 @@
       ],
       "maxFeatureWinMultiplier": 1500
     },
-    "limits": { "maxWinPerRoundMultiplier": 2000 }
+    "limits": { "maxWinPerRoundMultiplier": 2000 },
+    "betConfig": {
+      "values": [0.10, 0.20, 0.40, 0.60, 1.00, 2.00, 4.00, 10.00, 20.00, 50.00],
+      "defaultBet": 0.40
+    }
   }
 }

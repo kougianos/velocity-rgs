@@ -33,7 +33,8 @@ public record SlotMathDefinition(
         PowerBetConfig powerBet,
         List<BonusBuyOption> bonusBuyOptions,
         PickCollectConfig pickCollect,
-        Limits limits
+        Limits limits,
+        BetConfig betConfig
 ) {
 
     public SlotMathDefinition {
@@ -51,6 +52,7 @@ public record SlotMathDefinition(
         Objects.requireNonNull(bonusBuyOptions, "bonusBuyOptions");
         Objects.requireNonNull(pickCollect, "pickCollect");
         Objects.requireNonNull(limits, "limits");
+        Objects.requireNonNull(betConfig, "betConfig");
 
         if (gameId.isBlank() || mathVersion.isBlank()) {
             throw new IllegalArgumentException("gameId/mathVersion must not be blank");

@@ -18,6 +18,29 @@
       "8":  { "glyph": "🐉", "name": "Dragon"  },
       "9":  { "glyph": "🔥", "name": "Wild"    },
       "12": { "glyph": "💰", "name": "Scatter" }
+    },
+    "info": {
+      "paragraphs": [
+        "Descend into the magma! Inferno Riches erupts across five reels and twenty paylines with the biggest, boldest swings of the entire collection — strictly for thrill-seekers.",
+        "Phoenixes rise and Dragons roar as molten Wilds tear through the grid. Three or more Scatter coins blast open the Free Spins feature, and Power Bet pours fuel on every spin for even hotter potential.",
+        "Survive the eruption and the Pick & Collect lets you cash out glowing credits or gamble for the lava core — a monstrous 25,000× max win waits at the bottom of the volcano."
+      ],
+      "stats": [
+        { "label": "Game Theme", "value": "Volcano, Dragon, Fire" },
+        { "label": "Volatility", "value": "High" },
+        { "label": "RTP", "value": "96.00%" }
+      ],
+      "specs": [
+        { "label": "Game Type", "values": ["Video Slot Game"] },
+        { "label": "Lines", "values": ["20 paylines"] },
+        { "label": "Reel Type", "values": ["5×3"] },
+        { "label": "Winning Functionality", "values": ["Left to right on adjacent reels"] },
+        { "label": "Special Features", "values": ["Free Spins", "Pick & Collect", "Power Bet"] },
+        { "label": "Free Spins Symbol", "values": ["Scatter 💰"] },
+        { "label": "Hit Frequency", "values": ["23.80% — for RTP 96.00%"] },
+        { "label": "Max Exposure", "values": ["Max multiplier: 25,000×", "Max win: €2,500,000"] },
+        { "label": "Bet Values", "values": ["Min — €0.20", "Default — €2.00", "Max — €200.00"] }
+      ]
     }
   },
   "math": {
@@ -116,6 +139,10 @@
       ],
       "maxFeatureWinMultiplier": 3000
     },
-    "limits": { "maxWinPerRoundMultiplier": 25000 }
+    "limits": { "maxWinPerRoundMultiplier": 25000 },
+    "betConfig": {
+      "values": [0.20, 0.50, 1.00, 2.00, 5.00, 10.00, 25.00, 50.00, 100.00, 200.00],
+      "defaultBet": 2.00
+    }
   }
 }

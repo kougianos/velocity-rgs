@@ -1,77 +1,52 @@
 "use strict";
 
 /* =========================================================================
- * Velocity RGS — shared game presentation metadata.
+ * Velocity RGS — game catalog client.
  *
- * The backend GET /api/v1/games endpoint is the source of truth for WHICH
- * games exist and their math facts (RTP, max-win multiplier, buy costs). This
- * file only layers on presentation: theme, glyphs and copy keyed by gameId.
- * Loaded by both the lobby (index.html) and the game page (game.html).
+ * The backend GET /api/v1/games endpoint is the single source of truth for
+ * everything about a game: presentation (title, tagline, theme, logo, per-symbol
+ * glyphs), the grid shape + paylines used to draw and highlight the reels, and the
+ * headline math facts (RTP, max-win, buy costs). Nothing about a game is hardcoded
+ * here — this module just fetches that catalog once, caches it, and exposes small
+ * helpers to shape it for rendering. Loaded by both the lobby (index.html) and the
+ * game page (game.html).
  * ======================================================================= */
 
-const GAME_META = {
-  "aztec-fire": {
-    name: "Aztec Fire",
-    tagline: "Sun-scorched reels and blazing free spins.",
-    logo: "🔥",
-    theme: "fire",
-    volatility: "Medium",
-    symbols: {
-      1:  { glyph: "A",  name: "Ace"    },
-      2:  { glyph: "K",  name: "King"   },
-      3:  { glyph: "Q",  name: "Queen"  },
-      4:  { glyph: "J",  name: "Jack"   },
-      5:  { glyph: "10", name: "Ten"    },
-      6:  { glyph: "9",  name: "Nine"   },
-      7:  { glyph: "🗿", name: "Statue" },
-      8:  { glyph: "👹", name: "Mask"   },
-      9:  { glyph: "⭐", name: "Wild"   },
-      12: { glyph: "💎", name: "Scatter"},
-    },
-  },
-  "frost-crown": {
-    name: "Frost Crown",
-    tagline: "Steady, frequent wins beneath the northern lights.",
-    logo: "❄️",
-    theme: "frost",
-    volatility: "Low",
-    symbols: {
-      1:  { glyph: "A",  name: "Ace"    },
-      2:  { glyph: "K",  name: "King"   },
-      3:  { glyph: "Q",  name: "Queen"  },
-      4:  { glyph: "J",  name: "Jack"   },
-      5:  { glyph: "10", name: "Ten"    },
-      6:  { glyph: "9",  name: "Nine"   },
-      7:  { glyph: "🦉", name: "Owl"    },
-      8:  { glyph: "👑", name: "Crown"  },
-      9:  { glyph: "❄️", name: "Wild"   },
-      12: { glyph: "💠", name: "Scatter"},
-    },
-  },
-  "inferno-riches": {
-    name: "Inferno Riches",
-    tagline: "Brave the volcano for monstrous 25,000× hits.",
-    logo: "🌋",
-    theme: "inferno",
-    volatility: "High",
-    symbols: {
-      1:  { glyph: "A",  name: "Ace"     },
-      2:  { glyph: "K",  name: "King"    },
-      3:  { glyph: "Q",  name: "Queen"   },
-      4:  { glyph: "J",  name: "Jack"    },
-      5:  { glyph: "10", name: "Ten"     },
-      6:  { glyph: "9",  name: "Nine"    },
-      7:  { glyph: "🦅", name: "Phoenix" },
-      8:  { glyph: "🐉", name: "Dragon"  },
-      9:  { glyph: "🔥", name: "Wild"    },
-      12: { glyph: "💰", name: "Scatter" },
-    },
-  },
-};
+let _catalogPromise = null;
 
-const DEFAULT_GAME_ID = "aztec-fire";
+/** Fetch the full game catalog from the backend, memoized so repeat callers share one request. */
+function fetchCatalog() {
+  if (!_catalogPromise) {
+    _catalogPromise = fetch("/api/v1/games")
+      .then((res) => {
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return res.json();
+      })
+      .catch((err) => {
+        // Reset so a later caller can retry after a transient failure.
+        _catalogPromise = null;
+        throw err;
+      });
+  }
+  return _catalogPromise;
+}
 
-/** Resolve presentation metadata for a gameId, falling back to the default game. */
-function gameMeta(gameId) {
-  return GAME_META[gameId] || GAME_META[DEFAULT_GAME_ID];
+/** Resolve a game from the catalog by id, falling back to the first registered game. */
+function resolveGame(catalog, gameId) {
+  if (!Array.isArray(catalog) || catalog.length === 0) return null;
+  return catalog.find((g) => g.gameId === gameId) || catalog[0];
+}
+
+/** Build a { symbolId: { glyph, name } } lookup from a game's symbol list. */
+function buildSymbolMap(game) {
+  const map = {};
+  for (const s of game.symbols || []) map[s.id] = { glyph: s.glyph, name: s.name };
+  return map;
+}
+
+/** Build a { lineId: coords } lookup (coords = ordered [row, col] pairs) from a game's paylines. */
+function buildPaylineMap(game) {
+  const map = {};
+  for (const p of game.paylines || []) map[p.id] = p.coords;
+  return map;
 }

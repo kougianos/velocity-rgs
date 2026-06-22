@@ -32,7 +32,7 @@ class SessionStateMachineTest {
 
     @BeforeEach
     void loadMath() {
-        math = new SlotMathLoader().load("aztec-fire", "v1");
+        math = new SlotMathLoader().load("aztec-fire", "v1").math();
         ctx = new TransitionContext(math, "EUR");
     }
 

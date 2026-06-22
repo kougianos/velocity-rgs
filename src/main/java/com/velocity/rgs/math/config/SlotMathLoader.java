@@ -11,9 +11,10 @@ import java.io.IOException;
 import java.io.InputStream;
 
 /**
- * Loads {@link SlotMathDefinition} from {@code src/main/resources/math/<gameId>/<mathVersion>.json} (A.4).
- * Uses a dedicated strict {@link ObjectMapper} (fail on unknown fields, big-decimal for numerics) so
- * malformed math JSON fails fast at startup.
+ * Loads a {@link GameDefinition} (presentation + math) from
+ * {@code src/main/resources/games/<gameId>/<mathVersion>.json} (A.4). Uses a dedicated strict
+ * {@link ObjectMapper} (fail on unknown fields, big-decimal for numerics) so any malformed game JSON
+ * fails fast at startup.
  */
 @Slf4j
 @Component
@@ -24,23 +25,23 @@ public class SlotMathLoader {
             .configure(DeserializationFeature.USE_BIG_DECIMAL_FOR_FLOATS, true)
             .registerModule(new ParameterNamesModule());
 
-    public SlotMathDefinition load(String gameId, String mathVersion) {
-        String path = "math/" + gameId + "/" + mathVersion + ".json";
+    public GameDefinition load(String gameId, String mathVersion) {
+        String path = "games/" + gameId + "/" + mathVersion + ".json";
         ClassPathResource resource = new ClassPathResource(path);
         if (!resource.exists()) {
-            throw new IllegalStateException("Math JSON not found on classpath: " + path);
+            throw new IllegalStateException("Game JSON not found on classpath: " + path);
         }
-        log.info("Loading slot math {} from {}", gameId + "@" + mathVersion, path);
+        log.info("Loading game {} from {}", gameId + "@" + mathVersion, path);
         try (InputStream in = resource.getInputStream()) {
-            SlotMathDefinition def = MAPPER.readValue(in, SlotMathDefinition.class);
+            GameDefinition def = MAPPER.readValue(in, GameDefinition.class);
             if (!gameId.equals(def.gameId()) || !mathVersion.equals(def.mathVersion())) {
                 throw new IllegalStateException(String.format(
-                        "Math JSON header mismatch for %s/%s: file declares %s/%s",
+                        "Game JSON header mismatch for %s/%s: file declares %s/%s",
                         gameId, mathVersion, def.gameId(), def.mathVersion()));
             }
             return def;
         } catch (IOException e) {
-            throw new IllegalStateException("Failed to parse math JSON " + path + ": " + e.getMessage(), e);
+            throw new IllegalStateException("Failed to parse game JSON " + path + ": " + e.getMessage(), e);
         }
     }
 }

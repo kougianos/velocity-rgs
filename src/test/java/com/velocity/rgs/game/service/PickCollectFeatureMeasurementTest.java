@@ -33,7 +33,7 @@ class PickCollectFeatureMeasurementTest {
     @ParameterizedTest(name = "{0} feature E[W]")
     @ValueSource(strings = {"aztec-fire", "frost-crown", "inferno-riches"})
     void measureFeatureAverageWin(String gameId) {
-        SlotMathDefinition math = new SlotMathLoader().load(gameId, "v1");
+        SlotMathDefinition math = new SlotMathLoader().load(gameId, "v1").math();
         PickCollectConfig cfg = math.pickCollect();
         PickCollectEngine engine = new PickCollectEngine();
 

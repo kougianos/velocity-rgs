@@ -28,7 +28,7 @@ class BonusBuyPolicyServiceTest {
     void setUp() {
         props = new BonusBuyPolicyProperties();
         service = new BonusBuyPolicyService(props);
-        math = new SlotMathLoader().load("aztec-fire", "v1");
+        math = new SlotMathLoader().load("aztec-fire", "v1").math();
         session = GameSession.builder()
                 .sessionId("ses-1")
                 .playerId("p-1")

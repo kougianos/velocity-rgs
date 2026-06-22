@@ -1,8 +1,10 @@
 "use strict";
 
 /* =========================================================================
- * Velocity RGS — lobby. Fetches the live game catalog from the backend and
- * renders a themed card per game. Clicking a card opens the game page.
+ * Velocity RGS — lobby. Fetches the live game catalog from the backend (see
+ * games.js) and renders a themed card per game. Every card detail — theme, logo,
+ * title, copy, volatility and math facts — comes straight from the server config.
+ * Clicking a card opens the game page.
  * ======================================================================= */
 
 const fmtInt = (n) => Number(n ?? 0).toLocaleString();
@@ -10,9 +12,7 @@ const fmtInt = (n) => Number(n ?? 0).toLocaleString();
 async function loadGames() {
   const grid = document.getElementById("gameGrid");
   try {
-    const res = await fetch("/api/v1/games");
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const games = await res.json();
+    const games = await fetchCatalog();
     if (!Array.isArray(games) || games.length === 0) {
       grid.innerHTML = `<p class="lobby-error">No games are registered on the server.</p>`;
       return;
@@ -27,22 +27,21 @@ function renderGames(games) {
   const grid = document.getElementById("gameGrid");
   grid.innerHTML = "";
   for (const g of games) {
-    const meta = gameMeta(g.gameId);
     const rtp = Number(g.targetRtp).toFixed(1);
-    const vol = meta.volatility;
+    const vol = g.volatility || "";
 
     const card = document.createElement("a");
     card.className = "game-card";
-    card.dataset.theme = meta.theme;
+    card.dataset.theme = g.theme;
     card.href = `game.html?game=${encodeURIComponent(g.gameId)}`;
     card.innerHTML = `
       <div class="card-art">
-        <span class="card-logo">${meta.logo}</span>
+        <span class="card-logo">${g.logo}</span>
         <span class="vol-badge vol-${vol.toLowerCase()}">${vol} volatility</span>
       </div>
       <div class="card-body">
-        <h3>${meta.name}</h3>
-        <p class="card-tagline">${meta.tagline}</p>
+        <h3>${g.title}</h3>
+        <p class="card-tagline">${g.tagline}</p>
         <div class="card-stats">
           <div class="stat"><span class="stat-label">RTP</span><span class="stat-value">${rtp}%</span></div>
           <div class="stat"><span class="stat-label">Max win</span><span class="stat-value">${fmtInt(g.maxWinMultiplier)}×</span></div>

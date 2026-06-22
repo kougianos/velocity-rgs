@@ -8,42 +8,38 @@
 
 const CURRENCY = "EUR";
 
-/** Active game resolved from the ?game= query param (falls back to the default). */
-const GAME_ID = (() => {
-  const requested = new URLSearchParams(window.location.search).get("game");
-  return requested && GAME_META[requested] ? requested : DEFAULT_GAME_ID;
-})();
-const META = gameMeta(GAME_ID);
+/**
+ * The active game's config, fetched from the backend catalog (see games.js) during init. Everything the
+ * client needs to draw and play the game — presentation, grid shape, paylines and symbol glyphs — is
+ * server-driven, so introducing a different layout (3x3, 5x4, more/fewer paylines …) or a brand-new game
+ * needs no changes here.
+ */
+let GAME_ID = new URLSearchParams(window.location.search).get("game") || "";
+let META = null;     // the resolved game summary from /api/v1/games
+let SYMBOLS = {};     // { symbolId: { glyph, name } }
+let PAYLINES = {};    // { lineId: [[row, col], …] } used for win highlighting
+let ROWS = 0;
+let COLS = 0;
 
-/** Symbol id -> display metadata for the active game (see games.js). */
-const SYMBOLS = META.symbols;
-
-/** Payline coordinates [row, col] indexed by lineId (for win highlighting). */
-const PAYLINES = {
-  1:  [[0,0],[0,1],[0,2],[0,3],[0,4]],
-  2:  [[1,0],[1,1],[1,2],[1,3],[1,4]],
-  3:  [[2,0],[2,1],[2,2],[2,3],[2,4]],
-  4:  [[0,0],[1,1],[2,2],[1,3],[0,4]],
-  5:  [[2,0],[1,1],[0,2],[1,3],[2,4]],
-  6:  [[0,0],[0,1],[1,2],[2,3],[2,4]],
-  7:  [[2,0],[2,1],[1,2],[0,3],[0,4]],
-  8:  [[1,0],[0,1],[1,2],[2,3],[1,4]],
-  9:  [[1,0],[2,1],[1,2],[0,3],[1,4]],
-  10: [[0,0],[1,1],[1,2],[1,3],[0,4]],
-  11: [[2,0],[1,1],[1,2],[1,3],[2,4]],
-  12: [[1,0],[0,1],[0,2],[0,3],[1,4]],
-  13: [[1,0],[2,1],[2,2],[2,3],[1,4]],
-  14: [[0,0],[1,1],[0,2],[1,3],[0,4]],
-  15: [[2,0],[1,1],[2,2],[1,3],[2,4]],
-  16: [[0,0],[2,1],[0,2],[2,3],[0,4]],
-  17: [[2,0],[0,1],[2,2],[0,3],[2,4]],
-  18: [[1,0],[1,1],[0,2],[1,3],[1,4]],
-  19: [[1,0],[1,1],[2,2],[1,3],[1,4]],
-  20: [[0,0],[2,1],[2,2],[2,3],[0,4]],
-};
-
-const ROWS = 3;
-const COLS = 5;
+/**
+ * Load the active game's config from the backend catalog and populate the module state above. Resolves the
+ * game from the ?game= query param, falling back to the first registered game.
+ */
+async function loadGameConfig() {
+  const catalog = await fetchCatalog();
+  const game = resolveGame(catalog, GAME_ID);
+  if (!game) throw new Error("No games are registered on the server");
+  META = game;
+  GAME_ID = game.gameId;
+  SYMBOLS = buildSymbolMap(game);
+  PAYLINES = buildPaylineMap(game);
+  ROWS = game.rows;
+  COLS = game.cols;
+  // Filler symbols (wild/scatter excluded) used to dress the idle reels — derived from the live symbol set.
+  FILLER_SYMBOL_IDS = Object.keys(SYMBOLS)
+    .map(Number)
+    .filter((id) => !/wild|scatter/i.test((SYMBOLS[id] && SYMBOLS[id].name) || ""));
+}
 
 const state = {
   token: null,
@@ -260,9 +256,7 @@ function buildGrid() {
 }
 
 /** Symbol ids used to dress the idle reels — wild/scatter excluded so the resting grid looks natural. */
-const FILLER_SYMBOL_IDS = Object.keys(SYMBOLS)
-  .map(Number)
-  .filter((id) => !/wild|scatter/i.test((SYMBOLS[id] && SYMBOLS[id].name) || ""));
+let FILLER_SYMBOL_IDS = [];
 
 function randomFillerId() {
   return FILLER_SYMBOL_IDS[Math.floor(Math.random() * FILLER_SYMBOL_IDS.length)];
@@ -765,31 +759,30 @@ function bindEvents() {
 /** Apply the active game's theme + branding to the page chrome. */
 function applyGameChrome() {
   document.body.dataset.game = GAME_ID;
-  document.title = `Velocity RGS — ${META.name}`;
+  document.title = `Velocity RGS — ${META.title}`;
   if (els.brandLogo) els.brandLogo.textContent = META.logo;
-  if (els.gameName) els.gameName.textContent = META.name;
+  if (els.gameName) els.gameName.textContent = META.title;
   if (els.gameTagline) els.gameTagline.textContent = `${META.tagline} · ${META.volatility} volatility`;
 }
 
-/** Pull the live buy-cost multipliers from the catalog so the labels match the math. */
-async function applyGameInfo() {
-  try {
-    const games = await api("/api/v1/games");
-    const info = (games || []).find((g) => g.gameId === GAME_ID);
-    if (!info) return;
-    if (info.freeSpinsBuyCostMultiplier != null) {
-      els.buyFreeSpinsCost.textContent = `(×${Number(info.freeSpinsBuyCostMultiplier)})`;
-    }
-  } catch (e) {
-    // non-fatal — labels just keep their placeholder
+/** Reflect the live free-spins buy-cost multiplier from the catalog so the label matches the math. */
+function applyGameInfo() {
+  if (META && META.freeSpinsBuyCostMultiplier != null) {
+    els.buyFreeSpinsCost.textContent = `(×${Number(META.freeSpinsBuyCostMultiplier)})`;
   }
 }
 
-function main() {
-  applyGameChrome();
-  buildGrid();
+async function main() {
   bindEvents();
+  try {
+    await loadGameConfig();
+  } catch (e) {
+    toast(`Could not load game config: ${e.message}`, "error");
+    return;
+  }
+  applyGameChrome();
   applyGameInfo();
+  buildGrid();
   bootSession();
 }
 

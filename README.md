@@ -102,8 +102,11 @@ velocity-rgs/
 
 ## Games & Features
 
-Three slots ship as JSON math configs under `src/main/resources/math/`
-(`aztec-fire`, `frost-crown`, `inferno-riches`); the built-in client exposes them via a lobby.
+Three slots ship as JSON game configs under `src/main/resources/games/`
+(`aztec-fire`, `frost-crown`, `inferno-riches`) — each file holds both a `presentation` block
+(title, theme, copy, symbol glyphs) and a `math` block (grid, paylines, pay table, reel strips), so
+a game is fully described in one place. The built-in client exposes them via a lobby and renders each
+game purely from the server catalog (`GET /api/v1/games`).
 Each is a 3×5, 20-payline slot, fully playable end-to-end with these mechanics:
 
 | Feature | Entry path | Server mechanic |

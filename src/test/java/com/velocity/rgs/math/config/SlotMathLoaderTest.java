@@ -25,8 +25,18 @@ class SlotMathLoaderTest {
 
     @Test
     void loadsReferenceAztecFireFixture() {
-        SlotMathDefinition def = loader.load("aztec-fire", "v1");
+        GameDefinition game = loader.load("aztec-fire", "v1");
 
+        assertThat(game.gameId()).isEqualTo("aztec-fire");
+        assertThat(game.mathVersion()).isEqualTo("v1");
+
+        // Presentation travels in the same game file as the math.
+        GamePresentation presentation = game.presentation();
+        assertThat(presentation.title()).isEqualTo("Aztec Fire");
+        assertThat(presentation.theme()).isEqualTo("fire");
+        assertThat(presentation.symbols().get(9).name()).isEqualTo("Wild");
+
+        SlotMathDefinition def = game.math();
         assertThat(def.gameId()).isEqualTo("aztec-fire");
         assertThat(def.mathVersion()).isEqualTo("v1");
         assertThat(def.grid().rows()).isEqualTo(3);
@@ -59,12 +69,13 @@ class SlotMathLoaderTest {
 
     @Test
     void rejectsUnknownTopLevelField() throws Exception {
-        ObjectNode tree;
-        try (InputStream in = new ClassPathResource("math/aztec-fire/v1.json").getInputStream()) {
-            tree = (ObjectNode) STRICT.readTree(in);
+        ObjectNode root;
+        try (InputStream in = new ClassPathResource("games/aztec-fire/v1.json").getInputStream()) {
+            root = (ObjectNode) STRICT.readTree(in);
         }
-        tree.put("extraThing", true);
-        String json = STRICT.writeValueAsString(tree);
+        ObjectNode math = (ObjectNode) root.get("math");
+        math.put("extraThing", true);
+        String json = STRICT.writeValueAsString(math);
 
         assertThatThrownBy(() -> STRICT.readValue(json, SlotMathDefinition.class))
                 .hasMessageContaining("extraThing");

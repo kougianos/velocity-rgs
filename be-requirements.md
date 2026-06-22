@@ -364,9 +364,9 @@ Foundation guarantee for M1+: every later module can throw a domain exception an
 Define the immutable data objects and configuration structures that govern the slot's behavior. No persistence, no HTTP.
 
 * **Task 1.1:** Create Java records for `Symbol` (`id`, `name`, `type` ∈ `STANDARD`/`WILD`/`SCATTER`, optional `substitutes`), `Payline` (`id`, `coords: List<int[]>` with `[row, col]` zero-indexed), `PayTable` (`Map<Integer, Map<Integer, BigDecimal>>` keyed by `symbolId` then match count), `ReelStrip` (`int[]` of symbol ids).
-* **Task 1.2:** Implement `SlotMathConfiguration` and `SlotMathLoader` that reads `src/main/resources/math/<gameId>/<mathVersion>.json` per A.4. Strict Jackson validation (unknown fields = fail-fast). The loader is invoked at startup for every entry in the Game Catalog (A.5).
+* **Task 1.2:** Implement `SlotMathConfiguration` and `SlotMathLoader` that reads `src/main/resources/games/<gameId>/<mathVersion>.json` per A.4 (each file wraps a `presentation` block and a `math` block). Strict Jackson validation (unknown fields = fail-fast). The loader is invoked at startup for every entry in the Game Catalog (A.5).
 * **Task 1.3:** Build `ReelEvaluator`: given a 3×5 `int[][]` matrix and a `BigDecimal` bet, returns `EvaluationResult(totalWin, List<WinLine>)`. Implements left-to-right matching, `WILD` substitution for `STANDARD` symbols only, and applies the active payline set. Cap by `limits.maxWinPerRoundMultiplier` and emit reason code `MAX_WIN_CAPPED` when triggered.
-* **Task 1.4:** Ship the reference math JSON `src/main/resources/math/aztec-fire/v1.json` with a complete, deterministic small set (e.g. 20 paylines, 5 reel strips of length ≥ 30 each per strip set). This is the test fixture for every subsequent milestone.
+* **Task 1.4:** Ship the reference game JSON `src/main/resources/games/aztec-fire/v1.json` with a complete, deterministic small set (e.g. 20 paylines, 5 reel strips of length ≥ 30 each per strip set). This is the test fixture for every subsequent milestone.
 
 Tests for M1:
 * JSON loader: malformed/missing fields → fail at startup with clear message.
@@ -647,7 +647,7 @@ Selection: `SPRING_PROFILES_ACTIVE=demo` is the default for `mvn spring-boot:run
 
 ### A.4 Slot Math JSON — Canonical Layout
 
-**Location:** `src/main/resources/math/<gameId>/<mathVersion>.json` (e.g. `math/aztec-fire/v1.json`). Loaded at startup via `SlotMathConfiguration`. Hot-reload is NOT supported in scope.
+**Location:** `src/main/resources/games/<gameId>/<mathVersion>.json` (e.g. `games/aztec-fire/v1.json`). Each file wraps two top-level blocks — `presentation` (player-facing title, copy, theme and per-symbol glyphs, surfaced to the client via the A.5 catalog) and `math` (the skeleton below) — so a game is described in one place. Loaded at startup via `SlotMathConfiguration`. Hot-reload is NOT supported in scope.
 
 **Skeleton (all fields required unless marked optional):**
 
@@ -991,7 +991,6 @@ A milestone is "done" only when:
 2. Test coverage on changed packages ≥ 80% lines (JaCoCo).
 3. New endpoints appear in generated `openapi.yaml` and the file is committed.
 4. Flyway migrations are forward-only (no edits to applied versions).
-5. No new `TODO` markers left in committed code.
 6. README is NOT auto-updated (per repo instructions); CHANGELOG entry under `## [Unreleased]` is mandatory.
 
 ### A.18 Glossary

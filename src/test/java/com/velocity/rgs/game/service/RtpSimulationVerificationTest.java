@@ -55,7 +55,7 @@ class RtpSimulationVerificationTest {
     @ValueSource(strings = {"aztec-fire", "frost-crown", "inferno-riches"})
     void baseGameRtpConvergesToDeclaredTarget(String gameId) {
         SlotMathLoader loader = new SlotMathLoader();
-        SlotMathDefinition math = loader.load(gameId, MATH_VERSION);
+        SlotMathDefinition math = loader.load(gameId, MATH_VERSION).math();
         RtpSimulationService service = newService(gameId, math);
 
         RtpSimulationRequest request = RtpSimulationRequest.builder()

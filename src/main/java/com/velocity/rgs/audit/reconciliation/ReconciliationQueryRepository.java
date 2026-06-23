@@ -1,7 +1,7 @@
 package com.velocity.rgs.audit.reconciliation;
 
-import com.velocity.rgs.game.domain.FeaturePurchaseEvent;
-import com.velocity.rgs.game.domain.GameRound;
+import com.velocity.rgs.slot.domain.FeaturePurchaseEvent;
+import com.velocity.rgs.slot.domain.GameRound;
 import com.velocity.rgs.wallet.domain.WalletTransaction;
 import com.velocity.rgs.wallet.domain.WalletTransactionType;
 import jakarta.persistence.EntityManager;

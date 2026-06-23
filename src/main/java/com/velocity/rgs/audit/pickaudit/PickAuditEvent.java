@@ -1,6 +1,6 @@
 package com.velocity.rgs.audit.pickaudit;
 
-import com.velocity.rgs.math.domain.PickTileType;
+import com.velocity.rgs.slot.math.domain.PickTileType;
 
 import java.math.BigDecimal;
 import java.time.Instant;

@@ -5,8 +5,10 @@ import com.velocity.rgs.common.error.ErrorCode;
 import com.velocity.rgs.common.error.RgsException;
 import com.velocity.rgs.common.money.Money;
 import com.velocity.rgs.config.PlayerContext;
-import com.velocity.rgs.game.domain.GameRound;
-import com.velocity.rgs.game.persistence.GameRoundRepository;
+import com.velocity.rgs.roulette.domain.RouletteRound;
+import com.velocity.rgs.roulette.persistence.RouletteRoundRepository;
+import com.velocity.rgs.slot.domain.GameRound;
+import com.velocity.rgs.slot.persistence.GameRoundRepository;
 import com.velocity.rgs.session.domain.GameSession;
 import com.velocity.rgs.session.persistence.SessionCache;
 import com.velocity.rgs.session.service.SessionStore;
@@ -31,8 +33,10 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Stream;
 
 /**
  * Demo-only admin endpoints for manual QA (M7 Task 7.4, Appendix A.20):
@@ -58,6 +62,7 @@ public class AdminQaController {
     private final SessionStore sessionStore;
     private final SessionCache sessionCache;
     private final GameRoundRepository gameRoundRepository;
+    private final RouletteRoundRepository rouletteRoundRepository;
     private final ObjectMapper objectMapper;
 
     // ------------------------------------------------------------------ wallet/balance
@@ -122,16 +127,21 @@ public class AdminQaController {
     }
 
     /**
-     * Lists a player's persisted rounds, most recent first (capped at 200), as lightweight summaries
-     * for the History page. The heavy per-round payload (matrix, rng draws …) stays behind
-     * {@code GET /round/{roundId}}.
+     * Lists a player's persisted rounds across <b>all game types</b>, most recent first (capped at 200), as
+     * lightweight summaries for the History page. Slot ({@code game_round}) and roulette
+     * ({@code roulette_round}) rounds are merged and re-sorted by time so the page shows one unified ledger.
+     * The heavy per-round payload (matrix, rng draws …) stays behind {@code GET /round/{roundId}}.
      */
     @GetMapping("/rounds/{playerId}")
     public ResponseEntity<List<RoundSummary>> listRounds(@PathVariable String playerId) {
         requireAdmin();
-        List<RoundSummary> rounds = gameRoundRepository.findByPlayerIdOrderByCreatedAtDesc(playerId).stream()
+        Stream<RoundSummary> slotRounds = gameRoundRepository.findByPlayerIdOrderByCreatedAtDesc(playerId)
+                .stream().map(RoundSummary::from);
+        Stream<RoundSummary> rouletteRounds = rouletteRoundRepository.findByPlayerIdOrderByCreatedAtDesc(playerId)
+                .stream().map(RoundSummary::fromRoulette);
+        List<RoundSummary> rounds = Stream.concat(slotRounds, rouletteRounds)
+                .sorted(Comparator.comparing(RoundSummary::createdAt).reversed())
                 .limit(200)
-                .map(RoundSummary::from)
                 .toList();
         log.info("ADMIN listRounds admin={} playerId={} count={}",
                 playerContext.getPlayerId(), playerId, rounds.size());
@@ -242,6 +252,13 @@ public class AdminQaController {
                     r.getStateContext() != null ? r.getStateContext().name() : null,
                     r.getBetAmount(), r.getTotalWin(), r.getCurrency(),
                     r.isPowerBetActive(), r.getCreatedAt());
+        }
+
+        static RoundSummary fromRoulette(RouletteRound r) {
+            return new RoundSummary(
+                    r.getRoundId(), r.getGameId(), "ROULETTE",
+                    r.getTotalBet(), r.getTotalWin(), r.getCurrency(),
+                    false, r.getCreatedAt());
         }
     }
 

@@ -12,7 +12,7 @@
     <div class="topbar-inner">
       <div class="brand">
         <a href="/" class="back-link" title="Back to lobby">‹</a>
-        <span class="logo" id="brandLogo">🔥</span>
+        <span class="logo" id="brandLogo">🎰</span>
         <div>
           <h1 id="gameName">Velocity RGS</h1>
           <p class="subtitle" id="gameTagline">Demo Test Harness</p>
@@ -22,16 +22,8 @@
         <a href="/" class="topnav-link">Lobby</a>
         <a href="/history.html" class="topnav-link">History</a>
       </nav>
-      <div class="topbar-right"></div>
-    </div>
-  </header>
-
-  <main class="layout">
-    <!-- ===== Game column ===== -->
-    <section class="panel game-panel">
-      <h2 class="panel-title">
-        Reels
-        <button id="showInfo" class="btn btn-ghost info-btn">
+      <div class="topbar-right">
+        <button id="showInfo" class="btn btn-ghost info-btn hidden">
           <svg class="info-icon" viewBox="0 0 24 24" aria-hidden="true">
             <circle cx="12" cy="12" r="9.25" fill="none" stroke="currentColor" stroke-width="1.6" />
             <circle cx="12" cy="7.6" r="1.15" fill="currentColor" />
@@ -39,7 +31,14 @@
           </svg>
           <span>Show Game Info</span>
         </button>
-      </h2>
+      </div>
+    </div>
+  </header>
+
+  <main class="layout">
+    <!-- ===== Slot game column (one game section is revealed by game.js) ===== -->
+    <section class="panel game-panel hidden" id="slotGame">
+      <h2 class="panel-title">Reels</h2>
 
       <div id="reels" class="reels" aria-label="Slot grid"></div>
 
@@ -91,6 +90,43 @@
       <div id="winLines" class="win-lines"></div>
     </section>
 
+    <!-- ===== Roulette game column ===== -->
+    <section class="panel game-panel hidden" id="rouletteGame">
+      <h2 class="panel-title">European Roulette</h2>
+
+      <div class="roulette-stage">
+        <canvas id="wheel" class="roulette-wheel" width="300" height="300" aria-label="Roulette wheel"></canvas>
+        <div id="rouletteResult" class="roulette-result is-empty">
+          <span class="result-number" id="resultNumber">—</span>
+          <span class="result-label" id="resultLabel">Place your bets</span>
+        </div>
+      </div>
+
+      <div id="rouletteWin" class="win-banner is-empty">
+        <span class="win-label">WIN</span>
+        <span id="rouletteWinAmount" class="win-amount">0.00</span>
+      </div>
+
+      <div class="chip-bar">
+        <span class="chip-bar-label">Chip</span>
+        <div id="chipRow" class="chip-row"></div>
+      </div>
+
+      <div id="rouletteTable" class="roulette-table" aria-label="Roulette betting table"></div>
+
+      <div class="roulette-controls">
+        <div class="bet-summary">
+          Total bet <strong id="rouletteTotal" class="bet-value">0.00</strong> ·
+          <span id="rouletteBetCount">0</span> bets
+        </div>
+        <div class="roulette-actions">
+          <button id="clearBets" class="btn btn-ghost">Clear</button>
+          <button id="rebet" class="btn btn-ghost">Rebet</button>
+          <button id="spinRoulette" class="btn btn-primary btn-spin" disabled>SPIN</button>
+        </div>
+      </div>
+    </section>
+
     <!-- ===== Tools column ===== -->
     <aside class="side">
       <!-- Session -->
@@ -113,8 +149,8 @@
         <button id="resetSession" class="btn btn-ghost full" title="Start a brand new demo player">New Player</button>
       </section>
 
-      <!-- Simulator -->
-      <section class="panel">
+      <!-- Simulator (slot-only) -->
+      <section class="panel" id="slotSimulator">
         <h2 class="panel-title">RTP Simulator</h2>
         <div class="form-grid">
           <label class="sim-bet" for="simSlider">
@@ -180,12 +216,12 @@
 
   <div id="toast" class="toast hidden"></div>
 
-  <!-- Game info modal — spans the reels + simulator width over the main game area -->
+  <!-- Game info modal — spans the game area; populated from the server catalog -->
   <div id="infoModal" class="info-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="infoTitle">
     <div class="info-card">
       <button id="infoClose" class="info-close" aria-label="Close game info">×</button>
       <header class="info-head">
-        <span class="info-logo" id="infoLogo">🔥</span>
+        <span class="info-logo" id="infoLogo">🎰</span>
         <div>
           <h2 class="info-title" id="infoTitle">Game</h2>
           <p class="info-tagline" id="infoTagline"></p>
@@ -197,7 +233,7 @@
     </div>
   </div>
 
-  <!-- Free-spins intro / summary dialog -->
+  <!-- Shared confirm / summary dialog (slot free-spins intro etc.) -->
   <div id="fsModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="fsModalTitle">
     <div class="modal-card">
       <div id="fsModalIcon" class="modal-icon">🎁</div>
@@ -211,6 +247,9 @@
   </div>
 
   <script src="/games.js"></script>
-  <script src="/app.js"></script>
+  <script src="/game-core.js"></script>
+  <script src="/slot.js"></script>
+  <script src="/roulette.js"></script>
+  <script src="/game.js"></script>
 </body>
 </html>

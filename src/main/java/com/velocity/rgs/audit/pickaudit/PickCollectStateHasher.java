@@ -1,6 +1,6 @@
 package com.velocity.rgs.audit.pickaudit;
 
-import com.velocity.rgs.game.feature.pickcollect.PickCollectState;
+import com.velocity.rgs.slot.feature.pickcollect.PickCollectState;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;

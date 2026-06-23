@@ -1,6 +1,6 @@
 package com.velocity.rgs.audit.replay;
 
-import com.velocity.rgs.math.engine.WinLine;
+import com.velocity.rgs.slot.math.engine.WinLine;
 import com.velocity.rgs.rng.RngDraw;
 
 import java.math.BigDecimal;

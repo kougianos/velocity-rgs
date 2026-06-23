@@ -161,6 +161,12 @@ rgs:
       - gameId: inferno-riches
         mathVersion: v1
 
+  # Roulette games (additive — an empty/absent list boots with slots only).
+  roulette:
+    catalog:
+      - gameId: european-roulette
+        mathVersion: v1
+
 logging:
   level:
     root: INFO

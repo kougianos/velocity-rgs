@@ -2,9 +2,9 @@ package com.velocity.rgs.audit.reconciliation;
 
 import com.velocity.rgs.audit.AuditReconciliationFinding;
 import com.velocity.rgs.audit.AuditReconciliationFindingRepository;
-import com.velocity.rgs.game.domain.GameRound;
-import com.velocity.rgs.game.persistence.FeaturePurchaseEventRepository;
-import com.velocity.rgs.game.persistence.GameRoundRepository;
+import com.velocity.rgs.slot.domain.GameRound;
+import com.velocity.rgs.slot.persistence.FeaturePurchaseEventRepository;
+import com.velocity.rgs.slot.persistence.GameRoundRepository;
 import com.velocity.rgs.session.domain.GameState;
 import com.velocity.rgs.testsupport.RgsIntegrationTest;
 import com.velocity.rgs.wallet.domain.WalletTransaction;

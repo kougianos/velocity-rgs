@@ -114,8 +114,6 @@ const els = {
   simStrategy: $("simStrategy"),
   runSim: $("runSim"),
   simReport: $("simReport"),
-  adminBalance: $("adminBalance"),
-  setBalanceBtn: $("setBalanceBtn"),
   log: $("log"),
   clearLog: $("clearLog"),
   toast: $("toast"),
@@ -180,10 +178,19 @@ class ApiError extends Error {
   }
 }
 
-async function api(path, { method = "GET", body, idempotency = false } = {}) {
+/**
+ * The last "primary" request we made — captured here so the log panel can show the request that produced
+ * a response (see logResponse). Background/polling calls pass `track: false` so they don't clobber it
+ * (e.g. the wallet-balance refresh fired right after a spin).
+ */
+let lastApiRequest = null;
+
+async function api(path, { method = "GET", body, idempotency = false, track = true } = {}) {
   const headers = { "Content-Type": "application/json" };
   if (state.token) headers["Authorization"] = "Bearer " + state.token;
   if (idempotency) headers["Idempotency-Key"] = crypto.randomUUID();
+
+  if (track) lastApiRequest = { method, path, body: body ?? null };
 
   const res = await fetch(path, {
     method,
@@ -205,7 +212,15 @@ function fmt(value) {
 }
 
 function logResponse(label, data) {
-  els.log.textContent = `// ${label}  @ ${new Date().toLocaleTimeString()}\n` +
+  const req = lastApiRequest;
+  const requestBlock = req
+    ? `// request — ${req.method} ${req.path}\n` +
+      (req.body != null ? JSON.stringify(req.body, null, 2) : "(no body)")
+    : "// request\n(none)";
+  els.log.textContent =
+    `// ${label}  @ ${new Date().toLocaleTimeString()}\n\n` +
+    requestBlock +
+    `\n\n// response\n` +
     JSON.stringify(data, null, 2);
 }
 
@@ -541,7 +556,7 @@ function applySessionView(resp) {
 
 async function refreshBalance() {
   try {
-    const bal = await api("/api/v1/wallet/balance");
+    const bal = await api("/api/v1/wallet/balance", { track: false });
     state.balance = Number(bal.balance);
     renderHud();
   } catch (e) {
@@ -549,11 +564,26 @@ async function refreshBalance() {
   }
 }
 
-async function bootSession() {
+/**
+ * The demo player id is persisted in localStorage so reloading the page resumes the same player —
+ * keeping the balance and building a meaningful round History. "New Player" passes forceNew to mint
+ * a brand-new id (and a fresh session/balance). The History page reads the same key.
+ */
+const PLAYER_KEY = "velocity.playerId";
+
+function resolvePlayerId(forceNew) {
+  let id = forceNew ? null : localStorage.getItem(PLAYER_KEY);
+  if (!id) {
+    id = `demo-${crypto.randomUUID().slice(0, 8)}`;
+    localStorage.setItem(PLAYER_KEY, id);
+  }
+  return id;
+}
+
+async function bootSession(forceNewPlayer = false) {
   try {
     setBusy(true);
-    const suffix = crypto.randomUUID().slice(0, 8);
-    state.playerId = `demo-${suffix}`;
+    state.playerId = resolvePlayerId(forceNewPlayer);
     state.sessionId = crypto.randomUUID();
 
     const tokenResp = await api("/api/v1/dev/token", {
@@ -870,25 +900,6 @@ function renderSimReport(report) {
     </p>`;
 }
 
-async function setBalance() {
-  try {
-    const resp = await api("/api/v1/admin/wallet/balance", {
-      method: "POST",
-      body: {
-        playerId: state.playerId,
-        currency: CURRENCY,
-        balance: Number(els.adminBalance.value),
-      },
-    });
-    state.balance = Number(resp.balance);
-    renderHud();
-    logResponse("admin/wallet/balance", resp);
-    toast(`Balance set to ${fmt(resp.balance)} ${CURRENCY}`, "success");
-  } catch (e) {
-    handleError("Set balance failed", e);
-  }
-}
-
 function handleError(label, e) {
   const detail = e instanceof ApiError && e.payload ? e.payload : { message: e.message };
   logResponse(label + " (ERROR)", detail);
@@ -907,9 +918,8 @@ function bindEvents() {
     if (feature === "FREE_SPINS") runFreeSpinsAutoplay();
     else startFeature(feature);
   });
-  els.resetSession.addEventListener("click", bootSession);
+  els.resetSession.addEventListener("click", () => bootSession(true));
   els.runSim.addEventListener("click", runSimulation);
-  els.setBalanceBtn.addEventListener("click", setBalance);
   els.clearLog.addEventListener("click", () => (els.log.textContent = ""));
   els.showInfo.addEventListener("click", openInfoModal);
   els.infoClose.addEventListener("click", closeInfoModal);

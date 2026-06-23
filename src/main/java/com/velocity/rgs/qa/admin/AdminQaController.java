@@ -31,6 +31,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -39,6 +40,7 @@ import java.util.Map;
  *   <li>{@code POST /api/v1/admin/wallet/balance} — upsert player balance</li>
  *   <li>{@code GET  /api/v1/admin/session/{playerId}} — inspect persistent + cached session</li>
  *   <li>{@code GET  /api/v1/admin/round/{roundId}} — inspect persisted round payload</li>
+ *   <li>{@code GET  /api/v1/admin/rounds/{playerId}} — list a player's round history (most recent first)</li>
  * </ul>
  * All endpoints require the {@code ADMIN} role claim and write audit log entries.
  */
@@ -117,6 +119,23 @@ public class AdminQaController {
         log.info("ADMIN inspectRound admin={} roundId={} playerId={}",
                 playerContext.getPlayerId(), roundId, round.getPlayerId());
         return ResponseEntity.ok(RoundInspection.from(round, objectMapper));
+    }
+
+    /**
+     * Lists a player's persisted rounds, most recent first (capped at 200), as lightweight summaries
+     * for the History page. The heavy per-round payload (matrix, rng draws …) stays behind
+     * {@code GET /round/{roundId}}.
+     */
+    @GetMapping("/rounds/{playerId}")
+    public ResponseEntity<List<RoundSummary>> listRounds(@PathVariable String playerId) {
+        requireAdmin();
+        List<RoundSummary> rounds = gameRoundRepository.findByPlayerIdOrderByCreatedAtDesc(playerId).stream()
+                .limit(200)
+                .map(RoundSummary::from)
+                .toList();
+        log.info("ADMIN listRounds admin={} playerId={} count={}",
+                playerContext.getPlayerId(), playerId, rounds.size());
+        return ResponseEntity.ok(rounds);
     }
 
     // ------------------------------------------------------------------ helpers
@@ -204,6 +223,25 @@ public class AdminQaController {
                     parseJson(r.getRngDraws(), mapper),
                     parseJson(r.getWinLines(), mapper),
                     parseJson(r.getReasonCodes(), mapper));
+        }
+    }
+
+    public record RoundSummary(
+            String roundId,
+            String gameId,
+            String stateContext,
+            BigDecimal betAmount,
+            BigDecimal totalWin,
+            String currency,
+            boolean powerBetActive,
+            Instant createdAt
+    ) {
+        static RoundSummary from(GameRound r) {
+            return new RoundSummary(
+                    r.getRoundId(), r.getGameId(),
+                    r.getStateContext() != null ? r.getStateContext().name() : null,
+                    r.getBetAmount(), r.getTotalWin(), r.getCurrency(),
+                    r.isPowerBetActive(), r.getCreatedAt());
         }
     }
 

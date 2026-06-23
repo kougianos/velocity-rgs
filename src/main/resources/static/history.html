@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Velocity RGS — Round History</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body class="history-page">
+  <header class="topbar">
+    <div class="topbar-inner">
+      <div class="brand">
+        <a href="/" class="back-link" title="Back to lobby">‹</a>
+        <span class="logo">🎰</span>
+        <div>
+          <h1>Velocity RGS</h1>
+          <p class="subtitle">Round History — Demo Test Harness</p>
+        </div>
+      </div>
+      <nav class="topnav">
+        <a href="/" class="topnav-link">Lobby</a>
+        <a href="/history.html" class="topnav-link is-active">History</a>
+      </nav>
+      <div class="topbar-right"></div>
+    </div>
+  </header>
+
+  <main class="history">
+    <div class="history-head">
+      <div>
+        <h2 class="history-title">Round History</h2>
+        <p class="history-sub">
+          Every spin played by demo player
+          <strong id="historyPlayer">—</strong>, most recent first.
+        </p>
+      </div>
+      <div class="history-actions">
+        <button id="refreshHistory" class="btn btn-ghost">Refresh</button>
+      </div>
+    </div>
+
+    <div class="history-summary" id="historySummary"></div>
+
+    <section class="panel history-panel">
+      <div id="historyBody">
+        <p class="history-loading">Loading round history…</p>
+      </div>
+    </section>
+  </main>
+
+  <div id="toast" class="toast hidden"></div>
+
+  <script src="/games.js"></script>
+  <script src="/history.js"></script>
+</body>
+</html>

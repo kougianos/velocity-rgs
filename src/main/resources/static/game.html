@@ -9,28 +9,20 @@
 </head>
 <body>
   <header class="topbar">
-    <div class="brand">
-      <a href="/" class="back-link" title="Back to lobby">‹</a>
-      <span class="logo" id="brandLogo">🔥</span>
-      <div>
-        <h1 id="gameName">Velocity RGS</h1>
-        <p class="subtitle" id="gameTagline">Demo Test Harness</p>
+    <div class="topbar-inner">
+      <div class="brand">
+        <a href="/" class="back-link" title="Back to lobby">‹</a>
+        <span class="logo" id="brandLogo">🔥</span>
+        <div>
+          <h1 id="gameName">Velocity RGS</h1>
+          <p class="subtitle" id="gameTagline">Demo Test Harness</p>
+        </div>
       </div>
-    </div>
-    <div class="session-info">
-      <div class="pill balance">
-        <span class="pill-label">Balance</span>
-        <span id="balance" class="pill-value">—</span>
-      </div>
-      <div class="pill">
-        <span class="pill-label">State</span>
-        <span id="gameState" class="pill-value">—</span>
-      </div>
-      <div class="pill">
-        <span class="pill-label">Free Spins</span>
-        <span id="freeSpins" class="pill-value">0</span>
-      </div>
-      <button id="resetSession" class="btn btn-ghost" title="Start a brand new demo player">New Player</button>
+      <nav class="topnav">
+        <a href="/" class="topnav-link">Lobby</a>
+        <a href="/history.html" class="topnav-link">History</a>
+      </nav>
+      <div class="topbar-right"></div>
     </div>
   </header>
 
@@ -39,7 +31,14 @@
     <section class="panel game-panel">
       <h2 class="panel-title">
         Reels
-        <button id="showInfo" class="btn btn-ghost tiny info-btn">ⓘ Show Game Info</button>
+        <button id="showInfo" class="btn btn-ghost info-btn">
+          <svg class="info-icon" viewBox="0 0 24 24" aria-hidden="true">
+            <circle cx="12" cy="12" r="9.25" fill="none" stroke="currentColor" stroke-width="1.6" />
+            <circle cx="12" cy="7.6" r="1.15" fill="currentColor" />
+            <rect x="11" y="10.5" width="2" height="7" rx="1" fill="currentColor" />
+          </svg>
+          <span>Show Game Info</span>
+        </button>
       </h2>
 
       <div id="reels" class="reels" aria-label="Slot grid"></div>
@@ -94,6 +93,26 @@
 
     <!-- ===== Tools column ===== -->
     <aside class="side">
+      <!-- Session -->
+      <section class="panel session-panel">
+        <h2 class="panel-title">Session</h2>
+        <div class="session-grid">
+          <div class="pill balance">
+            <span class="pill-label">Balance</span>
+            <span id="balance" class="pill-value">—</span>
+          </div>
+          <div class="pill">
+            <span class="pill-label">State</span>
+            <span id="gameState" class="pill-value">—</span>
+          </div>
+          <div class="pill">
+            <span class="pill-label">Free Spins</span>
+            <span id="freeSpins" class="pill-value">0</span>
+          </div>
+        </div>
+        <button id="resetSession" class="btn btn-ghost full" title="Start a brand new demo player">New Player</button>
+      </section>
+
       <!-- Simulator -->
       <section class="panel">
         <h2 class="panel-title">RTP Simulator</h2>
@@ -118,7 +137,12 @@
           <label>
             <span class="label-row">
               Pick strategy
-              <span class="info" tabindex="0" aria-label="Pick strategy help">ⓘ
+              <span class="info" tabindex="0" aria-label="Pick strategy help">
+                <svg class="info-icon" viewBox="0 0 24 24" aria-hidden="true">
+                  <circle cx="12" cy="12" r="9.25" fill="none" stroke="currentColor" stroke-width="1.6" />
+                  <circle cx="12" cy="7.6" r="1.15" fill="currentColor" />
+                  <rect x="11" y="10.5" width="2" height="7" rx="1" fill="currentColor" />
+                </svg>
                 <span class="tooltip" role="tooltip">
                   <strong>How the simulator opens Pick &amp; Collect tiles:</strong>
                   <span><b>RANDOM_UNOPENED</b> — picks a random tile that hasn't been
@@ -143,20 +167,10 @@
         <div id="simReport" class="sim-report"></div>
       </section>
 
-      <!-- Admin -->
-      <section class="panel">
-        <h2 class="panel-title">Admin</h2>
-        <div class="control-group inline">
-          <label for="adminBalance">Set balance</label>
-          <input id="adminBalance" type="number" min="0" step="100" value="10000" />
-          <button id="setBalanceBtn" class="btn btn-ghost">Apply</button>
-        </div>
-      </section>
-
-      <!-- Response log -->
+      <!-- Request / response log -->
       <section class="panel">
         <h2 class="panel-title">
-          Last Response
+          Last Request / Response
           <button id="clearLog" class="btn btn-ghost tiny">clear</button>
         </h2>
         <pre id="log" class="log">Booting demo session…</pre>

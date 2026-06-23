@@ -9,6 +9,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
+import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -17,7 +18,6 @@ import org.hibernate.type.SqlTypes;
 
 import java.io.Serializable;
 import java.time.Instant;
-import java.util.Objects;
 
 @Entity
 @Table(name = "idempotency_record")
@@ -63,19 +63,9 @@ public class IdempotencyRecord {
     @Setter
     @NoArgsConstructor
     @AllArgsConstructor
+    @EqualsAndHashCode
     public static class Pk implements Serializable {
         private String scope;
         private String key;
-
-        @Override
-        public boolean equals(Object o) {
-            if (!(o instanceof Pk pk)) return false;
-            return Objects.equals(scope, pk.scope) && Objects.equals(key, pk.key);
-        }
-
-        @Override
-        public int hashCode() {
-            return Objects.hash(scope, key);
-        }
     }
 }

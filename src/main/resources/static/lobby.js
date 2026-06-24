@@ -31,14 +31,14 @@ function renderGames(games) {
   const slots = games.filter((g) => g.gameType !== "ROULETTE");
   const tables = games.filter((g) => g.gameType === "ROULETTE");
 
-  if (slots.length) root.appendChild(section("Slot Games", slots, false));
-  if (tables.length) root.appendChild(section("Roulette", tables, true));
+  if (slots.length) root.appendChild(section("Slot Games", slots, false, "slots"));
+  if (tables.length) root.appendChild(section("Roulette", tables, true, "roulette"));
 }
 
 /** A titled row of game cards. `centered` lays a single card (roulette) in the middle of the row. */
-function section(title, games, centered) {
+function section(title, games, centered, kind) {
   const wrap = document.createElement("section");
-  wrap.className = "lobby-section";
+  wrap.className = "lobby-section " + (kind || "");
 
   const heading = document.createElement("h3");
   heading.className = "lobby-section-title";

@@ -28,11 +28,13 @@ async function loadGames() {
 function renderGames(games) {
   const root = document.getElementById("gameGrid");
   root.innerHTML = "";
-  const slots = games.filter((g) => g.gameType !== "ROULETTE");
-  const tables = games.filter((g) => g.gameType === "ROULETTE");
+  const slots = games.filter((g) => g.gameType === "SLOT" || !g.gameType);
+  const roulette = games.filter((g) => g.gameType === "ROULETTE");
+  const blackjack = games.filter((g) => g.gameType === "BLACKJACK");
 
   if (slots.length) root.appendChild(section("Slot Games", slots, false, "slots"));
-  if (tables.length) root.appendChild(section("Roulette", tables, true, "roulette"));
+  if (roulette.length) root.appendChild(section("Roulette", roulette, true, "roulette"));
+  if (blackjack.length) root.appendChild(section("Blackjack", blackjack, true, "blackjack"));
 }
 
 /** A titled row of game cards. `centered` lays a single card (roulette) in the middle of the row. */
@@ -53,7 +55,8 @@ function section(title, games, centered, kind) {
 }
 
 function renderCard(g) {
-  const rtp = Number(g.targetRtp).toFixed(g.gameType === "ROULETTE" ? 2 : 1);
+  const isSlot = g.gameType === "SLOT" || !g.gameType;
+  const rtp = Number(g.targetRtp).toFixed(isSlot ? 1 : 2);
   const vol = g.volatility || "";
 
   const card = document.createElement("a");
@@ -61,7 +64,10 @@ function renderCard(g) {
   card.dataset.theme = g.theme;
   card.href = `game.html?game=${encodeURIComponent(g.gameId)}`;
 
-  const stats = g.gameType === "ROULETTE" ? rouletteStats(g, rtp) : slotStats(g, rtp);
+  const stats =
+    g.gameType === "ROULETTE" ? rouletteStats(g, rtp)
+    : g.gameType === "BLACKJACK" ? blackjackStats(g, rtp)
+    : slotStats(g, rtp);
   card.innerHTML = `
     <div class="card-art">
       <span class="card-logo">${g.logo}</span>
@@ -90,6 +96,15 @@ function rouletteStats(g, rtp) {
     stat("RTP", `${rtp}%`) +
     stat("Variant", titleCase(r.variant)) +
     stat("Max win", `${fmtInt(r.maxPayoutMultiplier)}×`)
+  );
+}
+
+function blackjackStats(g, rtp) {
+  const b = g.blackjack || {};
+  return (
+    stat("RTP", `${rtp}%`) +
+    stat("Decks", b.decks ?? "—") +
+    stat("BJ pays", b.blackjackPayoutLabel || "3:2")
   );
 }
 

@@ -3,6 +3,8 @@ package com.velocity.rgs.qa.admin;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.velocity.rgs.common.error.ErrorCode;
 import com.velocity.rgs.common.error.RgsException;
+import com.velocity.rgs.blackjack.domain.BlackjackRound;
+import com.velocity.rgs.blackjack.persistence.BlackjackRoundRepository;
 import com.velocity.rgs.common.money.Money;
 import com.velocity.rgs.config.PlayerContext;
 import com.velocity.rgs.roulette.domain.RouletteRound;
@@ -63,6 +65,7 @@ public class AdminQaController {
     private final SessionCache sessionCache;
     private final GameRoundRepository gameRoundRepository;
     private final RouletteRoundRepository rouletteRoundRepository;
+    private final BlackjackRoundRepository blackjackRoundRepository;
     private final ObjectMapper objectMapper;
 
     // ------------------------------------------------------------------ wallet/balance
@@ -139,7 +142,9 @@ public class AdminQaController {
                 .stream().map(RoundSummary::from);
         Stream<RoundSummary> rouletteRounds = rouletteRoundRepository.findByPlayerIdOrderByCreatedAtDesc(playerId)
                 .stream().map(RoundSummary::fromRoulette);
-        List<RoundSummary> rounds = Stream.concat(slotRounds, rouletteRounds)
+        Stream<RoundSummary> blackjackRounds = blackjackRoundRepository.findByPlayerIdOrderByCreatedAtDesc(playerId)
+                .stream().map(RoundSummary::fromBlackjack);
+        List<RoundSummary> rounds = Stream.concat(Stream.concat(slotRounds, rouletteRounds), blackjackRounds)
                 .sorted(Comparator.comparing(RoundSummary::createdAt).reversed())
                 .limit(200)
                 .toList();
@@ -257,6 +262,13 @@ public class AdminQaController {
         static RoundSummary fromRoulette(RouletteRound r) {
             return new RoundSummary(
                     r.getRoundId(), r.getGameId(), "ROULETTE",
+                    r.getTotalBet(), r.getTotalWin(), r.getCurrency(),
+                    false, r.getCreatedAt());
+        }
+
+        static RoundSummary fromBlackjack(BlackjackRound r) {
+            return new RoundSummary(
+                    r.getRoundId(), r.getGameId(), "BLACKJACK",
                     r.getTotalBet(), r.getTotalWin(), r.getCurrency(),
                     false, r.getCreatedAt());
         }

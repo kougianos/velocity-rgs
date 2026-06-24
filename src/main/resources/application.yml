@@ -167,6 +167,12 @@ rgs:
       - gameId: european-roulette
         mathVersion: v1
 
+  # Blackjack games (additive — an empty/absent list boots without card games).
+  blackjack:
+    catalog:
+      - gameId: classic-blackjack
+        mathVersion: v1
+
 logging:
   level:
     root: INFO

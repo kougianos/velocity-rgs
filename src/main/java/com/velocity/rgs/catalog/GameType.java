@@ -7,5 +7,6 @@ package com.velocity.rgs.catalog;
  */
 public enum GameType {
     SLOT,
-    ROULETTE
+    ROULETTE,
+    BLACKJACK
 }

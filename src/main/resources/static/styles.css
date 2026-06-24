@@ -918,6 +918,7 @@ body[data-game="inferno-riches"] .sym-12 { background: linear-gradient(135deg, #
 }
 .lobby-section.slots .lobby-section-title { color: var(--accent); }
 .lobby-section.roulette .lobby-section-title { color: #3fb950; }
+.lobby-section.blackjack .lobby-section-title { color: #a371f7; }
 
 /* A single roulette card sits centered in its row rather than left-aligned. */
 .game-grid.centered { display: flex; justify-content: center; }
@@ -928,6 +929,12 @@ body[data-game="inferno-riches"] .sym-12 { background: linear-gradient(135deg, #
 .game-card[data-theme="roulette"] .play-btn { background: #2ea043; color: #fff; }
 .game-card[data-theme="roulette"]:hover .play-btn { background: #3fb950; }
 .game-card[data-theme="roulette"]:hover { border-color: #2ea043; }
+
+/* Blackjack lobby card — deep violet felt art + accent. */
+.game-card[data-theme="blackjack"] .card-art { background: linear-gradient(135deg, #2a1a4d, #4b2c86); }
+.game-card[data-theme="blackjack"] .play-btn { background: #8957e5; color: #fff; }
+.game-card[data-theme="blackjack"]:hover .play-btn { background: #a371f7; }
+.game-card[data-theme="blackjack"]:hover { border-color: #8957e5; }
 
 /* =========================================================================
  * Roulette game page
@@ -1062,4 +1069,97 @@ body[data-theme="roulette"] {
 @media (max-width: 520px) {
   .rt-cell { min-height: 32px; font-size: 11px; }
   .rt-zero { font-size: 14px; }
+}
+
+/* =========================================================================
+ * Blackjack game page
+ * ======================================================================= */
+body[data-theme="blackjack"] {
+  --accent: #8957e5;
+  --accent-2: #6e40c9;
+  background: radial-gradient(circle at top, #1c1430 0%, #0b0712 60%);
+}
+
+/* Felt table — dealer row above, player hand(s) below. */
+.bj-table {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  background: radial-gradient(circle at 50% 0%, #1c5037 0%, #0e3324 70%);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 22px 18px;
+  min-height: 260px;
+}
+.bj-row { display: flex; flex-direction: column; gap: 8px; }
+.bj-row-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: rgba(255, 255, 255, 0.7);
+}
+.bj-value { color: var(--gold); font-weight: 700; letter-spacing: 0; }
+.bj-player { margin-top: auto; }
+.bj-hands { display: flex; gap: 16px; flex-wrap: wrap; }
+
+/* A single hand box (multiple appear after a split). */
+.bj-hand-box {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px;
+  border-radius: 10px;
+  border: 2px solid transparent;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.bj-hand-box.active { border-color: var(--gold); box-shadow: 0 0 14px rgba(245, 197, 24, 0.35); }
+.bj-hand-box.outcome-win, .bj-hand-box.outcome-player_blackjack {
+  border-color: #2ea043; background: rgba(46, 160, 67, 0.12);
+}
+.bj-hand-box.outcome-lose { border-color: #c0392b; background: rgba(192, 57, 43, 0.1); }
+.bj-hand-box.outcome-push { border-color: var(--border); background: rgba(255, 255, 255, 0.04); }
+.bj-hand-meta { font-size: 12.5px; color: rgba(255, 255, 255, 0.85); }
+.bj-hand-meta .bj-outcome { font-weight: 700; color: var(--gold); }
+
+.bj-hand { display: flex; gap: 8px; min-height: 92px; }
+
+/* A playing card. */
+.card {
+  position: relative;
+  width: 64px;
+  height: 90px;
+  border-radius: 8px;
+  background: #fafafa;
+  color: #15191f;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  font-weight: 800;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.4);
+  animation: bj-deal 0.22s ease;
+}
+.card.red { color: #c0392b; }
+.card.black { color: #15191f; }
+.card .card-rank { font-size: 22px; line-height: 1; }
+.card .card-suit { font-size: 22px; line-height: 1; }
+.card.back {
+  background: repeating-linear-gradient(45deg, #4b2c86, #4b2c86 6px, #6e40c9 6px, #6e40c9 12px);
+  border: 2px solid #2a1a4d;
+}
+@keyframes bj-deal {
+  from { transform: translateY(-12px) scale(0.94); opacity: 0; }
+  to { transform: none; opacity: 1; }
+}
+
+/* Action buttons + message. */
+.bj-actions { display: flex; gap: 10px; margin-top: 16px; flex-wrap: wrap; }
+.bj-bet-readout { font-size: 13px; color: var(--text-dim); margin-left: auto; }
+.bj-bet-readout strong { color: var(--gold); }
+.bj-message { margin-top: 12px; font-size: 13.5px; color: var(--text-dim); min-height: 18px; }
+
+@media (max-width: 520px) {
+  .card { width: 52px; height: 74px; }
+  .card .card-rank, .card .card-suit { font-size: 18px; }
 }

@@ -1,5 +1,9 @@
 package com.velocity.rgs.catalog;
 
+import com.velocity.rgs.blackjack.config.BlackjackCatalogRegistry;
+import com.velocity.rgs.blackjack.config.BlackjackGameDefinition;
+import com.velocity.rgs.blackjack.config.BlackjackMathDefinition;
+import com.velocity.rgs.blackjack.config.BlackjackPresentation;
 import com.velocity.rgs.roulette.config.RouletteBetTypeConfig;
 import com.velocity.rgs.roulette.config.RouletteGameDefinition;
 import com.velocity.rgs.roulette.config.RouletteCatalogRegistry;
@@ -38,12 +42,14 @@ public class GameCatalogController {
 
     private final GameCatalogRegistry slotCatalog;
     private final RouletteCatalogRegistry rouletteCatalog;
+    private final BlackjackCatalogRegistry blackjackCatalog;
 
     @GetMapping
     public ResponseEntity<List<GameSummary>> list() {
         List<GameSummary> games = new ArrayList<>();
         slotCatalog.all().forEach(g -> games.add(toSlotSummary(g)));
         rouletteCatalog.all().forEach(g -> games.add(toRouletteSummary(g)));
+        blackjackCatalog.all().forEach(g -> games.add(toBlackjackSummary(g)));
         return ResponseEntity.ok(games);
     }
 
@@ -172,6 +178,70 @@ public class GameCatalogController {
         };
     }
 
+    // ------------------------------------------------------------------ blackjack
+
+    private static GameSummary toBlackjackSummary(BlackjackGameDefinition game) {
+        BlackjackMathDefinition math = game.math();
+        BlackjackPresentation p = game.presentation();
+        return GameSummary.builder()
+                .gameId(math.gameId())
+                .mathVersion(math.mathVersion())
+                .gameType(GameType.BLACKJACK)
+                .title(p.title())
+                .tagline(p.tagline())
+                .description(p.description())
+                .logo(p.logo())
+                .theme(p.theme())
+                .volatility(p.volatility())
+                .info(p.info())
+                .targetRtp(math.targetRtp())
+                .betValues(math.betConfig().values())
+                .defaultBet(math.betConfig().defaultBet())
+                .minBet(math.betConfig().minBet())
+                .maxBet(math.betConfig().maxBet())
+                .blackjack(toBlackjackView(math))
+                .build();
+    }
+
+    private static BlackjackView toBlackjackView(BlackjackMathDefinition math) {
+        String dealerRule = math.dealerHitsSoft17() ? "Hits soft 17" : "Stands on soft 17";
+        String payoutLabel = blackjackPayoutLabel(math.blackjackPayout());
+        List<String> rules = new ArrayList<>();
+        rules.add(math.decks() + "-deck shoe");
+        rules.add("Dealer " + dealerRule.toLowerCase());
+        rules.add("Blackjack pays " + payoutLabel);
+        rules.add("Double on any two cards" + (math.doubleAfterSplit() ? ", including after split" : ""));
+        rules.add("Split to " + math.maxHands() + " hands");
+        if (math.insuranceEnabled()) {
+            rules.add("Insurance offered (pays " + math.insurancePayout() + ":1)");
+        }
+        return BlackjackView.builder()
+                .decks(math.decks())
+                .dealerHitsSoft17(math.dealerHitsSoft17())
+                .dealerRule(dealerRule)
+                .blackjackPayout(math.blackjackPayout())
+                .blackjackPayoutLabel(payoutLabel)
+                .doubleAfterSplit(math.doubleAfterSplit())
+                .maxSplits(math.maxSplits())
+                .maxHands(math.maxHands())
+                .insuranceEnabled(math.insuranceEnabled())
+                .insurancePayout(math.insurancePayout())
+                .maxBet(math.limits().maxBet())
+                .rules(rules)
+                .build();
+    }
+
+    /** A friendly "X:Y" label for the blackjack payout ratio (1.5 → "3:2", 1.2 → "6:5"). */
+    private static String blackjackPayoutLabel(BigDecimal payout) {
+        if (payout.compareTo(new BigDecimal("1.5")) == 0) {
+            return "3:2";
+        }
+        if (payout.compareTo(new BigDecimal("1.2")) == 0) {
+            return "6:5";
+        }
+        return payout.stripTrailingZeros().toPlainString() + ":1";
+    }
+
     // ------------------------------------------------------------------ DTOs
 
     @Builder
@@ -201,8 +271,10 @@ public class GameCatalogController {
             Integer cols,
             List<PaylineView> paylines,
             List<SymbolView> symbols,
-            // Roulette-only (null for slots)
-            RouletteView roulette
+            // Roulette-only (null for other types)
+            RouletteView roulette,
+            // Blackjack-only (null for other types)
+            BlackjackView blackjack
     ) {}
 
     /** A payline as the client draws it: its id and ordered {@code [row, col]} coordinates. */
@@ -228,4 +300,21 @@ public class GameCatalogController {
 
     /** A bettable spot: the bet kind, its "to-one" payout, and a friendly label. */
     public record BetTypeView(String kind, int payout, String label) {}
+
+    /** Everything the client needs to advertise a blackjack game's rules — all server-driven. */
+    @Builder
+    public record BlackjackView(
+            int decks,
+            boolean dealerHitsSoft17,
+            String dealerRule,
+            BigDecimal blackjackPayout,
+            String blackjackPayoutLabel,
+            boolean doubleAfterSplit,
+            int maxSplits,
+            int maxHands,
+            boolean insuranceEnabled,
+            int insurancePayout,
+            BigDecimal maxBet,
+            List<String> rules
+    ) {}
 }

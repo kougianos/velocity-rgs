@@ -127,6 +127,44 @@
       </div>
     </section>
 
+    <!-- ===== Blackjack game column ===== -->
+    <section class="panel game-panel hidden" id="blackjackGame">
+      <h2 class="panel-title">Classic Blackjack</h2>
+
+      <div class="bj-table">
+        <div class="bj-row bj-dealer">
+          <div class="bj-row-label">Dealer <span id="bjDealerValue" class="bj-value"></span></div>
+          <div id="bjDealerCards" class="bj-hand" aria-label="Dealer hand"></div>
+        </div>
+        <div class="bj-row bj-player">
+          <div class="bj-row-label">Player</div>
+          <div id="bjPlayerHands" class="bj-hands" aria-label="Player hands"></div>
+        </div>
+      </div>
+
+      <div id="blackjackWin" class="win-banner is-empty">
+        <span class="win-label">WIN</span>
+        <span id="blackjackWinAmount" class="win-amount">0.00</span>
+      </div>
+
+      <div class="chip-bar" id="bjChipBar">
+        <span class="chip-bar-label">Bet</span>
+        <div id="bjChipRow" class="chip-row"></div>
+        <span class="bj-bet-readout">Stake <strong id="bjBetValue" class="bet-value">0.00</strong></span>
+      </div>
+
+      <div class="bj-actions">
+        <button id="bjDeal" class="btn btn-primary btn-spin">Deal</button>
+        <button id="bjHit" class="btn btn-accent hidden">Hit</button>
+        <button id="bjStand" class="btn btn-accent hidden">Stand</button>
+        <button id="bjDouble" class="btn btn-ghost hidden">Double</button>
+        <button id="bjSplit" class="btn btn-ghost hidden">Split</button>
+        <button id="bjInsurance" class="btn btn-ghost hidden">Insurance</button>
+      </div>
+
+      <p id="bjMessage" class="bj-message"></p>
+    </section>
+
     <!-- ===== Tools column ===== -->
     <aside class="side">
       <!-- Session -->
@@ -250,6 +288,7 @@
   <script src="/game-core.js"></script>
   <script src="/slot.js"></script>
   <script src="/roulette.js"></script>
+  <script src="/blackjack.js"></script>
   <script src="/game.js"></script>
 </body>
 </html>

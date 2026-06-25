@@ -2,15 +2,15 @@
   "presentation": {
     "title": "Classic Blackjack",
     "tagline": "Beat the dealer to 21.",
-    "description": "The timeless casino card game — hit, stand, double and split your way to 21 without busting. Six decks, dealer stands on soft 17, blackjack pays a full 3:2, and insurance is on offer when the dealer shows an Ace. Just you against the house.",
+    "description": "The timeless casino card game - hit, stand, double and split your way to 21 without busting. Six decks, dealer stands on soft 17, blackjack pays a full 3:2, and insurance is on offer when the dealer shows an Ace. Just you against the house.",
     "logo": "🂡",
     "theme": "blackjack",
     "volatility": "Medium",
     "info": {
       "paragraphs": [
-        "Classic Blackjack is the purest form of the table favourite: get closer to 21 than the dealer without going over. Number cards count their face value, face cards are worth 10, and an Ace is 11 or 1 — whichever helps your hand. A two-card 21 is a 'natural' blackjack and pays a generous 3:2.",
+        "Classic Blackjack is the purest form of the table favourite: get closer to 21 than the dealer without going over. Number cards count their face value, face cards are worth 10, and an Ace is 11 or 1 - whichever helps your hand. A two-card 21 is a 'natural' blackjack and pays a generous 3:2.",
         "Play it your way. Hit for another card, stand to hold, double down to twice your stake for exactly one more card, or split a matching pair into separate hands (up to three). Double after a split is allowed, and when the dealer's upcard is an Ace you can take insurance against a dealer blackjack.",
-        "The dealer plays by fixed rules — drawing to 16 and standing on all 17s, including soft 17 — and every card comes from a freshly shuffled six-deck shoe drawn by a certified server-side RNG. The whole round is auditable: the dealer's hole card stays hidden on the server until it's time to reveal."
+        "The dealer plays by fixed rules - drawing to 16 and standing on all 17s, including soft 17 - and every card comes from a freshly shuffled six-deck shoe drawn by a certified server-side RNG. The whole round is auditable: the dealer's hole card stays hidden on the server until it's time to reveal."
       ],
       "stats": [
         { "label": "Game Theme", "value": "Casino Table" },
@@ -18,13 +18,13 @@
         { "label": "RTP", "value": "99.40%" }
       ],
       "specs": [
-        { "label": "Game Type", "values": ["Table Game — Blackjack"] },
+        { "label": "Game Type", "values": ["Table Game - Blackjack"] },
         { "label": "Shoe", "values": ["6 decks", "Reshuffled every round"] },
         { "label": "Dealer", "values": ["Stands on soft 17 (S17)"] },
         { "label": "Blackjack Pays", "values": ["3 : 2"] },
-        { "label": "Player Options", "values": ["Hit / Stand", "Double on any two cards (incl. after split)", "Split to 3 hands", "Insurance — pays 2:1"] },
+        { "label": "Player Options", "values": ["Hit / Stand", "Double on any two cards (incl. after split)", "Split to 3 hands", "Insurance - pays 2:1"] },
         { "label": "House Edge", "values": ["~0.6% with basic strategy"] },
-        { "label": "Bet Values", "values": ["Min — €1.00", "Default — €5.00", "Max — €500.00"] }
+        { "label": "Bet Values", "values": ["Min - €1.00", "Default - €5.00", "Max - €500.00"] }
       ]
     }
   },

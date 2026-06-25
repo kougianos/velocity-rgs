@@ -3,7 +3,7 @@ package com.velocity.rgs.card;
 /**
  * One of the four French-deck suits, carrying its short {@code code} (used in the compact card code that gets
  * persisted), a display {@code symbol} for the UI, and its {@link CardColor}. Part of the reusable, game-
- * agnostic CardEngine — no blackjack knowledge lives here.
+ * agnostic CardEngine - no blackjack knowledge lives here.
  */
 public enum Suit {
     CLUBS('C', "♣", CardColor.BLACK),

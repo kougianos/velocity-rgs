@@ -14,7 +14,7 @@ public record Card(Rank rank, Suit suit) {
         Objects.requireNonNull(suit, "suit");
     }
 
-    /** Compact persistence/display code — rank code followed by the suit code, e.g. {@code "10H"}, {@code "AS"}. */
+    /** Compact persistence/display code - rank code followed by the suit code, e.g. {@code "10H"}, {@code "AS"}. */
     public String code() {
         return rank.code() + suit.code();
     }
@@ -28,7 +28,7 @@ public record Card(Rank rank, Suit suit) {
         return suit.color();
     }
 
-    /** Inverse of {@link #code()} — the last char is the suit, everything before it the rank. */
+    /** Inverse of {@link #code()} - the last char is the suit, everything before it the rank. */
     public static Card fromCode(String code) {
         if (code == null || code.length() < 2) {
             throw new IllegalArgumentException("Invalid card code: " + code);

@@ -108,7 +108,7 @@ class PickAuditEventIntegrationTest {
             assertThat(ev.sessionId()).isEqualTo(sessionId);
             assertThat(ev.beforeStateHash()).isNotBlank().hasSize(64);
             assertThat(ev.afterStateHash()).isNotBlank().hasSize(64);
-            // Hash must change between before and after — pick mutates state
+            // Hash must change between before and after - pick mutates state
             assertThat(ev.beforeStateHash()).isNotEqualTo(ev.afterStateHash());
             assertThat(ev.position()).isEqualTo(i);
             assertThat(ev.remainingPicksAfter()).isLessThanOrEqualTo(ev.remainingPicksBefore());

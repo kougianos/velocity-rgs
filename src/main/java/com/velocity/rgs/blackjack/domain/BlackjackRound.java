@@ -25,7 +25,7 @@ import java.time.Instant;
  * the active round for a session is the row with {@code status = IN_PROGRESS}. The {@code shoe} JSONB column
  * (shuffled order + draw cursor) makes the whole round deterministic and auditable across HTTP calls;
  * {@code rng_draws} captures the Fisher–Yates shuffle that produced that order. Kept as a separate table from
- * the slot {@code game_round} / roulette {@code roulette_round} so those paths are untouched — only the demo
+ * the slot {@code game_round} / roulette {@code roulette_round} so those paths are untouched - only the demo
  * history-list endpoint merges all three.
  */
 @Entity

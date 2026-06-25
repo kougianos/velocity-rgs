@@ -6,7 +6,7 @@ import jakarta.validation.constraints.NotNull;
 
 /**
  * Request body for {@code POST /api/v1/blackjack/action}. {@code action} is a {@code BlackjackAction} name
- * (HIT/STAND/DOUBLE/SPLIT/INSURANCE); {@code handIndex} is optional — the server resolves the active hand
+ * (HIT/STAND/DOUBLE/SPLIT/INSURANCE); {@code handIndex} is optional - the server resolves the active hand
  * itself and only uses the index as a sanity check.
  */
 public record BlackjackActionRequest(

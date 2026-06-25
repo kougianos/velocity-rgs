@@ -42,7 +42,7 @@ body {
   margin: 0 auto;
 }
 
-/* Brand left, nav centered, session/right group balanced — the two flex:1 flanks keep the nav
+/* Brand left, nav centered, session/right group balanced - the two flex:1 flanks keep the nav
    visually centered regardless of how wide the brand or right group are. */
 .brand { display: flex; align-items: center; gap: 12px; flex: 1 1 0; min-width: 0; }
 .topbar-right { flex: 1 1 0; display: flex; justify-content: flex-end; align-items: center; gap: 10px; }
@@ -122,7 +122,7 @@ body {
 
 .side { display: flex; flex-direction: column; gap: 20px; }
 
-/* Session panel (game page) — the balance/state/free-spins readouts + New Player, relocated out of
+/* Session panel (game page) - the balance/state/free-spins readouts + New Player, relocated out of
    the top bar into the tools column. */
 .session-grid {
   display: grid;
@@ -133,7 +133,7 @@ body {
 .session-panel .pill { min-width: 0; }
 
 /* ===== Reels ===== */
-/* The column/row counts below are fallbacks only — buildGrid() overrides grid-template-columns
+/* The column/row counts below are fallbacks only - buildGrid() overrides grid-template-columns
    (reels) and grid-template-rows (reel) per game from the server-driven grid shape, so 4/5/6-reel
    boards render without touching this file. Don't re-hardcode the shape here. */
 .reels {
@@ -288,7 +288,7 @@ input:focus, select:focus { outline: none; border-color: var(--accent); }
 .toggle.is-active .toggle-text { color: var(--gold); font-weight: 700; }
 .toggle.is-active .toggle-text small { color: var(--gold); }
 
-/* Bet slider — the stake selector is server-driven (discrete bet values stepped by the slider). */
+/* Bet slider - the stake selector is server-driven (discrete bet values stepped by the slider). */
 .bet-control { min-width: 200px; }
 .bet-control label { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
 .bet-value {
@@ -346,7 +346,7 @@ input[type="range"].bet-slider {
   font-weight: 700;
 }
 
-/* Inline help tooltip (pick strategy etc.) — the icon is an inline SVG so it stays crisp at any
+/* Inline help tooltip (pick strategy etc.) - the icon is an inline SVG so it stays crisp at any
    DPI/zoom (the old ⓘ glyph looked pixelated on desktop). */
 .label-row { display: inline-flex; align-items: center; gap: 6px; }
 .info {
@@ -456,7 +456,7 @@ input[type="range"].bet-slider {
 .sim-report table { width: 100%; border-collapse: collapse; table-layout: auto; }
 .sim-report th, .sim-report td { text-align: left; padding: 5px 6px; border-bottom: 1px solid var(--border); white-space: nowrap; }
 .sim-report th { color: var(--text-dim); font-weight: 600; font-size: 10px; text-transform: uppercase; }
-/* numeric columns (Spins, Total Bet, Total Win, RTP) — right-align with tabular figures */
+/* numeric columns (Spins, Total Bet, Total Win, RTP) - right-align with tabular figures */
 .sim-report th:not(:first-child), .sim-report td:not(:first-child) { text-align: right; font-variant-numeric: tabular-nums; }
 .sim-report .rtp { color: var(--gold); font-weight: 700; }
 .sim-report .row-overall td { border-top: 2px solid var(--border); border-bottom: none; }
@@ -529,7 +529,7 @@ input[type="range"].bet-slider {
 .modal-actions { display: flex; gap: 12px; justify-content: center; }
 
 /* =========================================================================
- * Game info modal — spans the reels + simulator width over the main game area
+ * Game info modal - spans the reels + simulator width over the main game area
  * ======================================================================= */
 .info-btn {
   display: inline-flex;
@@ -770,7 +770,7 @@ input[type="range"].bet-slider {
 .back-link:hover { border-color: var(--accent); color: var(--accent); }
 
 /* =========================================================================
- * Per-game themes (game page) — switched via <body data-game="...">
+ * Per-game themes (game page) - switched via <body data-game="...">
  * ======================================================================= */
 body[data-game="frost-crown"] {
   --accent: #4fc3f7;
@@ -884,14 +884,14 @@ body[data-game="inferno-riches"] .sym-12 { background: linear-gradient(135deg, #
 .badge-power { background: rgba(240, 136, 62, 0.16); color: var(--accent); border: 1px solid rgba(240, 136, 62, 0.4); margin-left: 6px; }
 
 /* =========================================================================
- * Lobby — game-type rows
+ * Lobby - game-type rows
  * ======================================================================= */
 /* The lobby is a vertical stack of category rows (Slot Games, then Roulette). */
 .lobby-sections { display: flex; flex-direction: column; gap: 6px; }
 .lobby-section { margin-bottom: 40px; }
 .lobby-section:last-child { margin-bottom: 0; }
 
-/* Punchy, colour-coded category headers — bigger, bolder, with a leading accent bar. */
+/* Punchy, colour-coded category headers - bigger, bolder, with a leading accent bar. */
 .lobby-section-title {
   display: inline-flex;
   align-items: center;
@@ -918,13 +918,13 @@ body[data-game="inferno-riches"] .sym-12 { background: linear-gradient(135deg, #
 .game-grid.centered { display: flex; justify-content: center; }
 .game-grid.centered .game-card { width: min(320px, 100%); }
 
-/* Roulette lobby card — casino-green felt art + accent. */
+/* Roulette lobby card - casino-green felt art + accent. */
 .game-card[data-theme="roulette"] .card-art { background: linear-gradient(135deg, #0b3d1e, #16692f); }
 .game-card[data-theme="roulette"] .play-btn { background: #2ea043; color: #fff; }
 .game-card[data-theme="roulette"]:hover .play-btn { background: #3fb950; }
 .game-card[data-theme="roulette"]:hover { border-color: #2ea043; }
 
-/* Blackjack lobby card — deep violet felt art + accent. */
+/* Blackjack lobby card - deep violet felt art + accent. */
 .game-card[data-theme="blackjack"] .card-art { background: linear-gradient(135deg, #2a1a4d, #4b2c86); }
 .game-card[data-theme="blackjack"] .play-btn { background: #8957e5; color: #fff; }
 .game-card[data-theme="blackjack"]:hover .play-btn { background: #a371f7; }
@@ -1069,7 +1069,7 @@ body[data-theme="blackjack"] {
   background: radial-gradient(circle at top, #1c1430 0%, #0b0712 60%);
 }
 
-/* Felt table — dealer row above, player hand(s) below. */
+/* Felt table - dealer row above, player hand(s) below. */
 .bj-table {
   display: flex;
   flex-direction: column;
@@ -1149,12 +1149,12 @@ body[data-theme="blackjack"] {
 .bj-message { margin-top: 12px; font-size: 13.5px; color: var(--text-dim); min-height: 18px; }
 
 /* =========================================================================
- * MOBILE — the single breakpoint.
+ * MOBILE - the single breakpoint.
  *
  * Above 500px the layout is fully fluid (flex/auto-fit grids handle every width
  * intrinsically). Below 500px we switch into a dedicated mobile design: compact
  * top bar, single-column controls, full-width primary buttons, smaller card/cell
- * art, and trimmed tables — sized so nothing overflows or scrolls horizontally.
+ * art, and trimmed tables - sized so nothing overflows or scrolls horizontally.
  * This is the ONLY media query in the stylesheet; keep new responsive rules here.
  * ======================================================================= */
 @media (max-width: 500px) {
@@ -1162,13 +1162,13 @@ body[data-theme="blackjack"] {
   .topbar-inner { flex-wrap: wrap; gap: 10px; padding: 10px 14px; }
   .topnav { order: 3; flex: 1 1 100%; justify-content: center; }
   /* Nav drops to its own row, so the desktop "flex:1 flanks center the nav" trick is
-     off — let the brand consume the freed width instead of splitting the row 50/50
+     off - let the brand consume the freed width instead of splitting the row 50/50
      (which otherwise wraps the brand title on pages with an empty right group). */
   .brand { flex: 1 1 auto; }
   .topbar-right { flex: 0 0 auto; }
   .brand .logo { font-size: 26px; }
   .brand h1 { font-size: 17px; }
-  .subtitle { display: none; }          /* declutter — full details live in the info modal */
+  .subtitle { display: none; }          /* declutter - full details live in the info modal */
   .info-btn { font-size: 12px; padding: 6px 10px; }
   .topbar-right { gap: 8px; }
 
@@ -1241,8 +1241,8 @@ body[data-theme="blackjack"] {
   .history-title { font-size: 22px; }
   .history-table { font-size: 12px; }
   .history-table th, .history-table td { padding: 9px 8px; }
-  /* Drop secondary columns (Time, Context, Net, Round Id) so the essentials —
-     Game / Bet / Win / Outcome — fit without horizontal scrolling. */
+  /* Drop secondary columns (Time, Context, Net, Round Id) so the essentials -
+     Game / Bet / Win / Outcome - fit without horizontal scrolling. */
   .history-table th:nth-child(1), .history-table td:nth-child(1),
   .history-table th:nth-child(3), .history-table td:nth-child(3),
   .history-table th:nth-child(6), .history-table td:nth-child(6),

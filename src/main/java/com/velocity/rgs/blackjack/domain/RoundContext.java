@@ -23,7 +23,7 @@ public class RoundContext {
     /**
      * Monotonic counter for additional wagers within the round (double/split). Yields short, deterministic
      * wallet transaction ids ({@code <roundId>:double:<n>}) that fit the 64-char column and are idempotent on
-     * retry — unlike a random UUID, which both overflowed the column and risked double-charging.
+     * retry - unlike a random UUID, which both overflowed the column and risked double-charging.
      */
     private int betSeq;
 }

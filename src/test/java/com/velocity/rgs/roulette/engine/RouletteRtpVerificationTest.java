@@ -20,7 +20,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  */
 class RouletteRtpVerificationTest {
 
-    /** 36/37 to 10 dp — the house-edge invariant of a European single-zero wheel. */
+    /** 36/37 to 10 dp - the house-edge invariant of a European single-zero wheel. */
     private static final BigDecimal HOUSE_EDGE_RTP =
             BigDecimal.valueOf(36).divide(BigDecimal.valueOf(37), 10, RoundingMode.HALF_UP);
 
@@ -32,7 +32,7 @@ class RouletteRtpVerificationTest {
         BigDecimal stake = new BigDecimal("1.00");
         for (RouletteBetKind kind : RouletteBetKind.values()) {
             BigDecimal totalReturn = BigDecimal.ZERO;
-            // A fixed bet (straight always on the same number) swept against every pocket exactly once —
+            // A fixed bet (straight always on the same number) swept against every pocket exactly once -
             // the empirical RTP of one full cycle. The straight wins on exactly one of the 37 pockets.
             Integer number = kind.requiresNumber() ? 7 : null;
             for (int n = 0; n < math.pocketCount(); n++) {

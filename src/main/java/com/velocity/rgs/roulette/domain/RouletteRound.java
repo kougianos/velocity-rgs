@@ -21,7 +21,7 @@ import java.time.Instant;
  * One row per roulette spin. The {@code rng_draws} JSONB column is the canonical replay artifact (the single
  * wheel draw); {@code bets} and {@code winning_bets} capture the full betting layout and its settlement for
  * audit. Kept as a separate table from the slot {@code game_round} so the slot replay/reconciliation path is
- * untouched — only the demo history-list endpoint merges the two.
+ * untouched - only the demo history-list endpoint merges the two.
  */
 @Entity
 @Table(name = "roulette_round")

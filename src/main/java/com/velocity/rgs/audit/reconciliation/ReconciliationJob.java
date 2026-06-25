@@ -35,7 +35,7 @@ import java.util.Set;
  *       sum(feature_purchase_event.cost)</li>
  *   <li>actual debit = sum(wallet_transaction.amount where type in BET, BONUS_BUY) minus
  *       rollbacks of those types</li>
- *   <li>expected credit = sum(game_round.total_win where win_transaction_id is not null) — Pick&Collect
+ *   <li>expected credit = sum(game_round.total_win where win_transaction_id is not null) - Pick&Collect
  *       credits flow through {@code pick-…} synthetic round ids that this job intentionally does NOT
  *       cross-check; they are tracked via {@code pick_collect_snapshot.final_win} separately.</li>
  *   <li>actual credit = sum(wallet_transaction.amount where type in WIN, FEATURE_WIN) minus

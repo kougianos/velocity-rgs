@@ -9,7 +9,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Plays the dealer's hand to completion — the only "decision-making" the house does, and it is fully
+ * Plays the dealer's hand to completion - the only "decision-making" the house does, and it is fully
  * deterministic given the card sequence. The dealer hits while the total is below 17; on a <i>soft</i> 17 it
  * hits only under H17 rules, otherwise stands (S17). Pure given the cards: the unit tests drive it with a
  * fixed {@link Shoe#fromState} so the behaviour is exactly reproducible.

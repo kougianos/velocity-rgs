@@ -1,10 +1,10 @@
 "use strict";
 
 /* =========================================================================
- * Velocity RGS — Slot game client (vanilla JS).
+ * Velocity RGS - Slot game client (vanilla JS).
  * Builds on game-core.js (API, token, toast, modal, info modal, bet slider).
  * Renders the reels, runs spins / features / Pick & Collect and the RTP
- * simulator. Entry point: initSlotGame(game) — called by the game-page
+ * simulator. Entry point: initSlotGame(game) - called by the game-page
  * bootstrap when the resolved catalog game is a SLOT.
  * ======================================================================= */
 
@@ -14,7 +14,7 @@
 
 /**
  * The active game's config, provided by the bootstrap from the backend catalog (see games.js). Everything
- * the client needs to draw and play the game — presentation, grid shape, paylines and symbol glyphs — is
+ * the client needs to draw and play the game - presentation, grid shape, paylines and symbol glyphs - is
  * server-driven, so introducing a different layout (3x3, 5x4, more/fewer paylines …) or a brand-new game
  * needs no changes here.
  */
@@ -24,14 +24,14 @@ let SYMBOLS = {};     // { symbolId: { glyph, name } }
 let PAYLINES = {};    // { lineId: [[row, col], …] } used for win highlighting
 let ROWS = 0;
 let COLS = 0;
-// How long the reels visibly roll before settling — server-driven per game (catalog), with a safe default.
+// How long the reels visibly roll before settling - server-driven per game (catalog), with a safe default.
 let SPIN_MS = 600;
-// The discrete stakes a player may wager — fully server-driven (catalog betValues). The bet slider steps
+// The discrete stakes a player may wager - fully server-driven (catalog betValues). The bet slider steps
 // through these by index; DEFAULT_BET seeds the initial selection. The server re-validates every spin, so
 // these are only a convenience for the UI.
 let BET_VALUES = [];
 let DEFAULT_BET = 1.0;
-// Bet-selector component instances (see createBetSlider) — one for the main game, one for the simulator.
+// Bet-selector component instances (see createBetSlider) - one for the main game, one for the simulator.
 let mainBetSlider = null;
 let simBetSlider = null;
 
@@ -50,7 +50,7 @@ function applyGameConfig(game) {
   BET_VALUES = (game.betValues || []).map(Number).filter((v) => v > 0).sort((a, b) => a - b);
   DEFAULT_BET = Number(game.defaultBet) || BET_VALUES[0] || 1.0;
   state.baseBet = DEFAULT_BET;
-  // Filler symbols (wild/scatter excluded) used to dress the idle reels — derived from the live symbol set.
+  // Filler symbols (wild/scatter excluded) used to dress the idle reels - derived from the live symbol set.
   FILLER_SYMBOL_IDS = Object.keys(SYMBOLS)
     .map(Number)
     .filter((id) => !/wild|scatter/i.test((SYMBOLS[id] && SYMBOLS[id].name) || ""));
@@ -66,7 +66,7 @@ const state = {
   availableActions: [],
   // Power Bet: the multiplier comes from the server (init featureFlags); baseBet is the player's
   // chosen per-spin stake before the multiplier is applied. While Power Bet is on, the Bet field is
-  // locked to baseBet × multiplier for display, but we always send baseBet to the server — the
+  // locked to baseBet × multiplier for display, but we always send baseBet to the server - the
   // server is the single authority that applies the multiplier to the debit and the win.
   powerMultiplier: 1.5,
   baseBet: 1.0,
@@ -149,7 +149,7 @@ function setBusy(busy) {
     return;
   }
   // When clearing the busy state, re-derive enablement from the legal actions
-  // instead of blanket-enabling — otherwise SPIN becomes clickable in states like
+  // instead of blanket-enabling - otherwise SPIN becomes clickable in states like
   // FREE_SPINS_AWAITING where only START_FREE_SPINS is allowed.
   els.startFeature.disabled = false;
   renderActions();
@@ -159,7 +159,7 @@ function setBusy(busy) {
 
 /* -------------------------------------------------------------- power bet */
 
-/** The per-spin base stake to send to the server — always one of the configured bet values; server ×N. */
+/** The per-spin base stake to send to the server - always one of the configured bet values; server ×N. */
 function betForRequest() {
   return state.baseBet;
 }
@@ -218,7 +218,7 @@ function setupBetSliders() {
 function buildGrid() {
   els.reels.innerHTML = "";
   // The grid shape is server-driven (catalog rows/cols), so the reel layout is sized from it rather
-  // than a fixed 5×3 — a 4-reel (Frost) or 6-reel (Inferno) board renders with no other changes.
+  // than a fixed 5×3 - a 4-reel (Frost) or 6-reel (Inferno) board renders with no other changes.
   els.reels.style.gridTemplateColumns = `repeat(${COLS}, 1fr)`;
   gridCells = Array.from({ length: ROWS }, () => new Array(COLS));
   for (let c = 0; c < COLS; c++) {
@@ -236,7 +236,7 @@ function buildGrid() {
   renderMatrix(randomMatrix());
 }
 
-/** Symbol ids used to dress the idle reels — wild/scatter excluded so the resting grid looks natural. */
+/** Symbol ids used to dress the idle reels - wild/scatter excluded so the resting grid looks natural. */
 let FILLER_SYMBOL_IDS = [];
 
 function randomFillerId() {
@@ -249,7 +249,7 @@ function randomMatrix() {
     Array.from({ length: COLS }, () => randomFillerId()));
 }
 
-/** Inner markup for a single symbol cell — shared by the resting grid and the spin strip. */
+/** Inner markup for a single symbol cell - shared by the resting grid and the spin strip. */
 function symbolCellHTML(id) {
   const meta = SYMBOLS[id] || { glyph: "?", name: id };
   return `<div class="cell sym-${id}"><span>${meta.glyph}</span><small>${meta.name}</small></div>`;
@@ -610,7 +610,7 @@ async function runFreeSpinsAutoplay() {
             sessionId: state.sessionId,
             sessionVersion: state.sessionVersion,
             // Free-spin bet is locked to the triggering bet server-side, and Power Bet does not
-            // persist into free spins for these games — always send the base bet without power.
+            // persist into free spins for these games - always send the base bet without power.
             betSize: betForRequest(),
             powerBetActive: false,
           },
@@ -766,7 +766,7 @@ function applyGameInfo() {
 }
 
 /**
- * Slot game entry point — called by the game-page bootstrap (game.js) when the resolved catalog game is a
+ * Slot game entry point - called by the game-page bootstrap (game.js) when the resolved catalog game is a
  * SLOT. The shared chrome + info modal are already applied by the bootstrap; this wires the slot controls,
  * builds the reels and boots the demo session.
  */

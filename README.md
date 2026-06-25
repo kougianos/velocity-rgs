@@ -4,12 +4,12 @@ An audit-grade iGaming platform: a deterministic Remote Gaming Server (RGS) buil
 Java 21 + Spring Boot 3.x + Postgres + Redis. Every outcome, state transition, and balance
 change is decided server-side.
 
-It hosts three game categories — **slots**, **roulette**, and **blackjack** — behind one
+It hosts three game categories - **slots**, **roulette**, and **blackjack** - behind one
 unified game catalog and one wallet.
 
 A self-contained **browser client** (vanilla HTML/CSS/JS) ships inside the server at
 [`src/main/resources/static/`](src/main/resources/static/) and is served directly by Spring
-Boot at `http://localhost:8080/` in demo mode — no separate frontend build, no Node/pnpm.
+Boot at `http://localhost:8080/` in demo mode - no separate frontend build, no Node/pnpm.
 
 ---
 
@@ -19,7 +19,7 @@ Boot at `http://localhost:8080/` in demo mode — no separate frontend build, no
 ┌─────────────────────────────────────────────────────┐
 │         Browser client (src/.../static/)            │
 │                                                     │
-│  Vanilla HTML/CSS/JS — lobby + per-game UIs          │
+│  Vanilla HTML/CSS/JS - lobby + per-game UIs          │
 │  Pure presentation: renders server responses only   │
 │  No RNG, no outcome eval, no local balance math     │
 └────────────────────┬────────────────────────────────┘

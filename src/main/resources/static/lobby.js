@@ -1,10 +1,10 @@
 "use strict";
 
 /* =========================================================================
- * Velocity RGS — lobby. Fetches the live game catalog from the backend (see
+ * Velocity RGS - lobby. Fetches the live game catalog from the backend (see
  * games.js) and renders themed cards grouped by game type: a row of slot games
- * and a row of roulette. Every card detail — theme, logo, title, copy and the
- * headline math facts — comes straight from the server config. Clicking a card
+ * and a row of roulette. Every card detail - theme, logo, title, copy and the
+ * headline math facts - comes straight from the server config. Clicking a card
  * opens the (single, type-aware) game page.
  * ======================================================================= */
 
@@ -103,7 +103,7 @@ function blackjackStats(g, rtp) {
   const b = g.blackjack || {};
   return (
     stat("RTP", `${rtp}%`) +
-    stat("Decks", b.decks ?? "—") +
+    stat("Decks", b.decks ?? "-") +
     stat("BJ pays", b.blackjackPayoutLabel || "3:2")
   );
 }

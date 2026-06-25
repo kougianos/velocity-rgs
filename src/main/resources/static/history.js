@@ -1,7 +1,7 @@
 "use strict";
 
 /* =========================================================================
- * Velocity RGS — Round History page.
+ * Velocity RGS - Round History page.
  *
  * Reads the demo player id persisted by the game page (localStorage), mints a
  * short-lived ADMIN dev token for it, and renders that player's persisted rounds
@@ -35,7 +35,7 @@ function fmt(value) {
 }
 
 function fmtTime(iso) {
-  if (!iso) return "—";
+  if (!iso) return "-";
   const d = new Date(iso);
   if (isNaN(d)) return iso;
   return d.toLocaleString();
@@ -43,7 +43,7 @@ function fmtTime(iso) {
 
 /** Human-friendly label for the persisted state context (BASE_GAME, FREE_SPINS_LOOP, …). */
 function stateLabel(state) {
-  if (!state) return "—";
+  if (!state) return "-";
   return state.replace(/_/g, " ").toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
@@ -149,12 +149,12 @@ function renderTable(rounds, games) {
 
 async function load() {
   const playerId = localStorage.getItem(PLAYER_KEY);
-  els.player.textContent = playerId || "—";
+  els.player.textContent = playerId || "-";
 
   if (!playerId) {
     els.body.innerHTML =
       `<p class="history-empty">No demo player yet. ` +
-      `<a href="/">Open a game</a> and spin once — your rounds will appear here.</p>`;
+      `<a href="/">Open a game</a> and spin once - your rounds will appear here.</p>`;
     els.summary.innerHTML = "";
     return;
   }

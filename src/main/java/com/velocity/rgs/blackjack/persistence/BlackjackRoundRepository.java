@@ -15,6 +15,6 @@ public interface BlackjackRoundRepository extends JpaRepository<BlackjackRound, 
 
     List<BlackjackRound> findByPlayerIdOrderByCreatedAtDesc(String playerId);
 
-    /** The active (unsettled) round for a session, if any — there is at most one. */
+    /** The active (unsettled) round for a session, if any - there is at most one. */
     Optional<BlackjackRound> findFirstBySessionIdAndStatusOrderByCreatedAtDesc(String sessionId, RoundStatus status);
 }

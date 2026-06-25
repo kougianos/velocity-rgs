@@ -14,7 +14,7 @@ import java.util.Set;
 /**
  * Stateless roulette settlement. Given the winning number and the placed bets, decides each bet against the
  * universal {@link RouletteGeometry} coverage and pays winners {@code amount × (payout + 1)} using the
- * configured "to-one" payout. All game logic lives here on the server — the client only renders the result.
+ * configured "to-one" payout. All game logic lives here on the server - the client only renders the result.
  *
  * <p>Because standard payouts are exact, every bet's theoretical return is
  * {@code coverage / pocketCount × (payout + 1)} which equals {@code 36/37 = 97.30%} on a European wheel; the

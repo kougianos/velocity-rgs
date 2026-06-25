@@ -6,8 +6,8 @@ import java.util.Map;
 import java.util.Objects;
 
 /**
- * Player-facing presentation metadata for a slot game — title, marketing copy, theme and the per-symbol
- * display (glyph + friendly name) — loaded from the {@code presentation} block of
+ * Player-facing presentation metadata for a slot game - title, marketing copy, theme and the per-symbol
+ * display (glyph + friendly name) - loaded from the {@code presentation} block of
  * {@code games/<gameId>/<mathVersion>.json}. Deliberately kept separate from {@link SlotMathDefinition} so
  * math and look-and-feel stay decoupled. The generic {@link GameInfo} block is shared with other game types.
  * Surfaced to the browser client through the public game catalog (A.5) so nothing about how a game looks is

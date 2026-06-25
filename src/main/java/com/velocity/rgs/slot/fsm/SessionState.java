@@ -8,7 +8,7 @@ import java.util.Objects;
 
 /**
  * Sealed projection of the persistent {@link GameState} enum into a typed FSM input. Each variant carries
- * only the data the {@link SessionStateMachine} needs to validate a command and emit the next state — the
+ * only the data the {@link SessionStateMachine} needs to validate a command and emit the next state - the
  * persistent row in {@code game_session} remains the source of truth for the full snapshot.
  */
 public sealed interface SessionState

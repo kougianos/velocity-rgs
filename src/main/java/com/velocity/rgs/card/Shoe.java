@@ -7,7 +7,7 @@ import java.util.List;
 import java.util.Objects;
 
 /**
- * A multi-deck shoe of {@link Card}s with a sequential draw cursor. Game-agnostic — any card game deals from
+ * A multi-deck shoe of {@link Card}s with a sequential draw cursor. Game-agnostic - any card game deals from
  * it. Built once per round via {@link #shuffled(int, RandomNumberGenerator)} (Fisher–Yates over the round
  * RNG, so the shuffle is captured in the draw log and replays deterministically), or rebuilt from persisted
  * state via {@link #fromState(List, int)} so a multi-step round resumes exactly where it left off without
@@ -52,7 +52,7 @@ public final class Shoe {
         return new Shoe(deck, 0);
     }
 
-    /** Rebuild a shoe from a persisted card order and draw cursor (no RNG — the order is already fixed). */
+    /** Rebuild a shoe from a persisted card order and draw cursor (no RNG - the order is already fixed). */
     public static Shoe fromState(List<Card> order, int drawIndex) {
         Objects.requireNonNull(order, "order");
         if (drawIndex < 0 || drawIndex > order.size()) {
@@ -82,7 +82,7 @@ public final class Shoe {
         return drawIndex;
     }
 
-    /** The full card order (immutable copy) — persist this together with {@link #drawIndex()} to resume. */
+    /** The full card order (immutable copy) - persist this together with {@link #drawIndex()} to resume. */
     public List<Card> cards() {
         return List.copyOf(cards);
     }

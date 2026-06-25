@@ -110,7 +110,7 @@ class ReconciliationJobIntegrationTest {
         Instant inBucket = bucketStart.plus(Duration.ofMinutes(25));
         String playerId = "p-recon-rb";
 
-        // No bet on the round side (treat the round as never recorded — i.e. rolled back)
+        // No bet on the round side (treat the round as never recorded - i.e. rolled back)
         seedWalletTx(playerId, "bet-rb-1", WalletTransactionType.BET, new BigDecimal("3.00"), inBucket, null);
         // Rollback compensates the BET entirely
         seedWalletTx(playerId, "bet-rb-1:rb", WalletTransactionType.ROLLBACK, new BigDecimal("3.00"), inBucket,

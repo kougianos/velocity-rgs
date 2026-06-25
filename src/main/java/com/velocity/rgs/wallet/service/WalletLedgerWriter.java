@@ -120,7 +120,7 @@ public class WalletLedgerWriter {
                 Money candidate = before.subtract(amount);
                 if (candidate.isNegative()) {
                     throw new RgsException(ErrorCode.INSUFFICIENT_FUNDS,
-                            "Cannot rollback credit — would drive balance negative");
+                            "Cannot rollback credit - would drive balance negative");
                 }
                 yield candidate;
             }

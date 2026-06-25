@@ -65,7 +65,7 @@ class ReplayAdminControllerIntegrationTest {
         String sessionId = init.get("sessionId").asText();
         long version = init.get("sessionVersion").asLong();
 
-        // A single base-game spin is enough — we just need a persisted round to replay
+        // A single base-game spin is enough - we just need a persisted round to replay
         String body = mapper.createObjectNode()
                 .put("gameId", GAME_ID)
                 .put("sessionId", sessionId)

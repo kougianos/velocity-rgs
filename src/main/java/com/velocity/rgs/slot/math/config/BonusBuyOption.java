@@ -15,7 +15,7 @@ import java.util.Objects;
  * <p>{@code freeSpinsWinMultiplier} boosts every win during a <em>bought</em> free-spins round (the
  * "you start with higher multipliers" mechanic of industry bonus buys). It lets the buy stay at an
  * industry-standard spin count (~10–15) and an industry-standard cost (~80–150× bet) while still
- * returning the game's target RTP — the feature is made richer per spin rather than longer. It applies
+ * returning the game's target RTP - the feature is made richer per spin rather than longer. It applies
  * <em>only</em> to the purchased feature; organically triggered free spins are unaffected. Defaults to
  * {@code 1} (no boost) when absent.
  */

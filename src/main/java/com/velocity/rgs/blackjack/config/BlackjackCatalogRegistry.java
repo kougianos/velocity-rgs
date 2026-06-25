@@ -34,7 +34,7 @@ public final class BlackjackCatalogRegistry {
         return def;
     }
 
-    /** First registered math version for a game id — the default a fresh session binds to. */
+    /** First registered math version for a game id - the default a fresh session binds to. */
     public BlackjackGameDefinition requireByGameId(String gameId) {
         return byKey.values().stream()
                 .filter(d -> d.gameId().equals(gameId))

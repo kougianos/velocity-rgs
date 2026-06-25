@@ -11,7 +11,7 @@ import java.util.Optional;
 import java.util.Set;
 
 /**
- * Root math model for a roulette game — the {@code math} block of {@code games/<gameId>/<mathVersion>.json}.
+ * Root math model for a roulette game - the {@code math} block of {@code games/<gameId>/<mathVersion>.json}.
  * Immutable; collections are defensively copied and the canonical constructor enforces structural invariants
  * so malformed JSON fails fast at startup. A European single-zero wheel is {@code pocketCount = 37}
  * (numbers 0–36); {@code redNumbers} fixes the wheel colours, {@code betTypes} the pay schedule, and the
@@ -80,7 +80,7 @@ public record RouletteMathDefinition(
         return betTypes.stream().filter(bt -> bt.kind() == kind).findFirst();
     }
 
-    /** Highest number on the wheel (pocketCount - 1) — 36 for a European single-zero wheel. */
+    /** Highest number on the wheel (pocketCount - 1) - 36 for a European single-zero wheel. */
     public int highestNumber() {
         return pocketCount - 1;
     }

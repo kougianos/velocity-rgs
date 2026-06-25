@@ -16,7 +16,7 @@ import java.util.UUID;
 /**
  * Per-player short-lived contention guard (M4 Task 4.7 / A.10). Uses Redis {@code SET NX PX <ttl>} with
  * a caller-owned UUID so release only deletes the key when the value still belongs to the holder
- * (compare-and-delete via Lua). Default TTL is 3s (A.10) — the lock is a guard, not the source of truth.
+ * (compare-and-delete via Lua). Default TTL is 3s (A.10) - the lock is a guard, not the source of truth.
  */
 @Slf4j
 @Component

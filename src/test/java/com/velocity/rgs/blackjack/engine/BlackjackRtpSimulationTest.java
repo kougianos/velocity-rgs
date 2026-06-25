@@ -17,7 +17,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 /**
  * Blackjack RTP is player-decision-dependent, so unlike slots/roulette there is no exact guard. This tagged
  * (excluded-by-default; run with {@code -Prtp}) simulation plays a large number of hands with a simplified
- * basic strategy and only asserts the return lands in a WIDE band around the ~99.4% basic-strategy figure —
+ * basic strategy and only asserts the return lands in a WIDE band around the ~99.4% basic-strategy figure -
  * a sanity net that the engine's settlement and dealer-play are wired together sensibly, not a precise claim.
  * The simplified strategy omits splits and some soft doubles, so the realised return sits a little below the
  * textbook figure.
@@ -69,7 +69,7 @@ class BlackjackRtpSimulationTest {
                 continue;
             }
 
-            // Player decisions — simplified basic strategy, no splits.
+            // Player decisions - simplified basic strategy, no splits.
             boolean firstDecision = true;
             while (true) {
                 HandValue v = HandValue.of(player);

@@ -9,7 +9,7 @@ import java.math.BigDecimal;
 
 /**
  * Wallet credit request (A.0.1). The idempotency key arrives via the
- * {@code Idempotency-Key} HTTP header (NEVER in body — A.6).
+ * {@code Idempotency-Key} HTTP header (NEVER in body - A.6).
  */
 public record WalletCreditRequest(
         @NotBlank String playerId,

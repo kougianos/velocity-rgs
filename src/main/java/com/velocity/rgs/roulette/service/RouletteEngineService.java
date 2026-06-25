@@ -54,7 +54,7 @@ import java.util.UUID;
  * Application-layer orchestrator for the public roulette endpoints. Composes the math registry, the
  * {@link RouletteWheel} / {@link RouletteEvaluator} (game logic), the {@link WalletGateway} (money), the
  * shared {@link SessionStore} (identity + balance) and the {@link PlayerActionLock} (concurrency) into one
- * atomic spin. Roulette is stateless per round — no free-spins/feature FSM — so a spin is simply
+ * atomic spin. Roulette is stateless per round - no free-spins/feature FSM - so a spin is simply
  * validate → debit → draw → settle → credit → persist. All game logic is server-side; the client only
  * places bets and renders the returned result. Idempotency for client retries is handled upstream by
  * {@code IdempotencyAspect} on the controller.
@@ -176,7 +176,7 @@ public class RouletteEngineService {
 
     /**
      * Validates the incoming bets against the game's bet types, chip values and per-spot limit, and maps each
-     * to an engine {@link RouletteBet}. The server is the single authority — a tampered or stale client
+     * to an engine {@link RouletteBet}. The server is the single authority - a tampered or stale client
      * cannot wager an unknown bet type, an off-grid chip, an out-of-range straight number, or over the limit.
      */
     private List<RouletteBet> validateAndMapBets(List<RouletteBetRequest> requested,
@@ -292,7 +292,7 @@ public class RouletteEngineService {
             walletGateway.credit(req, txId, session.getCurrency());
             log.debug("roulette credit ok player={} txId={} amount={}", playerId, txId, amount.amount());
         } catch (RuntimeException ex) {
-            log.error("roulette credit failed — rolling back the bet debit player={} roundId={} cause={}",
+            log.error("roulette credit failed - rolling back the bet debit player={} roundId={} cause={}",
                     playerId, roundId, ex.getMessage());
             String rollbackTxId = txId + ":rollback";
             try {

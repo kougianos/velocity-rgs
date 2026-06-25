@@ -12,7 +12,7 @@ import java.util.List;
 /**
  * Mutable working/persisted state of the dealer's hand. The <b>full</b> hand (including the hole card) is
  * always stored server-side in the {@code dealer_hand} JSONB column; the response DTO is responsible for
- * hiding the hole card while the round is in progress — it is never serialized to the client until settlement.
+ * hiding the hole card while the round is in progress - it is never serialized to the client until settlement.
  */
 @Getter
 @Setter

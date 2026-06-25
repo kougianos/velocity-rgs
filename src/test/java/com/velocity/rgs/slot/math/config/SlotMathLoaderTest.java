@@ -65,7 +65,7 @@ class SlotMathLoaderTest {
 
     @Test
     void rejectsDefaultBetOutsideValues() {
-        // defaultBet must be one of the configured stakes — compact-constructor validation must trip.
+        // defaultBet must be one of the configured stakes - compact-constructor validation must trip.
         assertThatThrownBy(() -> new BetConfig(
                 java.util.List.of(new java.math.BigDecimal("0.20"), new java.math.BigDecimal("1.00")),
                 new java.math.BigDecimal("0.50")))

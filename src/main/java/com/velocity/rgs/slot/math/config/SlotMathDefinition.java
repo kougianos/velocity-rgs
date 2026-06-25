@@ -16,7 +16,7 @@ import java.util.Objects;
 import java.util.Set;
 
 /**
- * Root math model — the {@code math} block of {@code games/<gameId>/<mathVersion>.json} per A.4. Immutable; all collections
+ * Root math model - the {@code math} block of {@code games/<gameId>/<mathVersion>.json} per A.4. Immutable; all collections
  * are defensively copied. The canonical constructor enforces structural invariants so any malformed JSON
  * fails fast at startup.
  */

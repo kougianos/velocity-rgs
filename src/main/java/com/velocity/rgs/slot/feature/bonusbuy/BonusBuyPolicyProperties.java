@@ -8,7 +8,7 @@ import java.math.BigDecimal;
 import java.util.List;
 
 /**
- * Server-side policy gates for Bonus Buy entry (Section 4 — Implementation Notes / M5 Task 5.6).
+ * Server-side policy gates for Bonus Buy entry (Section 4 - Implementation Notes / M5 Task 5.6).
  * Sourced from {@code rgs.bonus-buy.*}; defaults declared in {@code application.yml}.
  */
 @Getter

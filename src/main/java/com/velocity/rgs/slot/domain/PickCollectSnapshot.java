@@ -20,7 +20,7 @@ import java.time.Instant;
 /**
  * Persisted Pick &amp; Collect feature artifact (A.9 / A.11 / Section 5 Implementation Notes).
  * The {@code board} JSONB is the resolved tile set frozen at feature start and is the canonical
- * replay artifact for the feature (no seed replay — see A.11).
+ * replay artifact for the feature (no seed replay - see A.11).
  */
 @Entity
 @Table(name = "pick_collect_snapshot")

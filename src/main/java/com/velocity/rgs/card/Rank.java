@@ -33,7 +33,7 @@ public enum Rank {
         return code;
     }
 
-    /** Blackjack value — Ace is 11 (soft); {@link HandValue} drops it to 1 to avoid a bust. */
+    /** Blackjack value - Ace is 11 (soft); {@link HandValue} drops it to 1 to avoid a bust. */
     public int value() {
         return value;
     }

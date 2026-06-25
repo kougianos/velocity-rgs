@@ -43,10 +43,10 @@ import java.util.stream.Stream;
 /**
  * Demo-only admin endpoints for manual QA (M7 Task 7.4, Appendix A.20):
  * <ul>
- *   <li>{@code POST /api/v1/admin/wallet/balance} — upsert player balance</li>
- *   <li>{@code GET  /api/v1/admin/session/{playerId}} — inspect persistent + cached session</li>
- *   <li>{@code GET  /api/v1/admin/round/{roundId}} — inspect persisted round payload</li>
- *   <li>{@code GET  /api/v1/admin/rounds/{playerId}} — list a player's round history (most recent first)</li>
+ *   <li>{@code POST /api/v1/admin/wallet/balance} - upsert player balance</li>
+ *   <li>{@code GET  /api/v1/admin/session/{playerId}} - inspect persistent + cached session</li>
+ *   <li>{@code GET  /api/v1/admin/round/{roundId}} - inspect persisted round payload</li>
+ *   <li>{@code GET  /api/v1/admin/rounds/{playerId}} - list a player's round history (most recent first)</li>
  * </ul>
  * All endpoints require the {@code ADMIN} role claim and write audit log entries.
  */

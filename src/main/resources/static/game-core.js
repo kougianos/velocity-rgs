@@ -1,7 +1,7 @@
 "use strict";
 
 /* =========================================================================
- * Velocity RGS — shared game-page core.
+ * Velocity RGS - shared game-page core.
  *
  * Cross-game plumbing used by BOTH game clients (slot.js and roulette.js): the
  * API helper + dev-token mint, demo player-id persistence, toast, the shared
@@ -76,7 +76,7 @@ function logResponse(label, data) {
   if (!el) return;
   const req = lastApiRequest;
   const requestBlock = req
-    ? `// request — ${req.method} ${req.path}\n` +
+    ? `// request - ${req.method} ${req.path}\n` +
       (req.body != null ? JSON.stringify(req.body, null, 2) : "(no body)")
     : "// request\n(none)";
   el.textContent =
@@ -161,7 +161,7 @@ function applyGameChrome(game) {
   document.body.dataset.game = game.gameId;
   document.body.dataset.theme = game.theme || "";
   document.body.dataset.gameType = game.gameType || "SLOT";
-  document.title = `Velocity RGS — ${game.title}`;
+  document.title = `Velocity RGS - ${game.title}`;
   const set = (id, text) => { const el = document.getElementById(id); if (el) el.textContent = text; };
   set("brandLogo", game.logo);
   set("gameName", game.title);
@@ -172,7 +172,7 @@ function applyGameChrome(game) {
 
 /**
  * Populate + wire the "Show Game Info" modal entirely from the server-driven catalog (game.info).
- * Everything — marketing copy, the stat cards and the spec sheet — is authored in the game JSON, so
+ * Everything - marketing copy, the stat cards and the spec sheet - is authored in the game JSON, so
  * this only lays the provided strings into the DOM. If a game ships no info block, the button is hidden.
  */
 function initInfoModal(game) {
@@ -245,7 +245,7 @@ function initInfoModal(game) {
 
 /* ----------------------------------------------------------------- bet slider component */
 
-/** Nearest index into a stake list for a value — used to seed a slider from the default/session bet. */
+/** Nearest index into a stake list for a value - used to seed a slider from the default/session bet. */
 function betIndexFor(values, value) {
   if (!values.length) return 0;
   let best = 0;

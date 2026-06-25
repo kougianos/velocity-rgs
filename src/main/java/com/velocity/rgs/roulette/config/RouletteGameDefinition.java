@@ -15,12 +15,12 @@ public record RouletteGameDefinition(RoulettePresentation presentation, Roulette
         Objects.requireNonNull(math, "math");
     }
 
-    /** Convenience delegate — the gameId lives on the math model. */
+    /** Convenience delegate - the gameId lives on the math model. */
     public String gameId() {
         return math.gameId();
     }
 
-    /** Convenience delegate — the mathVersion lives on the math model. */
+    /** Convenience delegate - the mathVersion lives on the math model. */
     public String mathVersion() {
         return math.mathVersion();
     }

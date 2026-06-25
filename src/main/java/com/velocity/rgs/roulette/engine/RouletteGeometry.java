@@ -7,7 +7,7 @@ import java.util.LinkedHashSet;
 import java.util.Set;
 
 /**
- * Universal roulette geometry — the set of numbers each bet kind covers on a standard single-zero layout
+ * Universal roulette geometry - the set of numbers each bet kind covers on a standard single-zero layout
  * (numbers {@code 1..highest}, with {@code 0} winning only straight-up bets on {@code 0}). This is the game's
  * rulebook, so it lives in server code (never the client): inside/outside coverage is derived here, while the
  * only configurable input is the red/black colour map ({@code math.redNumbers}). The {@code highest} number

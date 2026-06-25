@@ -12,7 +12,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class ShoeTest {
 
-    /** A deterministic RNG so a shuffle is a pure function of the draws — handy for reproducible tests. */
+    /** A deterministic RNG so a shuffle is a pure function of the draws - handy for reproducible tests. */
     private static final class FixedRng implements RandomNumberGenerator {
         private final int value;
         FixedRng(int value) { this.value = value; }

@@ -28,7 +28,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Public, read-only game catalog used by the lobby and game pages — the single source of truth for everything
+ * Public, read-only game catalog used by the lobby and game pages - the single source of truth for everything
  * the browser client needs to render a game. It serves <b>both</b> game types from one endpoint, each tagged
  * with a {@link GameType}: slot entries carry the flat reel facts (grid, paylines, symbols, free-spins) the
  * existing client already reads; roulette entries carry a nested {@code roulette} object (wheel pockets, bet
@@ -283,7 +283,7 @@ public class GameCatalogController {
     /** A reel symbol as the client renders it: math id plus the display glyph and friendly name. */
     public record SymbolView(int id, String glyph, String name) {}
 
-    /** Everything the client needs to draw a roulette table + wheel — all server-driven. */
+    /** Everything the client needs to draw a roulette table + wheel - all server-driven. */
     @Builder
     public record RouletteView(
             String variant,
@@ -301,7 +301,7 @@ public class GameCatalogController {
     /** A bettable spot: the bet kind, its "to-one" payout, and a friendly label. */
     public record BetTypeView(String kind, int payout, String label) {}
 
-    /** Everything the client needs to advertise a blackjack game's rules — all server-driven. */
+    /** Everything the client needs to advertise a blackjack game's rules - all server-driven. */
     @Builder
     public record BlackjackView(
             int decks,

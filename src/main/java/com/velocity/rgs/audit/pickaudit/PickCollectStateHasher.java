@@ -9,7 +9,7 @@ import java.util.HexFormat;
 
 /**
  * Deterministic SHA-256 fingerprint of a {@link PickCollectState} snapshot. Independent of map
- * iteration order — fields are emitted in a fixed canonical sequence so the same logical state always
+ * iteration order - fields are emitted in a fixed canonical sequence so the same logical state always
  * yields the same hash.
  */
 public final class PickCollectStateHasher {

@@ -8,7 +8,7 @@ import java.util.List;
 
 /**
  * Client-facing projection of {@link PickCollectState} per A.7 and the Pick &amp; Collect Implementation
- * Notes. Exposes board size, opened positions, revealed values, current accumulators, and status —
+ * Notes. Exposes board size, opened positions, revealed values, current accumulators, and status -
  * but NEVER the unrevealed tile contents.
  */
 public record PickCollectFeatureView(

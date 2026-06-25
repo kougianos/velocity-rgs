@@ -14,7 +14,7 @@ import java.time.Instant;
  * <p>In production the feature is entered only via the random in-spin trigger
  * ({@code pickCollect.triggerOneInN}), which can't be forced deterministically from an HTTP test.
  * Tests that exercise the {@code /feature/start} → {@code /feature/pick} flow therefore drop the
- * session straight into {@code PICK_COLLECT_AWAITING} here — the same state the live trigger produces —
+ * session straight into {@code PICK_COLLECT_AWAITING} here - the same state the live trigger produces -
  * then drive the public endpoints from there.
  */
 public final class PickCollectTestSupport {

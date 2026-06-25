@@ -5,10 +5,10 @@ import com.velocity.rgs.catalog.GameInfo;
 import java.util.Objects;
 
 /**
- * Player-facing presentation metadata for a roulette game — title, marketing copy, theme, and the shared
+ * Player-facing presentation metadata for a roulette game - title, marketing copy, theme, and the shared
  * {@link GameInfo} block (rules / payouts / stats). Loaded from the {@code presentation} block of
  * {@code games/<gameId>/<mathVersion>.json}. Unlike a slot's {@code GamePresentation} there is no per-symbol
- * glyph map — the table layout is drawn from the math model (pockets + bet types). Surfaced to the browser
+ * glyph map - the table layout is drawn from the math model (pockets + bet types). Surfaced to the browser
  * client through the public game catalog so nothing about how the game looks is hardcoded on the client.
  */
 public record RoulettePresentation(

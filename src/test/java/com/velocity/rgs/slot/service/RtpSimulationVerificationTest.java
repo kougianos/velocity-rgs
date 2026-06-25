@@ -21,7 +21,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * strips but carry distinct, volatility-shaped pay tables (Frost Crown = low volatility / 2,000x cap,
  * Aztec Fire = medium / 10,000x, Inferno Riches = high / 25,000x). The BASE_GAME channel folds in both
  * naturally-triggered free spins and the organically-triggered Pick &amp; Collect feature (~4% RTP
- * each); each pay table is scaled so the combined base-game RTP converges to the same 96% — this test
+ * each); each pay table is scaled so the combined base-game RTP converges to the same 96% - this test
  * is what guards that contract.
  *
  * <p>Tagged {@code slow} so it is excluded from the default {@code mvn test} / {@code mvn verify}

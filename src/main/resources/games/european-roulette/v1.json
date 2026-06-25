@@ -2,16 +2,16 @@
   "presentation": {
     "title": "European Roulette",
     "tagline": "One wheel. One zero. Pure casino classic.",
-    "description": "The timeless single-zero wheel — 37 pockets, 97.30% RTP, and every bet from a bold straight-up to the even-money outside. Place your chips and let it ride.",
+    "description": "The timeless single-zero wheel - 37 pockets, 97.30% RTP, and every bet from a bold straight-up to the even-money outside. Place your chips and let it ride.",
     "logo": "🎡",
     "theme": "roulette",
     "volatility": "Medium",
     "spinDurationMillis": 3600,
     "info": {
       "paragraphs": [
-        "European Roulette is the purest form of the table classic: a single green zero, the numbers 1–36 in alternating red and black, and a polished wheel that decides it all in one spin. With only one zero, the house edge is just 2.70% — the friendliest odds on the casino floor.",
+        "European Roulette is the purest form of the table classic: a single green zero, the numbers 1–36 in alternating red and black, and a polished wheel that decides it all in one spin. With only one zero, the house edge is just 2.70% - the friendliest odds on the casino floor.",
         "Bet big or play it safe. Drop a chip straight onto a single number for a 35:1 thrill, or spread your stake across red/black, odd/even, the high or low half, the dozens or the columns for steady, even-money action. Combine as many bets as you like before every spin.",
-        "Every outcome is drawn by a certified server-side RNG and is fully auditable — the wheel you see is just for show, the result is locked in the instant you spin."
+        "Every outcome is drawn by a certified server-side RNG and is fully auditable - the wheel you see is just for show, the result is locked in the instant you spin."
       ],
       "stats": [
         { "label": "Game Theme", "value": "Classic Casino" },
@@ -19,14 +19,14 @@
         { "label": "RTP", "value": "97.30%" }
       ],
       "specs": [
-        { "label": "Game Type", "values": ["Table Game — Roulette"] },
+        { "label": "Game Type", "values": ["Table Game - Roulette"] },
         { "label": "Wheel", "values": ["European single-zero", "37 pockets (0–36)"] },
         { "label": "House Edge", "values": ["2.70% on every bet"] },
-        { "label": "Inside Bets", "values": ["Straight up — pays 35:1"] },
-        { "label": "Outside Bets", "values": ["Red / Black — 1:1", "Even / Odd — 1:1", "1–18 / 19–36 — 1:1", "Dozens — 2:1", "Columns — 2:1"] },
+        { "label": "Inside Bets", "values": ["Straight up - pays 35:1"] },
+        { "label": "Outside Bets", "values": ["Red / Black - 1:1", "Even / Odd - 1:1", "1–18 / 19–36 - 1:1", "Dozens - 2:1", "Columns - 2:1"] },
         { "label": "Winning Functionality", "values": ["Ball lands in one pocket; all covering bets pay"] },
         { "label": "Max Exposure", "values": ["Max payout per spot: 35× stake", "Max total bet: €2,000"] },
-        { "label": "Bet Values", "values": ["Chip — €0.50", "Default — €1.00", "Max per spot — €500.00"] }
+        { "label": "Bet Values", "values": ["Chip - €0.50", "Default - €1.00", "Max per spot - €500.00"] }
       ]
     }
   },

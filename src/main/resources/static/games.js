@@ -1,13 +1,13 @@
 "use strict";
 
 /* =========================================================================
- * Velocity RGS — game catalog client.
+ * Velocity RGS - game catalog client.
  *
  * The backend GET /api/v1/games endpoint is the single source of truth for
  * everything about a game: presentation (title, tagline, theme, logo, per-symbol
  * glyphs), the grid shape + paylines used to draw and highlight the reels, and the
  * headline math facts (RTP, max-win, buy costs). Nothing about a game is hardcoded
- * here — this module just fetches that catalog once, caches it, and exposes small
+ * here - this module just fetches that catalog once, caches it, and exposes small
  * helpers to shape it for rendering. Loaded by both the lobby (index.html) and the
  * game page (game.html).
  * ======================================================================= */

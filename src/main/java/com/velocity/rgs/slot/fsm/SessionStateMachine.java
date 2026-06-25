@@ -28,7 +28,7 @@ import static com.velocity.rgs.slot.fsm.SessionState.PickCollectLoop;
  * Pure FSM evaluator. Given the current {@link SessionState}, the inbound {@link SessionCommand}, and the
  * {@link TransitionContext}, returns the next state + monetary intent + reason codes + available actions.
  *
- * <p>Stateless and idempotent — performs no I/O. {@code SlotEngineService} (M5) is responsible for
+ * <p>Stateless and idempotent - performs no I/O. {@code SlotEngineService} (M5) is responsible for
  * acquiring the player action lock, executing {@link MonetaryEffect}s against {@code WalletGateway},
  * persisting the resulting session row, and refreshing the Redis cache.</p>
  */

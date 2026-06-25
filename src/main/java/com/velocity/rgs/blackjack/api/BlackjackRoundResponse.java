@@ -7,7 +7,7 @@ import java.math.BigDecimal;
 import java.util.List;
 
 /**
- * The shared response body for {@code POST /api/v1/blackjack/deal} and {@code /action} — a full snapshot of
+ * The shared response body for {@code POST /api/v1/blackjack/deal} and {@code /action} - a full snapshot of
  * the round the client renders verbatim. While the round is in progress the {@link DealerView} carries only
  * the dealer's upcard with {@code hidden=true}; the hole card is <b>never</b> serialized until the round
  * settles. {@code availableActions} is the server's authoritative list of what the player may do next.
@@ -29,7 +29,7 @@ public record BlackjackRoundResponse(
         InsuranceView insurance
 ) {
 
-    /** One playing card as the client renders it — all display-ready, no client-side card logic. */
+    /** One playing card as the client renders it - all display-ready, no client-side card logic. */
     @Builder
     public record CardView(String rank, String suit, String suitSymbol, String color, String code) {
     }
@@ -47,7 +47,7 @@ public record BlackjackRoundResponse(
     ) {
     }
 
-    /** The dealer's hand — only the upcard while {@code hidden}, the full hand and total once revealed. */
+    /** The dealer's hand - only the upcard while {@code hidden}, the full hand and total once revealed. */
     @Builder
     public record DealerView(List<CardView> cards, Integer value, boolean hidden) {
     }

@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Velocity RGS — Game</title>
+  <title>Velocity RGS - Game</title>
   <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
   <link rel="stylesheet" href="/styles.css" />
 </head>
@@ -49,14 +49,14 @@
 
       <div class="controls">
         <div class="control-group bet-control" id="betControl">
-          <label for="betSlider">Bet <strong id="betValue" class="bet-value">—</strong></label>
+          <label for="betSlider">Bet <strong id="betValue" class="bet-value">-</strong></label>
           <input id="betSlider" class="bet-slider" type="range" min="0" max="0" step="1" value="0" />
           <div class="bet-scale">
-            <span id="betMin">—</span>
-            <span id="betMax">—</span>
+            <span id="betMin">-</span>
+            <span id="betMax">-</span>
           </div>
           <small id="betPowerHint" class="bet-power-hint hidden">
-            Power Bet ×<span id="betPowerMult">1.5</span> = <span id="betEffective">—</span>
+            Power Bet ×<span id="betPowerMult">1.5</span> = <span id="betEffective">-</span>
           </small>
         </div>
 
@@ -71,7 +71,7 @@
 
       <div class="feature-actions">
         <button id="buyFreeSpins" class="btn btn-buy" data-buy="FREE_SPINS_BUY">
-          Buy Free Spins <small id="buyFreeSpinsCost">(×—)</small>
+          Buy Free Spins <small id="buyFreeSpinsCost">(×-)</small>
         </button>
         <button id="startFeature" class="btn btn-accent hidden">Start Feature</button>
       </div>
@@ -97,7 +97,7 @@
       <div class="roulette-stage">
         <canvas id="wheel" class="roulette-wheel" width="300" height="300" aria-label="Roulette wheel"></canvas>
         <div id="rouletteResult" class="roulette-result is-empty">
-          <span class="result-number" id="resultNumber">—</span>
+          <span class="result-number" id="resultNumber">-</span>
           <span class="result-label" id="resultLabel">Place your bets</span>
         </div>
       </div>
@@ -173,11 +173,11 @@
         <div class="session-grid">
           <div class="pill balance">
             <span class="pill-label">Balance</span>
-            <span id="balance" class="pill-value">—</span>
+            <span id="balance" class="pill-value">-</span>
           </div>
           <div class="pill">
             <span class="pill-label">State</span>
-            <span id="gameState" class="pill-value">—</span>
+            <span id="gameState" class="pill-value">-</span>
           </div>
           <div class="pill">
             <span class="pill-label">Free Spins</span>
@@ -192,11 +192,11 @@
         <h2 class="panel-title">RTP Simulator</h2>
         <div class="form-grid">
           <label class="sim-bet" for="simSlider">
-            <span class="sim-bet-row">Bet <strong id="simBetValue" class="bet-value">—</strong></span>
+            <span class="sim-bet-row">Bet <strong id="simBetValue" class="bet-value">-</strong></span>
             <input id="simSlider" class="bet-slider" type="range" min="0" max="0" step="1" value="0" />
             <span class="bet-scale">
-              <span id="simBetMin">—</span>
-              <span id="simBetMax">—</span>
+              <span id="simBetMin">-</span>
+              <span id="simBetMax">-</span>
             </span>
           </label>
           <label>Base spins
@@ -219,13 +219,13 @@
                 </svg>
                 <span class="tooltip" role="tooltip">
                   <strong>How the simulator opens Pick &amp; Collect tiles:</strong>
-                  <span><b>RANDOM_UNOPENED</b> — picks a random tile that hasn't been
+                  <span><b>RANDOM_UNOPENED</b> - picks a random tile that hasn't been
                   opened yet. Models a typical player clicking around at random.</span>
-                  <span><b>SEQUENTIAL</b> — opens tiles in board order, continuing from the
+                  <span><b>SEQUENTIAL</b> - opens tiles in board order, continuing from the
                   last tile opened (1, 2, 3 …). Deterministic sweep of the board.</span>
-                  <span><b>COLLECT_FIRST</b> — always opens the lowest-index unopened tile
+                  <span><b>COLLECT_FIRST</b> - always opens the lowest-index unopened tile
                   (restarting the scan from the top each pick). A fixed, repeatable order.</span>
-                  <em>Tile values are fully random, so the strategy never changes the RTP —
+                  <em>Tile values are fully random, so the strategy never changes the RTP -
                   it only controls the order tiles are revealed.</em>
                 </span>
               </span>
@@ -254,7 +254,7 @@
 
   <div id="toast" class="toast hidden"></div>
 
-  <!-- Game info modal — spans the game area; populated from the server catalog -->
+  <!-- Game info modal - spans the game area; populated from the server catalog -->
   <div id="infoModal" class="info-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="infoTitle">
     <div class="info-card">
       <button id="infoClose" class="info-close" aria-label="Close game info">×</button>

@@ -6,7 +6,7 @@ import java.util.Objects;
 /**
  * The blackjack-style value of a hand: the best total achievable by counting aces as 11 where possible and 1
  * where an 11 would bust. An immutable snapshot computed by {@link #of(List)}. Part of the reusable
- * CardEngine — any game that totals card pip values with soft aces can use it.
+ * CardEngine - any game that totals card pip values with soft aces can use it.
  */
 public final class HandValue {
 
@@ -57,7 +57,7 @@ public final class HandValue {
     }
 
     /**
-     * True when the two cards form a splittable pair — exactly two cards of equal blackjack value, so a King
+     * True when the two cards form a splittable pair - exactly two cards of equal blackjack value, so a King
      * and a Queen (both 10) qualify, matching the common casino rule of splitting any two ten-value cards.
      */
     public static boolean isSplittablePair(List<Card> cards) {

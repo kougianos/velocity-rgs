@@ -1,7 +1,7 @@
 "use strict";
 
 /* =========================================================================
- * Velocity RGS — game-page bootstrap.
+ * Velocity RGS - game-page bootstrap.
  *
  * One game page serves every game type. This resolves the ?game= id against
  * the server catalog, applies the shared chrome + info modal, then shows the

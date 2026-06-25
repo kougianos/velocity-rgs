@@ -4,7 +4,7 @@ import java.math.BigDecimal;
 import java.util.Objects;
 
 /**
- * Table limits for a blackjack game — the {@code math.limits} block of the game JSON. Only the maximum base
+ * Table limits for a blackjack game - the {@code math.limits} block of the game JSON. Only the maximum base
  * bet is bounded here; doubles/splits/insurance derive their size from the base bet and the player's balance.
  */
 public record BlackjackLimits(BigDecimal maxBet) {

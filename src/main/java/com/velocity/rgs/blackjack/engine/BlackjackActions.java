@@ -10,7 +10,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Derives the structurally legal actions for the active hand from the rules and the hand's shape — the single
+ * Derives the structurally legal actions for the active hand from the rules and the hand's shape - the single
  * source of truth the client renders its buttons from (it is never trusted to decide for itself). INSURANCE is
  * offered only on the first decision while the dealer shows an Ace. DOUBLE needs a fresh two-card hand (and
  * DAS enabled if the hand came from a split); SPLIT needs a two-card matching pair below the hand cap.

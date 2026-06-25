@@ -153,7 +153,7 @@ public class BlackjackEngineService {
             if (roundRepository.findFirstBySessionIdAndStatusOrderByCreatedAtDesc(
                     session.getSessionId(), RoundStatus.IN_PROGRESS).isPresent()) {
                 throw new RgsException(ErrorCode.VALIDATION_ERROR,
-                        "A round is already in progress for this session — finish it before dealing again");
+                        "A round is already in progress for this session - finish it before dealing again");
             }
 
             BigDecimal bet = normalize(request.bet(), currency);
@@ -254,7 +254,7 @@ public class BlackjackEngineService {
                 if (act == BlackjackAction.INSURANCE) {
                     return takeInsurance(round, session, math, currency, playerId, hands, dealerState, shoe, ctx);
                 }
-                // Any other action declines insurance — peek now, then either settle or play on.
+                // Any other action declines insurance - peek now, then either settle or play on.
                 ctx.setInsuranceOffered(false);
                 if (resolvePeek(dealerState, hands)) {
                     return settleAndRespond(round, session, math, hands, dealerState, shoe, ctx, false);
@@ -415,7 +415,7 @@ public class BlackjackEngineService {
     /**
      * A short, deterministic wallet transaction id for an additional in-round wager ({@code double}/
      * {@code split}). Uses a per-round counter so the id stays within the 64-char column and is idempotent on
-     * retry — a random UUID both overflowed the column and risked a double-charge.
+     * retry - a random UUID both overflowed the column and risked a double-charge.
      */
     private String nextBetTxId(BlackjackRound round, RoundContext ctx, String kind) {
         ctx.setBetSeq(ctx.getBetSeq() + 1);
@@ -619,7 +619,7 @@ public class BlackjackEngineService {
                     .hidden(false)
                     .build();
         }
-        // In progress — expose ONLY the upcard; the hole card never leaves the server.
+        // In progress - expose ONLY the upcard; the hole card never leaves the server.
         return BlackjackRoundResponse.DealerView.builder()
                 .cards(List.of(toCardView(dealerState.upcard())))
                 .value(null)
@@ -708,7 +708,7 @@ public class BlackjackEngineService {
             walletGateway.credit(req, txId, session.getCurrency());
             log.debug("blackjack credit ok player={} txId={} amount={}", playerId, txId, amount.amount());
         } catch (RuntimeException ex) {
-            log.error("blackjack credit failed — rolling back the round's debits player={} roundId={} cause={}",
+            log.error("blackjack credit failed - rolling back the round's debits player={} roundId={} cause={}",
                     playerId, roundId, ex.getMessage());
             String rollbackTxId = txId + ":rollback";
             try {

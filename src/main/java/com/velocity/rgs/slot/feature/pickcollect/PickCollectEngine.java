@@ -16,17 +16,17 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Pure Pick &amp; Collect resolver (Section 5 — Implementation Notes / M5 Task 5.7).
+ * Pure Pick &amp; Collect resolver (Section 5 - Implementation Notes / M5 Task 5.7).
  *
  * <p>Three operations:
  * <ul>
- *   <li>{@link #startFeature(PickCollectConfig, BigDecimal, RandomNumberGenerator, int)} —
+ *   <li>{@link #startFeature(PickCollectConfig, BigDecimal, RandomNumberGenerator, int)} -
  *       generates the immutable board from the weighted tile distribution using the supplied RNG; the
  *       resulting {@link PickCollectState} is the frozen feature payload persisted in
  *       {@code pick_collect_snapshot.board}.</li>
- *   <li>{@link #applyPick(PickCollectState, int, PickCollectConfig)} — validates the position, resolves
+ *   <li>{@link #applyPick(PickCollectState, int, PickCollectConfig)} - validates the position, resolves
  *       the tile, updates accumulators, decrements picks, marks completion when criteria are met.</li>
- *   <li>{@link #finalizeFeature(PickCollectState, PickCollectConfig, String)} — computes the final
+ *   <li>{@link #finalizeFeature(PickCollectState, PickCollectConfig, String)} - computes the final
  *       feature payout ({@code (totalFeatureWin + currentCollected) * betSize}) capped by
  *       {@code maxFeatureWinMultiplier}, returns {@link FinalizationResult} with reason codes.</li>
  * </ul>
@@ -96,7 +96,7 @@ public class PickCollectEngine {
             }
             case BLANK -> { /* no-op */ }
             case END -> {
-                // Hitting END ends the feature and forfeits the unbanked pot — only amounts
+                // Hitting END ends the feature and forfeits the unbanked pot - only amounts
                 // already banked via a COLLECT tile (totalFeatureWin) survive. This is what makes
                 // COLLECT a genuine bank-vs-risk decision (classic hold-&-win semantics).
                 state.setCurrentCollected(BigDecimal.ZERO);
@@ -168,7 +168,7 @@ public class PickCollectEngine {
     }
 
     private int resolveInitialPicks(PickCollectCompletion completion, int boardSize) {
-        // END_TILE has no fixed pick count — the player may open every tile until an END appears,
+        // END_TILE has no fixed pick count - the player may open every tile until an END appears,
         // so the natural ceiling is the board size (also yields a sane "picks left" countdown).
         if (completion.type() == PickCollectCompletion.CompletionType.FIXED_PICKS) {
             return completion.value();

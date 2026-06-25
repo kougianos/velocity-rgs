@@ -7,7 +7,7 @@ import jakarta.validation.constraints.NotNull;
 
 import java.math.BigDecimal;
 
-/** Request body for {@code POST /api/v1/blackjack/deal} — starts a new round with a single base bet. */
+/** Request body for {@code POST /api/v1/blackjack/deal} - starts a new round with a single base bet. */
 public record BlackjackDealRequest(
         @NotBlank String gameId,
         @NotBlank String sessionId,

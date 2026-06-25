@@ -4,7 +4,7 @@
         Two output formats, selected by Spring profile:
 
           (default)   Human-readable, colored console output. This is what you get
-                      from `mvn spring-boot:run`, the IDE, or any local run — easy to
+                      from `mvn spring-boot:run`, the IDE, or any local run - easy to
                       scan while iterating.
 
           json        Structured JSON (Logstash encoder) for log aggregation in

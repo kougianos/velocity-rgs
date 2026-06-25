@@ -86,7 +86,7 @@ import java.util.UUID;
  * (durability + Redis cache), and {@link PlayerActionLock} (concurrency) into one atomic flow per
  * request. Idempotency for repeated client retries is handled upstream by {@code IdempotencyAspect}
  * on the controller; this service is therefore free to execute the underlying state mutation
- * directly — when a replay hits, the controller short-circuits with the cached response before this
+ * directly - when a replay hits, the controller short-circuits with the cached response before this
  * service is ever entered.
  */
 @Slf4j
@@ -166,7 +166,7 @@ public class SlotEngineService {
             SessionState currentState = rehydrate(session);
             // The player only chooses a stake in the base game; free spins lock to the trigger bet and
             // bonus-buy flows have their own cost path. When the player does pick the stake, it must be one
-            // of the game's configured bet values — the server is the authority, so a tampered or stale
+            // of the game's configured bet values - the server is the authority, so a tampered or stale
             // client cannot wager an off-grid amount. Power Bet multiplies this validated base stake.
             if (currentState instanceof SessionState.BaseGame
                     && !math.betConfig().isValidBet(request.betSize())) {
@@ -562,7 +562,7 @@ public class SlotEngineService {
         }
         // Power Bet raises the actual stake by powerBet.betMultiplier (e.g. ×1.5). This single
         // effective bet drives the wallet debit (via the FSM), the win evaluation, and the persisted
-        // round stake, so RTP stays consistent across all three. Only the base game opts into it —
+        // round stake, so RTP stays consistent across all three. Only the base game opts into it -
         // free spins already returned above and bonus-buy flows have their own cost path.
         if (state instanceof SessionState.BaseGame && powerBetActive) {
             return requestedBet.multiply(math.powerBet().betMultiplier())
@@ -710,7 +710,7 @@ public class SlotEngineService {
             WalletCreditResponse resp = walletGateway.credit(creditRequest, txId, session.getCurrency());
             log.debug("credit ok player={} txId={} balanceAfter={}", playerId, txId, resp.balanceAfter());
         } catch (RuntimeException ex) {
-            log.error("credit failed — issuing rollback of original bet player={} txId={} cause={}",
+            log.error("credit failed - issuing rollback of original bet player={} txId={} cause={}",
                     playerId, txId, ex.getMessage());
             String rollbackTxId = txId + ":rollback";
             try {

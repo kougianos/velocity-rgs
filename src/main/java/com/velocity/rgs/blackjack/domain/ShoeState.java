@@ -10,7 +10,7 @@ import java.util.List;
 
 /**
  * Persisted snapshot of the round's {@link Shoe}: the full shuffled card order plus the current draw cursor.
- * Stored in the {@code shoe} JSONB column so multi-step play is deterministic and auditable — the order is
+ * Stored in the {@code shoe} JSONB column so multi-step play is deterministic and auditable - the order is
  * fixed at deal time (from the RNG, captured in {@code rng_draws}) and only {@link #drawIndex} advances as the
  * round progresses.
  */

@@ -28,7 +28,7 @@ import java.util.UUID;
  * Synchronous RTP simulator endpoint (M7 Task 7.6 / A.19). Registered when {@code rgs.mode=demo}
  * (the default).
  *
- * <p>{@code POST /api/v1/admin/simulator/run} — ADMIN role required. Runs the requested number of spins
+ * <p>{@code POST /api/v1/admin/simulator/run} - ADMIN role required. Runs the requested number of spins
  * synchronously (test/QA tool: spin counts should stay under 10⁶) and persists the immutable result
  * into {@code audit_simulation_run} so the run can be cited in a compliance ticket.
  */

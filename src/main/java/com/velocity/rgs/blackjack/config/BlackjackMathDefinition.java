@@ -6,12 +6,12 @@ import java.math.BigDecimal;
 import java.util.Objects;
 
 /**
- * Root math model for a blackjack game — the {@code math} block of {@code games/<gameId>/<mathVersion>.json}.
+ * Root math model for a blackjack game - the {@code math} block of {@code games/<gameId>/<mathVersion>.json}.
  * Immutable; the canonical constructor enforces structural invariants so malformed JSON fails fast at startup
  * (mirrors {@code RouletteMathDefinition}).
  *
- * <p>Unlike slots/roulette there is <b>no single exact RTP</b> — blackjack's return depends on player
- * decisions — so {@code targetRtp} is the basic-strategy figure for display only and is never asserted
+ * <p>Unlike slots/roulette there is <b>no single exact RTP</b> - blackjack's return depends on player
+ * decisions - so {@code targetRtp} is the basic-strategy figure for display only and is never asserted
  * tightly. {@code blackjackPayout} and {@code insurancePayout} are "to-one" ratios (3:2 → {@code 1.5},
  * 2:1 → {@code 2}). {@code maxSplits} is the number of re-splits allowed, so total hands ≤ {@code maxSplits + 1}.
  */

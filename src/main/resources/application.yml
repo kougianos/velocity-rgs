@@ -1,15 +1,15 @@
 # =============================================================================
-# Velocity RGS — single consolidated configuration.
+# Velocity RGS - single consolidated configuration.
 #
 # Everything is driven by the two switches at the top of the `rgs:` block. No
-# Spring profiles are used for wiring anymore — flip a value here (or override
+# Spring profiles are used for wiring anymore - flip a value here (or override
 # with the matching env var / -Dproperty) and restart.
 #
 #   rgs.mode          demo | production
 #     demo        ->  dev-token, QA admin and RTP simulator endpoints are
 #                     registered, the in-process wallet auto-seeds new players,
 #                     and swagger/actuator/dev paths are public (zero auth setup
-#                     needed — ideal for the embedded UI and fast iteration).
+#                     needed - ideal for the embedded UI and fast iteration).
 #     production  ->  those helpers are NOT registered; only health probes are
 #                     public. Everything else requires a valid JWT.
 #
@@ -161,13 +161,13 @@ rgs:
       - gameId: inferno-riches
         mathVersion: v1
 
-  # Roulette games (additive — an empty/absent list boots with slots only).
+  # Roulette games (additive - an empty/absent list boots with slots only).
   roulette:
     catalog:
       - gameId: european-roulette
         mathVersion: v1
 
-  # Blackjack games (additive — an empty/absent list boots without card games).
+  # Blackjack games (additive - an empty/absent list boots without card games).
   blackjack:
     catalog:
       - gameId: classic-blackjack

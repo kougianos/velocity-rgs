@@ -82,7 +82,7 @@ class BlackjackControllerIntegrationTest {
         assertThat(walletTransactionRepository.findAll())
                 .anyMatch(t -> t.getTransactionId().endsWith(":bet"));
 
-        // While the round is live, only the dealer's upcard is exposed — the hole card is never serialized.
+        // While the round is live, only the dealer's upcard is exposed - the hole card is never serialized.
         if ("IN_PROGRESS".equals(deal.get("status").asText())) {
             JsonNode dealer = deal.get("dealer");
             assertThat(dealer.get("hidden").asBoolean()).isTrue();

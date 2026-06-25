@@ -1,11 +1,11 @@
 "use strict";
 
 /* =========================================================================
- * Velocity RGS — Roulette game client (vanilla JS).
+ * Velocity RGS - Roulette game client (vanilla JS).
  * Builds on game-core.js (API, token, toast, info modal). Renders a European
  * single-zero wheel (cosmetic <canvas>) + a clickable betting table, collects
  * the player's chips, and sends them to the server which is the sole authority
- * on the outcome. No game logic lives here — the wheel only animates to the
+ * on the outcome. No game logic lives here - the wheel only animates to the
  * server's winning number. Entry point: initRouletteGame(game).
  *
  * Wrapped in an IIFE so it can co-exist with slot.js on the game page without
@@ -14,7 +14,7 @@
 
 (() => {
 
-/** The physical pocket order of a European wheel (clockwise from 0) — cosmetic, for the spinning canvas. */
+/** The physical pocket order of a European wheel (clockwise from 0) - cosmetic, for the spinning canvas. */
 const WHEEL_ORDER = [
   0, 32, 15, 19, 4, 21, 2, 25, 17, 34, 6, 27, 13, 36, 11, 30, 8, 23,
   10, 5, 24, 16, 33, 1, 20, 14, 31, 9, 22, 18, 29, 7, 28, 12, 35, 3, 26,
@@ -135,7 +135,7 @@ function renderTable() {
     }
   }
 
-  // Column bets (2:1) — top row covers ...,36 (COLUMN_3); middle COLUMN_2; bottom COLUMN_1.
+  // Column bets (2:1) - top row covers ...,36 (COLUMN_3); middle COLUMN_2; bottom COLUMN_1.
   const colKinds = ["COLUMN_3", "COLUMN_2", "COLUMN_1"];
   colKinds.forEach((kind, row) => {
     if (!offers(kind)) return;
@@ -337,7 +337,7 @@ function clearHighlights() {
   for (const el of spotEls.values()) el.classList.remove("is-winning", "won");
   els.result.classList.add("is-empty");
   els.result.removeAttribute("data-color");
-  els.resultNumber.textContent = "—";
+  els.resultNumber.textContent = "-";
   els.resultLabel.textContent = "Place your bets";
   els.win.classList.add("is-empty");
   els.winAmount.textContent = "0.00";
@@ -388,7 +388,7 @@ async function refreshBalance() {
 function renderHud() {
   els.balance.textContent = `${fmt(state.balance)} ${CURRENCY}`;
   els.gameState.textContent = "ROULETTE";
-  els.freeSpins.textContent = "—";
+  els.freeSpins.textContent = "-";
 }
 
 async function boot(forceNewPlayer = false) {
@@ -449,8 +449,8 @@ async function doSpin() {
     logResponse("roulette/spin", resp);
     const win = Number(resp.totalWin || 0);
     toast(win > 0
-      ? `${resp.winningNumber} ${resp.winningColor} — won ${fmt(win)} ${CURRENCY}`
-      : `${resp.winningNumber} ${resp.winningColor} — no win`,
+      ? `${resp.winningNumber} ${resp.winningColor} - won ${fmt(win)} ${CURRENCY}`
+      : `${resp.winningNumber} ${resp.winningColor} - no win`,
       win > 0 ? "success" : "");
     // Remember the layout for Rebet, then clear the table for the next round.
     state.lastBets = [...state.bets.values()].map((b) => ({ ...b }));
@@ -475,7 +475,7 @@ function bindEvents() {
 }
 
 /**
- * Roulette entry point — called by the game-page bootstrap when the resolved catalog game is ROULETTE.
+ * Roulette entry point - called by the game-page bootstrap when the resolved catalog game is ROULETTE.
  * Shared chrome + info modal are already applied by the bootstrap.
  */
 function initRouletteGame(game) {

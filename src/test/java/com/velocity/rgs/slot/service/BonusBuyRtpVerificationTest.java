@@ -17,7 +17,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Long-running statistical guard that the purchasable {@code FREE_SPINS_BUY} feature returns its declared
- * {@code targetRtp} — the channel the historical bug lived in (costs were hand-set to arbitrary multiples,
+ * {@code targetRtp} - the channel the historical bug lived in (costs were hand-set to arbitrary multiples,
  * so the buy paid 90% on one game and 207% on another). The bought free-spins round is intentionally
  * decoupled from the organic 10-spin trigger: it awards its own (larger) {@code freeSpinsAwarded} so the
  * buy is an industry-priced feature (~80x / ~100x / ~150x by volatility), and its {@code costMultiplier}
@@ -26,7 +26,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * <p>Tagged {@code slow} (excluded from the default build). Run with:
  * <pre>{@code mvn -Prtp test -Dtest=BonusBuyRtpVerificationTest}</pre>
  *
- * <p>Pure math: drives {@link RtpSimulationService} with hand-wired stateless collaborators — no Spring
+ * <p>Pure math: drives {@link RtpSimulationService} with hand-wired stateless collaborators - no Spring
  * context, Postgres, or Redis.
  */
 @Tag("slow")
@@ -34,7 +34,7 @@ class BonusBuyRtpVerificationTest {
 
     private static final String MATH_VERSION = "v1";
 
-    /** 1,000,000 bought features — enough to converge the high-volatility Inferno buy inside tolerance. */
+    /** 1,000,000 bought features - enough to converge the high-volatility Inferno buy inside tolerance. */
     private static final long BUYS = 1_000_000L;
 
     /** Acceptable absolute deviation from the declared RTP, in percentage points. */

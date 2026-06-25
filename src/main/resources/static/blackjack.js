@@ -1,9 +1,9 @@
 "use strict";
 
 /* =========================================================================
- * Velocity RGS — Blackjack game client (vanilla JS).
+ * Velocity RGS - Blackjack game client (vanilla JS).
  * Builds on game-core.js (API, token, toast, info modal). Renders a felt
- * table — dealer row + player hand(s) of .card elements — a chip-based bet
+ * table - dealer row + player hand(s) of .card elements - a chip-based bet
  * selector, and Deal / Hit / Stand / Double / Split / Insurance buttons that
  * are enabled strictly from the server's availableActions. The server is the
  * sole authority on every card, the dealer's hidden hole card, and the result;
@@ -122,7 +122,7 @@ function handLabel(h) {
 }
 
 const OUTCOME_TEXT = {
-  PLAYER_BLACKJACK: "Blackjack — pays 3:2",
+  PLAYER_BLACKJACK: "Blackjack - pays 3:2",
   WIN: "Win",
   PUSH: "Push",
   LOSE: "Lose",
@@ -170,7 +170,7 @@ function showActions(available) {
 function settleMessage(resp) {
   const win = Number(resp.totalWin || 0);
   const bet = Number(resp.totalBet || 0);
-  let msg = win > 0 ? `Round over — you got back ${fmt(win)} ${CURRENCY}` : "Round over — no win";
+  let msg = win > 0 ? `Round over - you got back ${fmt(win)} ${CURRENCY}` : "Round over - no win";
   if (resp.insurance && resp.insurance.resolved) {
     msg += resp.insurance.won ? " · insurance paid" : " · insurance lost";
   }
@@ -181,7 +181,7 @@ function settleMessage(resp) {
 
 function inProgressMessage(resp) {
   if (resp.insurance == null && (resp.availableActions || []).includes("INSURANCE")) {
-    return "Dealer shows an Ace — take insurance, or play on.";
+    return "Dealer shows an Ace - take insurance, or play on.";
   }
   const hands = resp.playerHands || [];
   if (hands.length > 1) return `Playing hand ${resp.activeHandIndex + 1} of ${hands.length}.`;
@@ -218,7 +218,7 @@ function renderRound(resp) {
 function renderHud() {
   els.balance.textContent = `${fmt(state.balance)} ${CURRENCY}`;
   els.gameState.textContent = "BLACKJACK";
-  els.freeSpins.textContent = "—";
+  els.freeSpins.textContent = "-";
 }
 
 /* ----------------------------------------------------------------- flows */
@@ -327,7 +327,7 @@ function bindEvents() {
 }
 
 /**
- * Blackjack entry point — called by the game-page bootstrap when the resolved catalog game is BLACKJACK.
+ * Blackjack entry point - called by the game-page bootstrap when the resolved catalog game is BLACKJACK.
  * Shared chrome + info modal are already applied by the bootstrap.
  */
 function initBlackjackGame(game) {

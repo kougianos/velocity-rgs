@@ -108,3 +108,5 @@ gradle-app.setting
 *.tar
 *.tar.gz
 docker-compose.override.yml
+
+.claude/

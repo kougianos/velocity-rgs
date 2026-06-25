@@ -145,7 +145,10 @@ body {
   border-radius: var(--radius);
   padding: 10px;
 }
-.reel { display: grid; grid-template-rows: repeat(3, 1fr); gap: 8px; position: relative; }
+/* min-width:0 lets the 1fr reel columns shrink to an exact even split of the board width.
+   Without it each column keeps its content's min-content size (the symbol label), so a
+   6-reel board (Inferno) sums wider than .reels and the cells spill past the container. */
+.reel { display: grid; grid-template-rows: repeat(3, 1fr); gap: 8px; position: relative; min-width: 0; }
 /* While a reel is spinning we clip the scrolling strip to the reel window. We only
    add overflow during the spin so the resting win glow (which extends past the cell)
    is never clipped. */
@@ -153,6 +156,7 @@ body {
 
 .cell {
   aspect-ratio: 1 / 1;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -1172,6 +1176,14 @@ body[data-theme="blackjack"] {
   .layout { padding: 14px 12px; gap: 14px; }
   .panel { padding: 14px; }
   .panel-title { font-size: 12px; }
+
+  /* On mobile the tools column (.side) flattens into the single stack via display:contents
+     so its panels become direct flex children of .layout. That lets the Session readouts
+     (balance/state/free spins) jump ABOVE the game board, while the simulator + log stay
+     below it. Order: Session → game → simulator → log. */
+  .side { display: contents; }
+  .side > .panel { flex: 1 1 100%; min-width: 0; }
+  .session-panel { order: -1; }
 
   /* ----- Slot board + controls ----- */
   .reels { gap: 6px; padding: 8px; }

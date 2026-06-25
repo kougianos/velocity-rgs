@@ -1,8 +1,11 @@
 # Velocity RGS
 
-An audit-grade iGaming slot platform: a deterministic Remote Gaming Server (RGS) built with
-Java 21 + Spring Boot 3.x + Postgres + Redis. Every spin outcome, feature transition, and
-balance change is decided server-side.
+An audit-grade iGaming platform: a deterministic Remote Gaming Server (RGS) built with
+Java 21 + Spring Boot 3.x + Postgres + Redis. Every outcome, state transition, and balance
+change is decided server-side.
+
+It hosts three game categories — **slots**, **roulette**, and **blackjack** — behind one
+unified game catalog and one wallet.
 
 A self-contained **browser client** (vanilla HTML/CSS/JS) ships inside the server at
 [`src/main/resources/static/`](src/main/resources/static/) and is served directly by Spring
@@ -16,9 +19,9 @@ Boot at `http://localhost:8080/` in demo mode — no separate frontend build, no
 ┌─────────────────────────────────────────────────────┐
 │         Browser client (src/.../static/)            │
 │                                                     │
-│  Vanilla HTML/CSS/JS — lobby + slot game UI         │
+│  Vanilla HTML/CSS/JS — lobby + per-game UIs          │
 │  Pure presentation: renders server responses only   │
-│  No RNG, no payline eval, no local balance math     │
+│  No RNG, no outcome eval, no local balance math     │
 └────────────────────┬────────────────────────────────┘
                      │ HTTP (REST)
                      │ Authorization: Bearer <JWT>
@@ -27,8 +30,9 @@ Boot at `http://localhost:8080/` in demo mode — no separate frontend build, no
 ┌────────────────────▼────────────────────────────────┐
 │                 Spring Boot RGS                     │
 │                                                     │
-│  Slot Game API  ─── Session FSM ─── Math Engine     │
-│  Wallet API     ─── Audit/Replay ─── RTP Simulator  │
+│  Slot · Roulette · Blackjack APIs                   │
+│  Session FSM ── Game Engines ── Wallet              │
+│  Audit / Replay ── RTP Simulator                    │
 │                                                     │
 │  Postgres (system of record: rounds, wallet, audit) │
 │  Redis   (session cache, idempotency cache, locks)  │
@@ -39,17 +43,32 @@ Boot at `http://localhost:8080/` in demo mode — no separate frontend build, no
 
 | Principle | How it is enforced |
 |---|---|
-| Server is the single source of truth | The client never computes wins, evaluates paylines, or mutates balance locally |
+| Server is the single source of truth | The client never computes wins, evaluates outcomes, or mutates balance locally |
 | Idempotency on every mutation | `Idempotency-Key` UUID header required on all mutating endpoints; replayed unchanged on transport retry |
 | Session versioning | Every request carries `sessionVersion`; stale writes fail with `SESSION_VERSION_CONFLICT` (409) |
-| Strict FSM | `availableActions` array from the server drives all button state; illegal commands → `ILLEGAL_STATE_TRANSITION` (409) |
+| Strict FSM | `availableActions` from the server drives all button state; illegal commands → `ILLEGAL_STATE_TRANSITION` (409) |
 | Money safety | `BigDecimal` + `HALF_UP` rounding on the server |
 | JWT in memory only | The demo client holds the token in memory; never `localStorage` |
-| Deterministic replay | Every round is reconstructable bit-exact from persisted `rng_draws` via `DeterministicReplayRng` |
+| Deterministic replay | Every round is reconstructable bit-exact from persisted RNG draws |
+
+---
+
+## Games
+
+| Game | Type | Flow | Notes |
+|---|---|---|---|
+| Aztec Fire, Frost Crown, Inferno Riches | **Slot** | single-step spin | Distinct grids (4/5/6 reels), free spins, bonus-buy, pick & collect; base RTP ~96% |
+| European Roulette | **Roulette** | single-step spin | Server-authoritative single-zero wheel, exact 36/37 payout math |
+| Classic Blackjack | **Blackjack** | stateful multi-step | 6-deck S17, 3:2, DAS, splits, insurance; round state persisted across deal/action calls |
+
+All three are exposed through one catalog at `GET /api/v1/games`, tagged by `gameType`.
 
 ---
 
 ## Repository Layout
+
+The whole project is **one Spring Boot module rooted at the repo root**. Shared/platform code
+lives at the top of the package tree; each game category has its own sub-package.
 
 ```
 velocity-rgs/
@@ -62,29 +81,45 @@ velocity-rgs/
 └── src/
     ├── main/
     │   ├── java/com/velocity/rgs/
-    │   │   ├── config/         # Security, Jackson, OpenAPI, virtual threads
-    │   │   ├── common/         # error/, idempotency/, money/
-    │   │   ├── math/           # config/, domain/, engine/
-    │   │   ├── rng/            # SecureRandomNumberGenerator, RngDraw
-    │   │   ├── session/        # domain/, fsm/, persistence/, service/
-    │   │   ├── game/           # api/, service/, feature/{freespins,bonusbuy,pickcollect}/
-    │   │   ├── wallet/         # api/, service/, gateway/, domain/, persistence/
-    │   │   ├── audit/          # replay/, reconciliation/, pickaudit/, simulation/
-    │   │   ├── qa/             # admin/, dev/, simulator/ (demo mode only)
-    │   │   └── observability/  # MDC filter, metrics
+    │   │   ├── slot/          # Slot game: api/, service/, math/, fsm/, feature/{bonusbuy,pickcollect}/
+    │   │   ├── roulette/      # European roulette: config/, engine/, service/, api/
+    │   │   ├── blackjack/     # Classic blackjack: config/, engine/, service/, api/
+    │   │   ├── card/          # Reusable card primitives (Suit/Rank/Card/Shoe/HandValue)
+    │   │   ├── catalog/       # Unified game catalog + shared GameInfo/BetConfig
+    │   │   ├── session/       # Shared session store, versioning, Redis cache, per-player lock
+    │   │   ├── wallet/        # Balance/debit/credit/rollback (internal + operator gateway)
+    │   │   ├── rng/           # RNG + deterministic replay seeds
+    │   │   ├── audit/         # replay/, reconciliation/, pickaudit/, simulation/
+    │   │   ├── qa/            # admin/, dev/, simulator/ (demo mode only)
+    │   │   ├── config/        # Security, Jackson, OpenAPI, virtual threads
+    │   │   ├── common/        # error/, idempotency/, money/
+    │   │   └── observability/ # MDC trace filter, metrics
     │   └── resources/
     │       ├── application.yml             # Single config file (run-mode switches)
-    │       ├── math/{aztec-fire,frost-crown,inferno-riches}/v1.json
-    │       ├── db/migration/               # Flyway V1–V9
+    │       ├── games/{aztec-fire,frost-crown,inferno-riches,european-roulette,classic-blackjack}/v1.json
+    │       ├── db/migration/               # Flyway V1–V11
     │       └── static/                     # Built-in browser client (HTML/CSS/JS)
     └── test/                   # Unit + Testcontainers integration tests
 ```
 
 ---
 
-## Games & Features
+## API
 
-TODO
+```
+GET  /api/v1/games                                   # unified catalog (slot + roulette + blackjack)
+
+POST /api/v1/slot/{init,spin}
+POST /api/v1/slot/feature/{start,buy,pick}
+
+POST /api/v1/roulette/{init,spin}
+
+POST /api/v1/blackjack/{init,deal,action}            # stateful: round state persisted between calls
+
+GET  /api/v1/wallet/*
+POST /api/v1/dev/token                               # demo mode
+GET  /api/v1/admin/*                                  # demo mode: balance, sessions, rounds, replay, simulator
+```
 
 ---
 

@@ -8,9 +8,6 @@ A self-contained **browser client** (vanilla HTML/CSS/JS) ships inside the serve
 [`src/main/resources/static/`](src/main/resources/static/) and is served directly by Spring
 Boot at `http://localhost:8080/` in demo mode — no separate frontend build, no Node/pnpm.
 
-> **Full local setup:** see [RUNNING_LOCALLY.md](RUNNING_LOCALLY.md).
-> **Architectural blueprint:** [be-requirements.md](be-requirements.md) · [CHANGELOG.md](CHANGELOG.md)
-
 ---
 
 ## Architecture Overview
@@ -52,21 +49,6 @@ Boot at `http://localhost:8080/` in demo mode — no separate frontend build, no
 
 ---
 
-## Implementation Status
-
-| Milestone | Status | Description |
-|---|---|---|
-| **M0** — Bootstrap & Cross-Cutting | ✅ Complete | Maven project, package skeleton, run-mode switches, `Money` value object, `GlobalExceptionHandler`, idempotency aspect, MDC correlation filter, JWT auth filter, Logback JSON, Micrometer |
-| **M1** — Math Domain & JSON Config | ✅ Complete | `Symbol`, `Payline`, `PayTable`, `ReelStrip` records; `SlotMathLoader` from `math/<game>/v1.json`; `ReelEvaluator` with WILD substitution, payline evaluation, max-win cap |
-| **M2** — RNG Engine & Grid | ✅ Complete | `SecureRandomNumberGenerator`, `DeterministicReplayRng`, `GridGenerationEngine` with reel-strip sets (BASE / POWER_BET / FREE_SPINS) |
-| **M3** — Wallet | ✅ Complete | `WalletGateway` interface, `InternalWalletGateway` (demo/wallet-internal), `OperatorWalletGateway` skeleton; `WalletController` with `authenticate`, `balance`, `debit`, `credit`, `rollback`; idempotent ledger; demo seeder |
-| **M4** — Session FSM & Persistence | ✅ Complete | `GameSession` JPA entity with optimistic `@Version`; sealed `SessionState` / `SessionCommand` types; `SessionStateMachine` pure function; Redis session cache + TTL; `PlayerActionLock` |
-| **M5** — Slot Game API (end-to-end) | ✅ Complete | `SlotGameController` (`/init`, `/spin`, `/feature/start`, `/feature/buy`, `/feature/pick`); `SlotEngineService` orchestrator; `PickCollectEngine`; `BonusBuyPolicyService`; full saga (debit → evaluate → credit → rollback on failure); `RtpSimulator` CLI |
-| **M6** — Audit, Replay & Reconciliation | ✅ Complete | Bit-exact `ReplayService` via `DeterministicReplayRng`; `ReconciliationJob` (hourly, bucket-based); `OperatorWalletGateway` (WebClient, WireMock contract tests); per-pick state-hash audit events |
-| **M7** — QA Readiness & Operational Tooling | ✅ Complete | `DevTokenController` (demo profile); `AdminQaController` (set balance, get session, get round); `SimulatorAdminController` with `RtpSimulationService`; `V9` Flyway migration for `audit_simulation_run`; actuator hardening for `wallet-operator` profile |
-
----
-
 ## Repository Layout
 
 ```
@@ -102,52 +84,9 @@ velocity-rgs/
 
 ## Games & Features
 
-Three slots ship as JSON game configs under `src/main/resources/games/`
-(`aztec-fire`, `frost-crown`, `inferno-riches`) — each file holds both a `presentation` block
-(title, theme, copy, symbol glyphs) and a `math` block (grid, paylines, pay table, reel strips), so
-a game is fully described in one place. The built-in client exposes them via a lobby and renders each
-game purely from the server catalog (`GET /api/v1/games`).
-Each is a 3×5, 20-payline slot, fully playable end-to-end with these mechanics:
-
-| Feature | Entry path | Server mechanic |
-|---|---|---|
-| **Base Game Spin** | Spin button | Reel grid generated from `BASE` strips, payline eval, debit + optional credit |
-| **Free Spins** | 3+ Scatter symbols (organic) or Bonus Buy | Organic trigger awards 10 free spins on high-RTP `FREE_SPINS` reel strips; re-triggers add 5 spins; single accumulated credit on settlement |
-| **Power Bet** | Toggle in HUD | Sends `powerBetActive=true`; server switches to `POWER_BET` reel strips; bet multiplied by 1.5× |
-| **Bonus Buy** | Buy panel | `FREE_SPINS_BUY` only; an industry-standard 12-spin feature priced by volatility — Frost 80× / Aztec 100× / Inferno 150× bet. The bought round is made *richer per spin* (not longer) via a per-game `freeSpinsWinMultiplier` applied to the feature win at settlement, calibrated so the buy returns the game's 96% RTP; organic free spins are unaffected. Server debit → saga entry (Pick & Collect is no longer buyable) |
-| **Pick & Collect** | Organic in-spin trigger (`~1 in triggerOneInN`) | Deterministic 12-tile board generated at feature start; CREDITS / MULTIPLIER / COLLECT / END tiles; keep picking until an END tile forfeits the unbanked pot (only COLLECT-banked wins survive); single credit on completion |
+TODO
 
 ---
-
-## Run Modes
-
-All configuration lives in a single [`src/main/resources/application.yml`](src/main/resources/application.yml),
-driven by two switches (no Spring profiles). Set them in the file or override with `-Drgs.mode=…`
-/ env vars.
-
-| Switch | Values | Effect |
-|---|---|---|
-| `rgs.mode` | `demo` (default) / `production` | `demo`: dev-token + admin QA + simulator HTTP endpoints registered, demo wallet auto-seeding, built-in client + swagger/actuator anonymous. `production`: helpers off, only health probes public. |
-| `rgs.wallet.mode` | `internal` (default) / `operator` | `internal`: in-process seeded wallet, no external calls. `operator`: external WebClient → `RGS_WALLET_OPERATOR_URL`. |
-| `rgs.simulator.cli-enabled` | `false` (default) / `true` | When `true`, runs one batch RTP simulation on startup. |
-
-The `test` Spring profile remains for the integration-test harness only (Testcontainers,
-deterministic JWT secret); it inherits demo + internal defaults.
-
-## Environment Variables
-
-| Variable | Default | Purpose |
-|---|---|---|
-| `RGS_DB_URL` | `jdbc:postgresql://localhost:5432/rgs` | Postgres JDBC URL |
-| `RGS_DB_USERNAME` | `rgs` | Postgres username |
-| `RGS_DB_PASSWORD` | `rgs` | Postgres password |
-| `RGS_REDIS_HOST` | `localhost` | Redis host |
-| `RGS_REDIS_PORT` | `6379` | Redis port |
-| `RGS_JWT_SECRET` | dev-only placeholder | HS256 signing secret — **override in any non-demo deployment** |
-| `RGS_MODE` | `demo` | Run mode: `demo` (QA helpers + relaxed auth) or `production` |
-| `RGS_WALLET_MODE` | `internal` | Wallet backend: `internal` (in-process) or `operator` (external HTTP) |
-| `RGS_WALLET_OPERATOR_URL` | `http://localhost:9090` | External wallet base URL (only when `RGS_WALLET_MODE=operator`) |
-| `RGS_WALLET_OPERATOR_TOKEN` | — | Optional static bearer token for the operator wallet |
 
 ## Build & Test
 
@@ -157,21 +96,3 @@ mvn -B verify          # compile + all tests (Testcontainers Postgres + Redis)
 mvn -B package         # build runnable jar
 mvn spring-boot:run    # run locally (demo mode) → http://localhost:8080/
 ```
-
-### QA helpers (demo mode only)
-
-- `POST /api/v1/dev/token` — mint a JWT (no auth required)
-- `POST /api/v1/admin/wallet/balance` — set arbitrary player balance (ADMIN role)
-- `GET /api/v1/admin/session/{playerId}` — inspect persistent + cached session state (ADMIN role)
-- `GET /api/v1/admin/round/{roundId}` — inspect persisted round including `rng_draws` (ADMIN role)
-- `POST /api/v1/admin/simulator/run` — synchronous RTP simulation, persists an `audit_simulation_run` row (ADMIN role)
-
-## Key URLs (demo mode)
-
-| URL | Purpose |
-|---|---|
-| `http://localhost:8080/` | Built-in browser client (lobby + slot game) |
-| `http://localhost:8080/swagger-ui.html` | Swagger UI (all endpoints) |
-| `http://localhost:8080/v3/api-docs` | Raw OpenAPI spec |
-| `http://localhost:8080/actuator/health` | Server health check |
-| `http://localhost:8080/actuator/prometheus` | Prometheus metrics |

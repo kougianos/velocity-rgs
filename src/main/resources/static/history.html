@@ -2,27 +2,24 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Velocity RGS - Round History</title>
+  <!-- Pinch-zoom left enabled (no maximum-scale / user-scalable=no) for accessibility. -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Velocity — Round History</title>
   <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
   <link rel="stylesheet" href="/styles.css" />
 </head>
 <body class="history-page">
-  <header class="topbar">
-    <div class="topbar-inner">
-      <div class="brand">
-        <a href="/" class="back-link" title="Back to lobby">‹</a>
-        <span class="logo">🎰</span>
-        <div>
-          <h1>Velocity RGS</h1>
-          <p class="subtitle">Round History - Demo Test Harness</p>
-        </div>
-      </div>
-      <nav class="topnav">
-        <a href="/" class="topnav-link">Lobby</a>
-        <a href="/history.html" class="topnav-link is-active">History</a>
+  <header class="vx-top">
+    <div class="vx-top-inner">
+      <a class="vx-brand" href="/">
+        <span class="vx-mark" aria-hidden="true"></span>
+        <span class="vx-wordmark">VELO<b>CITY</b></span>
+      </a>
+      <nav class="vx-nav" aria-label="Primary">
+        <a href="/">Lobby</a>
+        <a href="/history.html" class="on" aria-current="page">History</a>
       </nav>
-      <div class="topbar-right"></div>
+      <span class="vx-build" title="Environment">Demo build</span>
     </div>
   </header>
 

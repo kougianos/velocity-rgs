@@ -69,8 +69,6 @@ body {
 .brand h1 { margin: 0; font-size: 20px; letter-spacing: 0.5px; }
 .subtitle { margin: 0; font-size: 12px; color: var(--text-dim); }
 
-.session-info { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-
 .pill {
   display: flex;
   flex-direction: column;
@@ -247,7 +245,6 @@ body {
   flex-wrap: wrap;
 }
 .control-group { display: flex; flex-direction: column; gap: 4px; }
-.control-group.inline { flex-direction: row; align-items: center; gap: 8px; }
 .control-group label { font-size: 11px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.5px; }
 
 input[type="number"], select {
@@ -649,110 +646,7 @@ input[type="range"].bet-slider {
 }
 .info-spec-line { color: var(--text); font-size: 13.5px; }
 
-/* =========================================================================
- * Lobby (landing page)
- * ======================================================================= */
-.lobby { max-width: 1100px; margin: 0 auto; padding: 36px 24px 56px; }
-.lobby-title { margin: 0 0 6px; font-size: 28px; letter-spacing: 0.5px; }
-.lobby-sub { margin: 0 0 28px; color: var(--text-dim); font-size: 15px; max-width: 640px; }
-.lobby-sub strong { color: var(--gold); }
-.lobby-loading, .lobby-error { color: var(--text-dim); font-size: 14px; }
-.lobby-error { color: var(--danger); }
-
-.game-grid {
-  display: grid;
-  /* Intrinsically responsive: cards are at least ~260px wide and pack as many per row
-     as fit (three across on desktop), collapsing to a single column on mobile without a
-     media query. min(100%, …) keeps a lone card from overflowing a narrow viewport. */
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr));
-  gap: 22px;
-}
-
-.game-card {
-  display: flex;
-  flex-direction: column;
-  background: var(--bg-panel);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  overflow: hidden;
-  text-decoration: none;
-  color: var(--text);
-  box-shadow: var(--shadow);
-  transition: transform 0.14s ease, box-shadow 0.14s ease, border-color 0.14s ease;
-}
-.game-card:hover {
-  transform: translateY(-4px);
-  border-color: var(--accent);
-  box-shadow: 0 12px 34px rgba(0, 0, 0, 0.55);
-}
-
-.card-art {
-  position: relative;
-  height: 132px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: linear-gradient(135deg, #3a2a12, #7c5210);
-}
-.card-logo { font-size: 60px; filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.5)); }
-.vol-badge {
-  position: absolute;
-  top: 12px;
-  right: 12px;
-  font-size: 10px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.6px;
-  padding: 4px 9px;
-  border-radius: 20px;
-  background: rgba(0, 0, 0, 0.55);
-  border: 1px solid rgba(255, 255, 255, 0.25);
-  color: #fff;
-}
-.vol-badge.vol-low { color: #8fe3ff; }
-.vol-badge.vol-medium { color: #ffce8f; }
-.vol-badge.vol-high { color: #ff9b8f; }
-
-.card-body { padding: 16px 18px 18px; display: flex; flex-direction: column; flex: 1; }
-.card-body h3 { margin: 0 0 4px; font-size: 19px; }
-.card-tagline { margin: 0 0 16px; font-size: 13px; color: var(--text-dim); flex: 1; }
-
-.card-stats { display: flex; gap: 8px; margin-bottom: 16px; }
-.card-stats .stat {
-  flex: 1;
-  background: var(--bg-elev);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 8px 6px;
-  text-align: center;
-}
-.stat-label { display: block; font-size: 9px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-dim); }
-.stat-value { display: block; font-size: 15px; font-weight: 700; margin-top: 2px; color: var(--gold); }
-
-.play-btn {
-  display: block;
-  text-align: center;
-  padding: 10px;
-  border-radius: 8px;
-  font-weight: 700;
-  letter-spacing: 1px;
-  background: var(--accent);
-  color: #1a1a1a;
-}
-.game-card:hover .play-btn { background: #f59a55; }
-
-/* Per-theme card art + accents (lobby cards) */
-.game-card[data-theme="fire"] .card-art { background: linear-gradient(135deg, #7c2d12, #b45309); }
-.game-card[data-theme="frost"] .card-art { background: linear-gradient(135deg, #0c4a6e, #0891b2); }
-.game-card[data-theme="frost"] .play-btn { background: #4fc3f7; }
-.game-card[data-theme="frost"]:hover .play-btn { background: #81d4fa; }
-.game-card[data-theme="frost"]:hover { border-color: #4fc3f7; }
-.game-card[data-theme="inferno"] .card-art { background: linear-gradient(135deg, #7f1d1d, #b91c1c); }
-.game-card[data-theme="inferno"] .play-btn { background: #ff5722; color: #fff; }
-.game-card[data-theme="inferno"]:hover .play-btn { background: #ff7043; }
-.game-card[data-theme="inferno"]:hover { border-color: #ff5722; }
-
-/* Back-to-lobby chevron */
+/* Back-to-lobby chevron (game page) */
 .back-link {
   display: inline-flex;
   align-items: center;
@@ -882,53 +776,6 @@ body[data-game="inferno-riches"] .sym-12 { background: linear-gradient(135deg, #
 .badge-win { background: rgba(63, 185, 80, 0.16); color: var(--primary-hi); border: 1px solid rgba(63, 185, 80, 0.4); }
 .badge-loss { background: rgba(248, 81, 73, 0.14); color: var(--danger); border: 1px solid rgba(248, 81, 73, 0.38); }
 .badge-power { background: rgba(240, 136, 62, 0.16); color: var(--accent); border: 1px solid rgba(240, 136, 62, 0.4); margin-left: 6px; }
-
-/* =========================================================================
- * Lobby - game-type rows
- * ======================================================================= */
-/* The lobby is a vertical stack of category rows (Slot Games, then Roulette). */
-.lobby-sections { display: flex; flex-direction: column; gap: 6px; }
-.lobby-section { margin-bottom: 40px; }
-.lobby-section:last-child { margin-bottom: 0; }
-
-/* Punchy, colour-coded category headers - bigger, bolder, with a leading accent bar. */
-.lobby-section-title {
-  display: inline-flex;
-  align-items: center;
-  gap: 12px;
-  margin: 0 0 18px;
-  font-size: 23px;
-  font-weight: 800;
-  letter-spacing: 0.3px;
-  text-transform: none;
-  color: var(--gold);
-}
-.lobby-section-title::before {
-  content: "";
-  width: 6px;
-  height: 24px;
-  border-radius: 3px;
-  background: currentColor;
-}
-.lobby-section.slots .lobby-section-title { color: var(--accent); }
-.lobby-section.roulette .lobby-section-title { color: #3fb950; }
-.lobby-section.blackjack .lobby-section-title { color: #a371f7; }
-
-/* A single roulette card sits centered in its row rather than left-aligned. */
-.game-grid.centered { display: flex; justify-content: center; }
-.game-grid.centered .game-card { width: min(320px, 100%); }
-
-/* Roulette lobby card - casino-green felt art + accent. */
-.game-card[data-theme="roulette"] .card-art { background: linear-gradient(135deg, #0b3d1e, #16692f); }
-.game-card[data-theme="roulette"] .play-btn { background: #2ea043; color: #fff; }
-.game-card[data-theme="roulette"]:hover .play-btn { background: #3fb950; }
-.game-card[data-theme="roulette"]:hover { border-color: #2ea043; }
-
-/* Blackjack lobby card - deep violet felt art + accent. */
-.game-card[data-theme="blackjack"] .card-art { background: linear-gradient(135deg, #2a1a4d, #4b2c86); }
-.game-card[data-theme="blackjack"] .play-btn { background: #8957e5; color: #fff; }
-.game-card[data-theme="blackjack"]:hover .play-btn { background: #a371f7; }
-.game-card[data-theme="blackjack"]:hover { border-color: #8957e5; }
 
 /* =========================================================================
  * Roulette game page
@@ -1200,16 +1047,6 @@ body[data-theme="blackjack"] {
   .form-grid { grid-template-columns: 1fr; }
   .log { font-size: 10px; max-height: 220px; }
 
-  /* ----- Lobby ----- */
-  .lobby { padding: 24px 14px 40px; }
-  .lobby-title { font-size: 23px; }
-  .lobby-sub { font-size: 14px; }
-  .lobby-section { margin-bottom: 28px; }
-  .lobby-section-title { font-size: 19px; }
-  .game-grid { gap: 16px; }
-  .card-art { height: 118px; }
-  .card-logo { font-size: 50px; }
-
   /* ----- Game info modal ----- */
   .info-overlay { padding: 58px 12px 24px; }
   .info-card { padding: 20px 16px 22px; max-height: calc(100vh - 80px); }
@@ -1247,4 +1084,600 @@ body[data-theme="blackjack"] {
   .history-table th:nth-child(3), .history-table td:nth-child(3),
   .history-table th:nth-child(6), .history-table td:nth-child(6),
   .history-table th:nth-child(8), .history-table td:nth-child(8) { display: none; }
+
+  /* ----- Velocity mobile -----
+     These are scoped with the page's body class (e.g. body.lobby-page .vx-hero)
+     so they out-specify the unscoped base .vx-* rules that are declared LATER in
+     the file — without that, source order would let the base rules win here. */
+
+  /* Chrome (lobby + history share .vx-top): nav drops to its own centered row. */
+  .vx-top .vx-top-inner { flex-wrap: wrap; gap: 12px; padding: 14px 16px; }
+  .vx-top .vx-nav { order: 3; flex: 1 1 100%; justify-content: center; }
+
+  /* Lobby hero: force a single column so the stage never sits off-screen right. */
+  body.lobby-page .vx-main { padding: 0 16px 40px; }
+  body.lobby-page .vx-hero { grid-template-columns: 1fr; padding: 22px 0 20px; }
+  body.lobby-page .vx-hero h1 { font-size: clamp(34px, 11vw, 46px); margin-bottom: 14px; }
+  body.lobby-page .vx-hero .vx-tag { font-size: 14px; margin-bottom: 22px; }
+  body.lobby-page .vx-telem { gap: 10px; margin-bottom: 24px; }
+  body.lobby-page .vx-telem .cell { min-width: 92px; padding: 10px 13px; }
+  body.lobby-page .vx-telem .k { font-size: 9px; }
+  body.lobby-page .vx-telem .v { font-size: 18px; }
+  body.lobby-page .vx-stage { aspect-ratio: auto; height: 152px; min-height: 0; max-width: 100%; }
+  body.lobby-page .vx-stage-glyph { font-size: 108px; }
+  body.lobby-page .vx-foot-inner { padding: 22px 16px 34px; }
+
+  /* Lobby cards: compact so a phone reaches the bottom without a long scroll. */
+  body.lobby-page .vx-sec { padding-top: 24px; }
+  body.lobby-page .vx-sec-head { margin-bottom: 16px; }
+  body.lobby-page .vx-grid { gap: 12px; }
+  body.lobby-page .vx-art { height: 94px; }
+  body.lobby-page .vx-art .glyph { font-size: 42px; }
+  body.lobby-page .vx-body { padding: 12px 13px 13px; }
+  body.lobby-page .vx-body h3 { font-size: 17px; }
+  body.lobby-page .vx-body .vx-cardtag { font-size: 12px; margin: 0 0 11px; }
+  body.lobby-page .vx-stats { gap: 7px; margin-bottom: 12px; }
+  body.lobby-page .vx-stats .s { padding: 7px 6px; }
+  body.lobby-page .vx-stats .sv { font-size: 13px; }
+  body.lobby-page .vx-play { padding: 9px; }
+
+  /* Game page: keep the topbar tight, and let the RTP table scroll inside its
+     panel instead of forcing the page wide. */
+  body.vx-game .topbar-inner { padding: 10px 14px; }
+  body.vx-game .sim-report { overflow-x: auto; }
+
+  /* History ledger: table-layout:fixed pins the table to its container width
+     (width:100%) no matter the data, so the 4 kept columns (Game / Bet / Win /
+     Outcome) are always fully visible and never overflow/clip. Numeric + outcome
+     columns get fixed widths; Game takes the remainder and truncates with an
+     ellipsis. Runs at 11px to keep big win amounts inside their column. */
+  body.history-page .history-table { table-layout: fixed; width: 100%; font-size: 11px; }
+  body.history-page .history-table th, body.history-page .history-table td { padding: 8px 6px; }
+  body.history-page .history-table th:nth-child(4), body.history-page .history-table td:nth-child(4) { width: 58px; }
+  body.history-page .history-table th:nth-child(5), body.history-page .history-table td:nth-child(5) { width: 84px; }
+  body.history-page .history-table th:nth-child(7), body.history-page .history-table td:nth-child(7) { width: 62px; }
+  body.history-page .history-table th:nth-child(2), body.history-page .history-table td:nth-child(2) { overflow: hidden; text-overflow: ellipsis; }
 }
+
+/* =========================================================================
+ * VELOCITY — reworked lobby (vertical slice).
+ *
+ * A kinetic, dark "cockpit" identity: carbon ground, a plasma velocity streak
+ * as the signature, and mono telemetry for every number. Fully namespaced with
+ * a `vx-` prefix and scoped to `body.lobby-page` so the game + history pages are
+ * untouched until this direction is rolled out. Self-hosted fonts live in /fonts.
+ * ======================================================================= */
+@font-face {
+  font-family: "Archivo Expanded";
+  src: url("/fonts/archivo-expanded.woff2") format("woff2");
+  font-weight: 700 900; font-stretch: 125%; font-style: normal; font-display: swap;
+}
+@font-face {
+  font-family: "Hanken Grotesk";
+  src: url("/fonts/hanken-grotesk.woff2") format("woff2");
+  font-weight: 400 700; font-style: normal; font-display: swap;
+}
+@font-face {
+  font-family: "Geist Mono";
+  src: url("/fonts/geist-mono.woff2") format("woff2");
+  font-weight: 400 600; font-style: normal; font-display: swap;
+}
+
+body.lobby-page,
+body.vx-game,
+body.history-page {
+  --vx-carbon: #0A0B12;
+  --vx-graphite: #12141C;
+  --vx-slate: #191D2A;
+  --vx-raise: #20263A;
+  --vx-hair: #272C3E;
+  --vx-hair2: #353C52;
+  --vx-text: #EDF0F7;
+  --vx-dim: #9198AE;
+  --vx-faint: #5C6379;
+  --vx-gold: #F5C518;
+  --vx-ignite: #FF6B2C;
+  --vx-plasma: #FF2E7E;
+  --vx-streak: linear-gradient(100deg, #FF6B2C 0%, #FF2E7E 100%);
+  /* per-game hues — each game tints the one shared chassis */
+  --vx-inferno: #FF5A2C;
+  --vx-aztec: #F5A524;
+  --vx-frost: #38BDF8;
+  --vx-emerald: #22CE7D;
+  --vx-violet: #8B6CFF;
+
+  --vx-body: "Hanken Grotesk", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --vx-display: "Archivo Expanded", "Archivo", system-ui, sans-serif;
+  --vx-mono: "Geist Mono", ui-monospace, "SF Mono", "Cascadia Code", Consolas, monospace;
+
+  font-family: var(--vx-body);
+  color: var(--vx-text);
+  background:
+    radial-gradient(1100px 620px at 82% -6%, rgba(255, 46, 126, 0.14), transparent 60%),
+    radial-gradient(900px 560px at 6% 3%, rgba(255, 107, 44, 0.10), transparent 55%),
+    var(--vx-carbon);
+  min-height: 100vh;
+}
+body.lobby-page ::selection { background: rgba(255, 46, 126, 0.30); }
+
+/* shared bits */
+.vx-lab {
+  font-family: var(--vx-mono);
+  font-size: 11px; letter-spacing: 0.22em; text-transform: uppercase; color: var(--vx-dim);
+}
+.vx-num { font-family: var(--vx-mono); font-variant-numeric: tabular-nums; }
+
+/* ---- top chrome ---- */
+.vx-top { border-bottom: 1px solid var(--vx-hair); }
+.vx-top-inner {
+  display: flex; align-items: center; gap: 22px;
+  max-width: 1240px; margin: 0 auto; padding: 18px 24px;
+}
+.vx-brand { display: flex; align-items: center; gap: 12px; flex: 1 1 auto; min-width: 0; text-decoration: none; color: var(--vx-text); }
+.vx-mark {
+  width: 30px; height: 30px; border-radius: 8px; flex: 0 0 auto;
+  background: var(--vx-streak); position: relative; overflow: hidden;
+  box-shadow: 0 0 22px rgba(255, 46, 126, 0.45);
+}
+.vx-mark::after {
+  content: ""; position: absolute; inset: 0;
+  background: linear-gradient(115deg, transparent 42%, rgba(255, 255, 255, 0.85) 50%, transparent 58%);
+  transform: translateX(-120%);
+  animation: vx-sweep 3.6s ease-in-out infinite;
+}
+@keyframes vx-sweep { 0%, 72% { transform: translateX(-120%); } 88%, 100% { transform: translateX(120%); } }
+.vx-wordmark { font-family: var(--vx-display); font-weight: 800; font-size: 19px; letter-spacing: 0.16em; text-transform: uppercase; }
+.vx-wordmark b { color: var(--vx-plasma); font-weight: 800; }
+.vx-nav { display: flex; gap: 6px; }
+.vx-nav a {
+  font-family: var(--vx-mono); font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--vx-dim); text-decoration: none; padding: 7px 13px; border-radius: 999px;
+  border: 1px solid transparent; transition: color 0.15s, background 0.15s;
+}
+.vx-nav a:hover { color: var(--vx-text); background: var(--vx-slate); }
+.vx-nav a.on { color: var(--vx-text); border-color: var(--vx-hair2); background: var(--vx-slate); }
+.vx-build {
+  font-family: var(--vx-mono); font-size: 10.5px; letter-spacing: 0.12em; text-transform: uppercase;
+  color: var(--vx-dim); padding: 6px 11px; border-radius: 7px;
+  border: 1px solid var(--vx-hair); background: rgba(255, 255, 255, 0.02);
+  display: flex; align-items: center; gap: 7px;
+}
+.vx-build::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--vx-emerald); box-shadow: 0 0 8px var(--vx-emerald); }
+
+.vx-main { max-width: 1240px; margin: 0 auto; padding: 0 24px 56px; }
+
+/* ---- hero ---- */
+.vx-hero {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr));
+  gap: clamp(20px, 3vw, 48px); align-items: center;
+  padding: clamp(34px, 6vw, 68px) 0 clamp(30px, 5vw, 54px);
+}
+.vx-hero-eye { display: flex; align-items: center; gap: 10px; margin-bottom: 20px; }
+.vx-hero-eye .tick { width: 26px; height: 2px; background: var(--vx-streak); border-radius: 2px; }
+.vx-hero-eye .vx-lab { color: var(--vx-plasma); }
+.vx-hero h1 {
+  font-family: var(--vx-display); font-weight: 800;
+  font-size: clamp(40px, 7vw, 86px); line-height: 0.92; letter-spacing: -0.01em;
+  text-transform: uppercase; text-wrap: balance; margin: 0 0 18px;
+  background: linear-gradient(180deg, #fff 30%, #C9CEDE);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+}
+.vx-hero .vx-tag { font-size: clamp(16px, 1.5vw, 18px); color: var(--vx-dim); max-width: 42ch; margin: 0 0 30px; }
+.vx-telem { display: flex; gap: 14px; flex-wrap: wrap; margin-bottom: 32px; }
+.vx-telem .cell {
+  padding: 12px 16px; border: 1px solid var(--vx-hair); border-radius: 11px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.03), transparent); min-width: 104px;
+}
+.vx-telem .k { font-family: var(--vx-mono); font-size: 10px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--vx-faint); }
+.vx-telem .v { font-family: var(--vx-mono); font-variant-numeric: tabular-nums; font-size: 22px; font-weight: 600; margin-top: 3px; }
+.vx-telem .v.gold { color: var(--vx-gold); }
+
+.vx-cta {
+  display: inline-flex; align-items: center; gap: 12px;
+  font-family: var(--vx-display); font-weight: 800; letter-spacing: 0.05em; text-transform: uppercase;
+  font-size: 15px; color: #12060B; text-decoration: none;
+  padding: 15px 28px; border: 0; border-radius: 12px; cursor: pointer;
+  background: var(--vx-streak); position: relative; overflow: hidden;
+  box-shadow: 0 12px 34px rgba(255, 46, 126, 0.30), inset 0 1px 0 rgba(255, 255, 255, 0.35);
+}
+.vx-cta .arw { font-family: var(--vx-mono); font-weight: 700; }
+.vx-cta::after {
+  content: ""; position: absolute; inset: 0;
+  background: linear-gradient(110deg, transparent 40%, rgba(255, 255, 255, 0.55) 50%, transparent 60%);
+  transform: translateX(-130%);
+}
+.vx-cta:hover::after { animation: vx-sweep2 0.9s ease; }
+@keyframes vx-sweep2 { to { transform: translateX(130%); } }
+.vx-cta:focus-visible { outline: 2px solid #fff; outline-offset: 3px; }
+
+.vx-stage {
+  position: relative; border-radius: 18px; overflow: hidden;
+  border: 1px solid var(--vx-hair2); aspect-ratio: 16 / 11; min-height: 260px;
+  background: radial-gradient(120% 100% at 70% 20%, color-mix(in srgb, var(--vx-hue, var(--vx-plasma)) 30%, #0b0710), #0b0710 72%);
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.55);
+}
+.vx-stage canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.vx-stage-glyph {
+  position: absolute; right: 6%; bottom: 2%; font-size: clamp(110px, 19vw, 220px); line-height: 1;
+  filter: drop-shadow(0 18px 40px rgba(255, 46, 126, 0.45)); pointer-events: none; user-select: none;
+}
+.vx-stage-tag {
+  position: absolute; left: 18px; top: 16px;
+  font-family: var(--vx-mono); font-size: 10.5px; letter-spacing: 0.16em; text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.72); padding: 6px 11px; border-radius: 8px;
+  background: rgba(10, 8, 16, 0.5); border: 1px solid rgba(255, 255, 255, 0.14); backdrop-filter: blur(6px);
+}
+
+/* ---- sections ---- */
+.vx-sec { padding: clamp(26px, 4vw, 44px) 0 0; }
+.vx-sec-head { display: flex; align-items: baseline; gap: 14px; margin-bottom: 24px; }
+.vx-sec-head h2 {
+  font-family: var(--vx-mono); font-weight: 600; font-size: 13px; letter-spacing: 0.26em; text-transform: uppercase;
+  color: var(--vx-text); margin: 0; display: flex; align-items: center; gap: 11px;
+}
+.vx-sec-head h2::before {
+  content: ""; width: 10px; height: 10px; border-radius: 3px;
+  background: var(--vx-sec, var(--vx-plasma)); box-shadow: 0 0 12px var(--vx-sec, var(--vx-plasma));
+}
+.vx-sec-head .rule { flex: 1; height: 1px; background: linear-gradient(90deg, var(--vx-hair), transparent); }
+.vx-sec-head .count { font-family: var(--vx-mono); font-size: 11px; color: var(--vx-faint); letter-spacing: 0.1em; }
+
+.vx-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr)); gap: 20px; }
+
+/* ---- game card: one chassis, hue injected via --vx-hue ---- */
+.vx-card {
+  --vx-hue: var(--vx-ignite);
+  display: flex; flex-direction: column; text-decoration: none; color: var(--vx-text);
+  background: var(--vx-graphite); border: 1px solid var(--vx-hair); border-radius: 14px;
+  overflow: hidden; position: relative;
+  transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
+}
+.vx-card:hover { transform: translateY(-5px); border-color: color-mix(in srgb, var(--vx-hue) 60%, var(--vx-hair)); box-shadow: 0 20px 46px rgba(0, 0, 0, 0.5); }
+.vx-card:focus-visible { outline: 2px solid var(--vx-hue); outline-offset: 2px; }
+.vx-art {
+  height: 150px; position: relative; overflow: hidden;
+  display: flex; align-items: center; justify-content: center;
+  background:
+    radial-gradient(120% 130% at 78% 12%, color-mix(in srgb, var(--vx-hue) 55%, transparent), transparent 62%),
+    linear-gradient(150deg, color-mix(in srgb, var(--vx-hue) 30%, #0b0d15), #0b0d15);
+}
+.vx-art .glyph { font-size: 66px; filter: drop-shadow(0 8px 20px rgba(0, 0, 0, 0.55)); }
+.vx-art::after {
+  content: ""; position: absolute; top: 0; bottom: 0; left: -40%; width: 38%;
+  background: linear-gradient(105deg, transparent, color-mix(in srgb, var(--vx-hue) 55%, transparent), transparent);
+  transform: skewX(-16deg); transition: left 0.5s ease; opacity: 0.8;
+}
+.vx-card:hover .vx-art::after { left: 120%; }
+.vx-vol {
+  position: absolute; top: 12px; right: 12px;
+  font-family: var(--vx-mono); font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase;
+  padding: 4px 9px; border-radius: 999px; color: #fff;
+  background: rgba(6, 8, 14, 0.55); border: 1px solid rgba(255, 255, 255, 0.2); backdrop-filter: blur(4px);
+}
+.vx-body { padding: 16px 17px 18px; display: flex; flex-direction: column; flex: 1; }
+.vx-body h3 { margin: 0 0 4px; font-size: 20px; letter-spacing: 0.01em; }
+.vx-body .vx-cardtag { margin: 0 0 15px; font-size: 13.5px; color: var(--vx-dim); flex: 1; }
+.vx-stats { display: flex; gap: 9px; margin-bottom: 16px; }
+.vx-stats .s { flex: 1; padding: 9px 8px; border-radius: 9px; text-align: center; background: var(--vx-slate); border: 1px solid var(--vx-hair); }
+.vx-stats .sl { font-family: var(--vx-mono); font-size: 9px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--vx-faint); display: block; }
+.vx-stats .sv { font-family: var(--vx-mono); font-variant-numeric: tabular-nums; font-size: 15px; font-weight: 600; margin-top: 3px; display: block; color: var(--vx-gold); }
+.vx-play {
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  padding: 11px; border-radius: 9px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; font-size: 13px;
+  color: #0b0710; background: var(--vx-hue); transition: filter 0.15s;
+}
+.vx-card:hover .vx-play { filter: brightness(1.12); }
+.vx-play .arw { font-family: var(--vx-mono); }
+
+/* ---- loading skeleton + error ---- */
+.vx-skel { background: linear-gradient(100deg, var(--vx-graphite) 30%, var(--vx-slate) 50%, var(--vx-graphite) 70%); background-size: 200% 100%; animation: vx-shim 1.3s linear infinite; border-radius: 14px; }
+@keyframes vx-shim { to { background-position: -200% 0; } }
+.vx-skel-hero { height: clamp(280px, 40vw, 380px); margin: clamp(34px, 6vw, 68px) 0 40px; }
+.vx-skel-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr)); gap: 20px; }
+.vx-skel-card { height: 320px; }
+.vx-error {
+  margin: 60px auto; max-width: 460px; text-align: center;
+  border: 1px solid var(--vx-hair); border-radius: 14px; padding: 32px 28px; background: var(--vx-graphite);
+}
+.vx-error h2 { font-family: var(--vx-display); text-transform: uppercase; letter-spacing: 0.03em; margin: 0 0 8px; font-size: 22px; }
+.vx-error p { color: var(--vx-dim); margin: 0 0 20px; font-size: 14px; }
+.vx-retry {
+  font-family: var(--vx-mono); text-transform: uppercase; letter-spacing: 0.08em; font-size: 12px;
+  color: var(--vx-text); background: var(--vx-slate); border: 1px solid var(--vx-hair2);
+  padding: 10px 20px; border-radius: 9px; cursor: pointer;
+}
+.vx-retry:hover { border-color: var(--vx-plasma); }
+
+/* ---- footer trust strip (production-ready surface) ---- */
+.vx-foot { border-top: 1px solid var(--vx-hair); background: linear-gradient(180deg, transparent, rgba(255, 255, 255, 0.015)); }
+.vx-foot-inner { max-width: 1240px; margin: 0 auto; padding: 22px 24px 40px; display: flex; flex-wrap: wrap; gap: 12px 26px; align-items: center; }
+.vx-foot .item { display: flex; align-items: center; gap: 9px; font-family: var(--vx-mono); font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--vx-dim); }
+.vx-foot .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--vx-emerald); box-shadow: 0 0 8px var(--vx-emerald); }
+.vx-foot .spacer { flex: 1; }
+
+@media (prefers-reduced-motion: reduce) {
+  .vx-mark::after, .vx-cta::after, .vx-art::after, .vx-skel { animation: none !important; transition: none !important; }
+}
+
+/* =========================================================================
+ * VELOCITY — reworked game page (slot / roulette / blackjack).
+ *
+ * Scoped to `body.vx-game` (set in game.html; game.js only writes data-* attrs,
+ * so the class survives). Re-skins the existing game-page classes into the same
+ * kinetic cockpit as the lobby — no JS or markup logic changes, every dynamic
+ * state class the game modules toggle is honoured. --vx-hue is bound to the
+ * per-game --accent so each game keeps its own colour on one shared chassis.
+ *
+ * The RTP simulator and request/response log are deliberately kept VISIBLE and
+ * are styled as first-class engineering instrumentation — the point is to show
+ * the engine, not hide it.
+ * ======================================================================= */
+body.vx-game {
+  --vx-hue: var(--accent, var(--vx-ignite));
+  background:
+    radial-gradient(1200px 720px at 82% -12%, color-mix(in srgb, var(--vx-hue) 20%, transparent), transparent 60%),
+    radial-gradient(900px 560px at 4% 2%, rgba(255, 255, 255, 0.03), transparent 55%),
+    var(--vx-carbon);
+}
+body.vx-game ::selection { background: color-mix(in srgb, var(--vx-hue) 35%, transparent); }
+
+/* ---- top chrome ---- */
+body.vx-game .topbar { background: transparent; border-bottom: 1px solid var(--vx-hair); }
+body.vx-game .topbar-inner { padding: 16px 24px; }
+/* min-width:0 lets the brand text block shrink to its flex track so the tagline
+   truncates instead of overflowing into the centered nav on tablet widths. */
+body.vx-game .brand { min-width: 0; }
+body.vx-game .brand > div { min-width: 0; }
+body.vx-game .brand h1 {
+  font-family: var(--vx-display); font-weight: 800; font-size: 18px;
+  letter-spacing: 0.06em; text-transform: uppercase; text-wrap: balance;
+}
+body.vx-game .subtitle {
+  font-family: var(--vx-mono); font-size: 11px; letter-spacing: 0.08em; color: var(--vx-dim);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+body.vx-game .brand .logo { font-size: 30px; filter: drop-shadow(0 4px 14px color-mix(in srgb, var(--vx-hue) 60%, transparent)); }
+body.vx-game .back-link {
+  background: var(--vx-slate); border: 1px solid var(--vx-hair); color: var(--vx-dim); border-radius: 9px;
+}
+body.vx-game .back-link:hover { border-color: var(--vx-hue); color: var(--vx-hue); }
+body.vx-game .topnav-link {
+  font-family: var(--vx-mono); font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--vx-dim); border-color: transparent;
+}
+body.vx-game .topnav-link:hover { color: var(--vx-text); background: var(--vx-slate); }
+body.vx-game .topnav-link.is-active { color: var(--vx-text); background: var(--vx-slate); border-color: var(--vx-hair2); }
+body.vx-game .info-btn { font-family: var(--vx-mono); font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em; background: var(--vx-slate); border-color: var(--vx-hair); }
+body.vx-game .info-btn .info-icon { color: var(--vx-hue); }
+body.vx-game .info-btn:hover { border-color: var(--vx-hue); }
+
+/* ---- layout + panels ---- */
+body.vx-game .panel {
+  background: var(--vx-graphite); border: 1px solid var(--vx-hair); border-radius: 14px;
+  box-shadow: 0 18px 44px rgba(0, 0, 0, 0.42);
+}
+body.vx-game .panel-title {
+  font-family: var(--vx-mono); font-size: 12px; letter-spacing: 0.22em; color: var(--vx-dim);
+  display: flex; align-items: center; gap: 10px;
+}
+body.vx-game .panel-title::before {
+  content: ""; width: 9px; height: 9px; border-radius: 3px; flex: 0 0 auto;
+  background: var(--vx-hue); box-shadow: 0 0 10px var(--vx-hue);
+}
+/* the clear button on the log title shouldn't get the tick treatment pushed onto it */
+body.vx-game .panel-title .btn { margin-left: auto; }
+
+/* ---- buttons ---- */
+body.vx-game .btn {
+  font-family: var(--vx-mono); letter-spacing: 0.04em; text-transform: uppercase; font-size: 12px;
+  background: var(--vx-slate); border: 1px solid var(--vx-hair); color: var(--vx-text); border-radius: 10px;
+}
+body.vx-game .btn-ghost { background: transparent; }
+body.vx-game .btn-ghost:hover { border-color: var(--vx-hue); color: var(--vx-hue); }
+body.vx-game .btn-primary {
+  background: color-mix(in srgb, var(--vx-hue) 90%, #000); border-color: var(--vx-hue); color: #0b0710;
+}
+body.vx-game .btn-primary:hover { background: var(--vx-hue); }
+/* SPIN / Deal — the signature launch button: hue gradient + a plasma streak sweep on hover */
+body.vx-game .btn-spin {
+  font-family: var(--vx-display); font-weight: 800; font-size: 17px; letter-spacing: 0.08em; color: #0b0710;
+  background: linear-gradient(105deg, color-mix(in srgb, var(--vx-hue) 82%, #fff) 0%, var(--vx-hue) 55%, color-mix(in srgb, var(--vx-hue) 70%, var(--vx-plasma)) 100%);
+  border: 0; position: relative; overflow: hidden;
+  box-shadow: 0 12px 30px color-mix(in srgb, var(--vx-hue) 35%, transparent), inset 0 1px 0 rgba(255, 255, 255, 0.4);
+}
+body.vx-game .btn-spin::after {
+  content: ""; position: absolute; inset: 0;
+  background: linear-gradient(110deg, transparent 40%, rgba(255, 255, 255, 0.6) 50%, transparent 60%);
+  transform: translateX(-130%);
+}
+body.vx-game .btn-spin:hover:not(:disabled)::after { animation: vx-sweep2 0.9s ease; }
+body.vx-game .btn-accent { background: color-mix(in srgb, var(--vx-hue) 18%, var(--vx-slate)); border-color: color-mix(in srgb, var(--vx-hue) 55%, var(--vx-hair)); color: var(--vx-text); }
+body.vx-game .btn-accent:hover { background: color-mix(in srgb, var(--vx-hue) 30%, var(--vx-slate)); }
+body.vx-game .btn-buy { background: transparent; border-color: color-mix(in srgb, var(--vx-hue) 55%, var(--vx-hair)); color: var(--vx-hue); }
+body.vx-game .btn:focus-visible { outline: 2px solid var(--vx-hue); outline-offset: 2px; }
+
+/* ---- session telemetry cluster ---- */
+body.vx-game .pill { background: var(--vx-slate); border: 1px solid var(--vx-hair); border-radius: 10px; }
+body.vx-game .pill-label { font-family: var(--vx-mono); font-size: 9.5px; letter-spacing: 0.14em; color: var(--vx-faint); }
+body.vx-game .pill-value { font-family: var(--vx-mono); font-variant-numeric: tabular-nums; font-size: 16px; }
+body.vx-game .pill.balance .pill-value { color: var(--vx-gold); }
+
+/* ---- slot board ---- */
+body.vx-game .reels { background: #07090F; border-color: var(--vx-hair); border-radius: 12px; }
+body.vx-game .cell { background: var(--vx-slate); border-radius: 9px; }
+body.vx-game .cell small { font-family: var(--vx-mono); }
+body.vx-game .cell.win { border-color: var(--vx-gold); box-shadow: 0 0 16px color-mix(in srgb, var(--vx-gold) 55%, transparent); }
+
+/* win banner — the launch */
+body.vx-game .win-banner { background: rgba(255, 255, 255, 0.02); border: 1px solid var(--vx-hair); position: relative; overflow: hidden; border-radius: 12px; }
+body.vx-game .win-label { font-family: var(--vx-mono); letter-spacing: 0.22em; color: var(--vx-dim); }
+body.vx-game .win-amount { font-family: var(--vx-mono); font-variant-numeric: tabular-nums; color: var(--vx-dim); }
+body.vx-game .win-banner:not(.is-empty) { border-color: color-mix(in srgb, var(--vx-gold) 45%, var(--vx-hair)); background: linear-gradient(90deg, color-mix(in srgb, var(--vx-hue) 12%, transparent), transparent); }
+body.vx-game .win-banner:not(.is-empty) .win-label,
+body.vx-game .win-banner:not(.is-empty) .win-amount { color: var(--vx-gold); }
+body.vx-game .win-banner:not(.is-empty)::after {
+  content: ""; position: absolute; inset: 0;
+  background: linear-gradient(105deg, transparent 42%, color-mix(in srgb, var(--vx-hue) 42%, transparent) 50%, transparent 58%);
+  transform: translateX(-120%); animation: vx-sweep2 1.1s ease;
+}
+
+/* controls */
+body.vx-game .control-group label,
+body.vx-game .controls label { font-family: var(--vx-mono); letter-spacing: 0.06em; color: var(--vx-dim); }
+body.vx-game .bet-value { font-family: var(--vx-mono); font-variant-numeric: tabular-nums; color: var(--vx-gold); }
+body.vx-game input[type="range"].bet-slider { background: var(--vx-carbon); border-color: var(--vx-hair); }
+body.vx-game .bet-slider::-webkit-slider-thumb { background: var(--vx-hue); border-color: #0b0710; }
+body.vx-game .bet-slider::-moz-range-thumb { background: var(--vx-hue); border-color: #0b0710; }
+body.vx-game .bet-scale { font-family: var(--vx-mono); color: var(--vx-faint); }
+body.vx-game .toggle-track { background: var(--vx-carbon); border-color: var(--vx-hair); }
+body.vx-game .toggle input:checked + .toggle-track { background: color-mix(in srgb, var(--vx-hue) 30%, transparent); border-color: var(--vx-hue); }
+body.vx-game .toggle input:checked + .toggle-track .toggle-thumb { background: var(--vx-hue); }
+body.vx-game .toggle-text { font-family: var(--vx-body); }
+body.vx-game .toggle.is-active .toggle-text,
+body.vx-game .toggle.is-active .toggle-text small { color: var(--vx-gold); }
+
+/* pick & collect + win chips */
+body.vx-game .pick-panel { background: var(--vx-slate); border-color: var(--vx-hair); border-radius: 12px; }
+body.vx-game .pick-meta { font-family: var(--vx-mono); color: var(--vx-dim); }
+body.vx-game .pick-meta strong { color: var(--vx-gold); }
+body.vx-game .tile { background: var(--vx-carbon); border-color: var(--vx-hair); }
+body.vx-game .tile:hover:not(.opened) { border-color: var(--vx-hue); }
+body.vx-game .tile .tile-type { font-family: var(--vx-mono); }
+body.vx-game .win-chip { font-family: var(--vx-mono); background: var(--vx-slate); border-color: color-mix(in srgb, var(--vx-gold) 40%, var(--vx-hair)); color: var(--vx-gold); }
+
+/* ---- roulette ---- */
+body.vx-game .roulette-stage { background: #07090F; border-color: var(--vx-hair); border-radius: 12px; }
+body.vx-game .result-number { font-family: var(--vx-display); background: var(--vx-slate); border-color: var(--vx-hair); }
+body.vx-game .result-label { font-family: var(--vx-mono); color: var(--vx-dim); }
+body.vx-game .chip-bar-label { font-family: var(--vx-mono); color: var(--vx-dim); }
+body.vx-game .chip { font-family: var(--vx-mono); background: var(--vx-slate); border-color: var(--vx-hair); }
+body.vx-game .chip.is-selected { border-color: var(--vx-gold); color: var(--vx-gold); box-shadow: 0 0 10px color-mix(in srgb, var(--vx-gold) 30%, transparent); }
+body.vx-game .rt-col, body.vx-game .rt-outside-cell { background: var(--vx-slate); }
+body.vx-game .bet-summary { font-family: var(--vx-mono); color: var(--vx-dim); }
+body.vx-game .bet-summary strong { color: var(--vx-gold); }
+
+/* ---- blackjack ---- */
+body.vx-game .bj-table { border-color: var(--vx-hair); border-radius: 12px; box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--vx-hue) 22%, transparent); }
+body.vx-game .bj-row-label { font-family: var(--vx-mono); letter-spacing: 0.14em; }
+body.vx-game .bj-value { font-family: var(--vx-mono); color: var(--vx-gold); }
+body.vx-game .bj-hand-meta { font-family: var(--vx-mono); }
+body.vx-game .bj-bet-readout { font-family: var(--vx-mono); }
+body.vx-game .bj-bet-readout strong { color: var(--vx-gold); }
+body.vx-game .bj-message { font-family: var(--vx-mono); color: var(--vx-dim); }
+
+/* =========================================================================
+ * Engineering instrumentation — RTP simulator + engine I/O log.
+ * Made prominent on purpose: this is the architect's console, not a debug leak.
+ * ======================================================================= */
+body.vx-game #slotSimulator .panel-title,
+body.vx-game .log ~ *,
+body.vx-game .panel-title:has(#clearLog) { position: relative; }
+
+body.vx-game .form-grid label { font-family: var(--vx-mono); font-size: 10px; letter-spacing: 0.08em; color: var(--vx-dim); }
+body.vx-game input[type="number"],
+body.vx-game select {
+  background: var(--vx-carbon); border: 1px solid var(--vx-hair); color: var(--vx-text);
+  font-family: var(--vx-mono); font-variant-numeric: tabular-nums; border-radius: 8px;
+}
+body.vx-game input:focus, body.vx-game select:focus { border-color: var(--vx-hue); }
+body.vx-game .sim-bet .bet-value { color: var(--vx-gold); }
+
+/* sim report → analytics readout */
+body.vx-game .sim-report { font-family: var(--vx-mono); }
+body.vx-game .sim-report th { color: var(--vx-faint); letter-spacing: 0.1em; }
+body.vx-game .sim-report th, body.vx-game .sim-report td { border-bottom-color: var(--vx-hair); font-variant-numeric: tabular-nums; }
+body.vx-game .sim-report .rtp { color: var(--vx-gold); }
+body.vx-game .sim-report .row-overall td { border-top: 2px solid var(--vx-hair2); }
+
+/* engine I/O log → console */
+body.vx-game .panel-title:has(#clearLog)::after {
+  content: "live"; margin-left: 2px; margin-right: auto;
+  font-family: var(--vx-mono); font-size: 9px; letter-spacing: 0.16em; text-transform: uppercase;
+  color: var(--vx-emerald); display: inline-flex; align-items: center;
+}
+body.vx-game .log {
+  background: #06070C; border: 1px solid var(--vx-hair);
+  border-left: 3px solid color-mix(in srgb, var(--vx-hue) 70%, var(--vx-hair));
+  border-radius: 10px; color: #B7C2DA; font-family: var(--vx-mono); line-height: 1.6;
+}
+
+/* ---- modals + toast retinted to carbon ---- */
+body.vx-game .modal-card,
+body.vx-game .info-card {
+  background: linear-gradient(160deg, var(--vx-graphite), var(--vx-carbon));
+  border: 1px solid color-mix(in srgb, var(--vx-hue) 32%, var(--vx-hair));
+}
+body.vx-game .modal-card h3 { font-family: var(--vx-display); text-transform: uppercase; letter-spacing: 0.04em; color: var(--vx-gold); }
+body.vx-game .info-title { font-family: var(--vx-display); text-transform: uppercase; letter-spacing: 0.03em; color: var(--vx-text); }
+body.vx-game .info-tagline { font-family: var(--vx-mono); color: var(--vx-dim); }
+body.vx-game .info-stat { background: var(--vx-slate); border-color: var(--vx-hair); border-radius: 11px; }
+body.vx-game .info-stat-label { font-family: var(--vx-mono); color: var(--vx-hue); }
+body.vx-game .info-stat-value { font-family: var(--vx-mono); font-variant-numeric: tabular-nums; }
+body.vx-game .info-spec-label { font-family: var(--vx-mono); color: var(--vx-dim); }
+body.vx-game .info-close { background: var(--vx-slate); border-color: var(--vx-hair); }
+body.vx-game .info-close:hover { color: var(--vx-hue); border-color: var(--vx-hue); }
+body.vx-game .toast { background: var(--vx-graphite); border: 1px solid var(--vx-hair); border-left: 4px solid var(--vx-hue); }
+body.vx-game .toast.error { border-left-color: var(--danger); }
+body.vx-game .toast.success { border-left-color: var(--vx-emerald); }
+
+/* =========================================================================
+ * VELOCITY — reworked round-history page (the cross-game ledger).
+ *
+ * Scoped to `body.history-page`. Reuses the lobby's `.vx-top` wordmark chrome
+ * (set in history.html) and re-skins the ledger into mono telemetry: tabular
+ * figures throughout, gold for money, emerald/danger for win-loss semantics.
+ * No history.js changes — every class it emits is honoured. Plasma is the brand
+ * accent here since the page spans all games.
+ * ======================================================================= */
+body.history-page { --vx-hue: var(--vx-plasma); }
+body.history-page ::selection { background: rgba(255, 46, 126, 0.30); }
+
+body.history-page .history { max-width: 1240px; }
+body.history-page .history-title {
+  font-family: var(--vx-display); font-weight: 800; text-transform: uppercase; letter-spacing: 0.02em;
+}
+body.history-page .history-sub { font-family: var(--vx-body); color: var(--vx-dim); }
+body.history-page .history-sub strong { font-family: var(--vx-mono); color: var(--vx-plasma); }
+body.history-page .history-actions .btn {
+  font-family: var(--vx-mono); text-transform: uppercase; letter-spacing: 0.06em; font-size: 12px;
+  background: var(--vx-slate); border: 1px solid var(--vx-hair); color: var(--vx-text); border-radius: 10px;
+}
+body.history-page .history-actions .btn:hover { border-color: var(--vx-plasma); color: var(--vx-text); }
+
+/* summary → telemetry stat tiles */
+body.history-page .stat-card { background: var(--vx-graphite); border: 1px solid var(--vx-hair); border-radius: 12px; }
+body.history-page .stat-card-label { font-family: var(--vx-mono); font-size: 10px; letter-spacing: 0.14em; color: var(--vx-faint); }
+body.history-page .stat-card-value { font-family: var(--vx-mono); font-variant-numeric: tabular-nums; }
+body.history-page .stat-card-value.pos { color: var(--vx-emerald); }
+body.history-page .stat-card-value.neg { color: var(--danger); }
+
+/* panel + ledger table */
+body.history-page .panel { background: var(--vx-graphite); border: 1px solid var(--vx-hair); border-radius: 14px; box-shadow: 0 18px 44px rgba(0, 0, 0, 0.42); }
+body.history-page .history-table { font-family: var(--vx-mono); }
+body.history-page .history-table thead th {
+  font-size: 10px; letter-spacing: 0.12em; color: var(--vx-faint);
+  background: var(--vx-slate); border-bottom: 1px solid var(--vx-hair);
+}
+body.history-page .history-table th, body.history-page .history-table td { border-bottom-color: var(--vx-hair); }
+body.history-page .history-table tbody tr:hover { background: rgba(255, 255, 255, 0.03); }
+body.history-page .history-table .num { font-variant-numeric: tabular-nums; }
+body.history-page .history-table .num.pos { color: var(--vx-emerald); }
+body.history-page .history-table .num.neg { color: var(--danger); }
+body.history-page .history-table .win-cell { color: var(--vx-gold); }
+body.history-page .history-table .col-time, body.history-page .history-table .col-round { color: var(--vx-faint); }
+body.history-page .history-table .row-win td:first-child { box-shadow: inset 3px 0 0 var(--vx-emerald); }
+body.history-page .history-table .row-loss td:first-child { box-shadow: inset 3px 0 0 var(--danger); }
+
+/* outcome badges */
+body.history-page .badge { font-family: var(--vx-mono); }
+body.history-page .badge-win { background: color-mix(in srgb, var(--vx-emerald) 16%, transparent); color: var(--vx-emerald); border: 1px solid color-mix(in srgb, var(--vx-emerald) 40%, transparent); }
+body.history-page .badge-loss { background: color-mix(in srgb, var(--danger) 14%, transparent); color: var(--danger); border: 1px solid color-mix(in srgb, var(--danger) 38%, transparent); }
+body.history-page .badge-power { background: color-mix(in srgb, var(--vx-plasma) 16%, transparent); color: var(--vx-plasma); border: 1px solid color-mix(in srgb, var(--vx-plasma) 40%, transparent); }
+
+/* states */
+body.history-page .history-loading, body.history-page .history-empty { font-family: var(--vx-mono); color: var(--vx-dim); }
+body.history-page .history-error { font-family: var(--vx-mono); color: var(--danger); }
+body.history-page .history-empty a, body.history-page .history-error a { color: var(--vx-plasma); }
+body.history-page .toast { background: var(--vx-graphite); border: 1px solid var(--vx-hair); border-left: 4px solid var(--vx-plasma); }
+body.history-page .toast.error { border-left-color: var(--danger); }

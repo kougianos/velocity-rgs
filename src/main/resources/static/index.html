@@ -2,45 +2,50 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Velocity RGS - Lobby</title>
+  <!-- Pinch-zoom left enabled (no maximum-scale / user-scalable=no) for accessibility. -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Velocity — Play</title>
   <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <link rel="preload" href="/fonts/archivo-expanded.woff2" as="font" type="font/woff2" crossorigin />
+  <link rel="preload" href="/fonts/geist-mono.woff2" as="font" type="font/woff2" crossorigin />
   <link rel="stylesheet" href="/styles.css" />
 </head>
 <body class="lobby-page">
-  <header class="topbar">
-    <div class="topbar-inner">
-      <div class="brand">
-        <span class="logo">🎰</span>
-        <div>
-          <h1>Velocity RGS</h1>
-          <p class="subtitle">Game Lobby - Demo Test Harness</p>
-        </div>
-      </div>
-      <nav class="topnav">
-        <a href="/" class="topnav-link is-active">Lobby</a>
-        <a href="/history.html" class="topnav-link">History</a>
+  <header class="vx-top">
+    <div class="vx-top-inner">
+      <a class="vx-brand" href="/">
+        <span class="vx-mark" aria-hidden="true"></span>
+        <span class="vx-wordmark">VELO<b>CITY</b></span>
+      </a>
+      <nav class="vx-nav" aria-label="Primary">
+        <a href="/" class="on" aria-current="page">Lobby</a>
+        <a href="/history.html">History</a>
       </nav>
-      <div class="topbar-right">
-        <div class="pill">
-          <span class="pill-label">Mode</span>
-          <span class="pill-value">Demo</span>
-        </div>
-      </div>
+      <span class="vx-build" title="Environment">Demo build</span>
     </div>
   </header>
 
-  <main class="lobby">
-    <h2 class="lobby-title">Choose your game</h2>
-    <p class="lobby-sub">
-      Three <strong>96% RTP</strong> slots, each tuned to a different volatility and
-      max-win ceiling - plus the timeless <strong>97.30% RTP</strong> European Roulette wheel.
-      Pick your game.
-    </p>
-    <div id="gameGrid" class="lobby-sections">
-      <p class="lobby-loading">Loading games…</p>
+  <main class="vx-main" id="lobbyRoot">
+    <!-- Loading skeleton — replaced by lobby.js once the catalog resolves. -->
+    <div id="lobbyLoading" aria-hidden="true">
+      <div class="vx-skel vx-skel-hero"></div>
+      <div class="vx-skel-grid">
+        <div class="vx-skel vx-skel-card"></div>
+        <div class="vx-skel vx-skel-card"></div>
+        <div class="vx-skel vx-skel-card"></div>
+      </div>
     </div>
+    <p class="vx-lab" style="position:absolute;left:-9999px" role="status">Loading games…</p>
   </main>
+
+  <footer class="vx-foot">
+    <div class="vx-foot-inner">
+      <span class="item"><span class="dot"></span>Certified server-side RNG</span>
+      <span class="item"><span class="dot"></span>Fully auditable rounds</span>
+      <span class="spacer"></span>
+      <span class="item">Play responsibly · 18+</span>
+    </div>
+  </footer>
 
   <script src="/games.js"></script>
   <script src="/lobby.js"></script>

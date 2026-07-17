@@ -37,12 +37,30 @@ class RtpSimulationVerificationTest {
     private static final String MATH_VERSION = "v1";
 
     /**
-     * 2,000,000 base-game spins. Higher than the historical 1M horizon because the high-volatility
-     * Inferno Riches pay table (rare 733x premium hits) needs more samples to converge tightly.
+     * 8,000,000 base-game spins.
+     *
+     * <p>Sized from measurement, not intuition. The simulation is unseeded ({@link
+     * com.velocity.rgs.rng.SecureRandomNumberGenerator}), so each run is a fresh sample and this test
+     * either flakes or it does not depending purely on how {@link #TOLERANCE} compares to the spread.
+     * Six runs at the historical 2M horizon measured a per-run standard deviation of ~0.24pp
+     * (aztec-fire), ~0.22pp (frost-crown) and ~0.28pp (inferno-riches) - against a 0.6pp tolerance
+     * that is only ~1.8-2.0 sigma of headroom, i.e. roughly a 10% chance that at least one game
+     * spuriously fails on any given run. That is far too flaky for a CI guard: a job that cries wolf
+     * every other week gets ignored, which is worse than no job.
+     *
+     * <p>Sampling error scales as 1/sqrt(n), so 4x the spins halves sigma to ~0.11-0.14pp, giving
+     * >3.5 sigma of headroom and a spurious-failure rate near 0.03% per run. Measured cost of the
+     * change: this test went 82s -> 272s (sublinear in spins - JIT warmup amortises), taking the
+     * full {@code -Prtp} guard suite to ~9 min. Free on a public repo.
+     *
+     * <p>If you tighten {@link #TOLERANCE}, re-measure the spread first - do not guess.
      */
-    private static final long BASE_SPINS = 2_000_000L;
+    private static final long BASE_SPINS = 8_000_000L;
 
-    /** Acceptable absolute deviation from the declared RTP, in percentage points. */
+    /**
+     * Acceptable absolute deviation from the declared RTP, in percentage points. See {@link #BASE_SPINS}
+     * for why this value and the spin count have to be chosen together.
+     */
     private static final BigDecimal TOLERANCE = new BigDecimal("0.6");
 
     private RtpSimulationService newService(String gameId, SlotMathDefinition math) {

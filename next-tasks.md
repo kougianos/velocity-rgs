@@ -43,22 +43,33 @@ doubles what the engine can express. That is where the maturity is.
 
 ---
 
-## §0 — Prerequisite: RTP regression in CI
+## §0 — RTP regression in CI — **DONE**
 
-**Do this first. It gates all of §1.**
+**This gated all of §1.** Every mechanic in §1 changes RTP math substantially; cascades in
+particular make effective RTP non-hand-calculable. Adding them without a regression net means
+shipping broken games and not finding out.
 
-`RtpSimulationService` exists and the `rtp` Maven profile already isolates the slow
-statistical tests — but `test.excludedGroups` defaults to `slow`, so **RTP convergence never
-runs in CI**. Every mechanic in §1 changes RTP math substantially; cascades in particular make
-the effective RTP wildly non-obvious. Adding them without a regression net means shipping
-broken games and not finding out.
+My original write-up of this section was **wrong in three ways**, corrected here after reading
+the tests rather than inferring from the pom:
 
-- [ ] Scheduled CI job (nightly, not per-PR — these are slow by design) running `mvn -Prtp test`.
-- [ ] Assert measured RTP per game converges within tolerance of its declared value; fail the build on drift.
-- [ ] Report measured RTP, hit frequency, and max-win distribution per game as a build artifact.
-- [ ] Extend the simulator to cover roulette and blackjack too — they have no equivalent net today.
+- I claimed the convergence assertions needed building. They already existed — `RtpSimulationVerificationTest` asserts every slot converges within 0.6pp of its declared target, and `BonusBuyRtpVerificationTest` guards the bonus-buy channel (the one a real historical bug lived in).
+- I claimed roulette and blackjack had "no equivalent net today." **False** — `RouletteRtpVerificationTest` and `BlackjackRtpSimulationTest` both exist and are tagged `slow`.
+- I asked for hit frequency and max-win distribution in the artifact. `RtpReport` exposes neither, so that is engine work, not CI wiring. Deliberately not done — see the follow-up below.
 
-**Acceptance:** deliberately breaking a paytable turns the nightly build red.
+The real gap was narrow: **these guards were good and simply never ran.**
+
+- [x] Nightly CI job (`.github/workflows/rtp.yml`) running `mvn -Prtp test`. Also runs on PR/push touching `games/**`, the engines, or `rng/` — drift is caused by those files, so catching it at review beats finding out the next morning. Free: public repo, unlimited standard-runner minutes. No Postgres/Redis service needed — every guard is pure math with hand-wired collaborators.
+- [x] **Split `slow` into guards vs design aids.** `GameRtpCalibrationHarness`, `BonusBuyCalibrationHarness` and `PickCollectFeatureMeasurementTest` are explicitly "not an assertion" — they print constants for a human to feed back into the game JSON. Running them in CI burns ~3M spins/game on tests that *cannot fail*. They are now `@Tag("calibration")`; `-Prtp` excludes them, new `-Pcalibrate` profile runs them.
+- [x] **Raised `BASE_SPINS` 2M → 8M.** Measured (6 runs/game) rather than guessed: per-run σ was ~0.24/0.22/0.28pp against a 0.6pp tolerance — only ~1.8σ headroom, ≈10% chance of a spurious failure per run. A guard that cries wolf every ~10 days gets ignored. 4× spins halves σ, giving >3.5σ and ≈0.03% flake. Confirmed after the change: deviations fell to 0.185/0.121/0.117pp. Cost 82s → 272s (sublinear — JIT warmup amortises); full guard suite ~9 min locally.
+- [x] Surefire reports uploaded as an artifact (30-day retention) and measured RTP echoed to the run summary.
+
+**Acceptance met:** the guards fail on drift, and the tolerance/spin-count relationship is now
+documented in the test so the next person does not silently re-introduce flake.
+
+### Follow-ups this surfaced
+
+- **`frost-crown` runs slightly hot (~+0.15pp) — accepted, won't fix.** Across 6 runs at 2M spins its mean landed at 96.201% vs a declared 96.00% (~2.3 standard errors — suggestive, not conclusive at n=6); a later 8M run came in at 96.121%, consistent with either a small positive bias or plain noise. It passes the 0.6pp tolerance comfortably either way, and the deviation is in the **player-favourable** direction: the game pays marginally more than declared, which costs the house rather than shortchanging anyone. In demo money that is a rounding error. Revisit only if `frost-crown`'s paytable is reshaped for another reason — `mvn -Pcalibrate test -Dtest=GameRtpCalibrationHarness` measures the scale directly.
+- [ ] Optional: extend `RtpReport` with hit frequency and max-win distribution, then assert them. Note `aztec-fire/v1.json` *declares* `"Hit Frequency": "27.40%"` in its presentation block — a player-visible number that nothing currently verifies.
 
 ---
 

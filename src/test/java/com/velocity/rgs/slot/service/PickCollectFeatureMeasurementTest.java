@@ -22,9 +22,10 @@ import java.math.RoundingMode;
  * contribution {@code P} (in RTP percentage points) we set {@code triggerOneInN = 100 * E[W] / P}.
  *
  * <p>Pure math, no Spring/Postgres. Tagged {@code slow} so it stays out of the default build. Run with:
- * <pre>{@code mvn -Dtest.excludedGroups= -Dgroups=slow -Dtest=PickCollectFeatureMeasurementTest test}</pre>
+ * <pre>{@code mvn -Pcalibrate test -Dtest=PickCollectFeatureMeasurementTest}</pre>
  */
 @Tag("slow")
+@Tag("calibration")
 class PickCollectFeatureMeasurementTest {
 
     private static final long PLAYS = 1_000_000L;

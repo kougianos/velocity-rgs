@@ -28,9 +28,10 @@ import java.math.RoundingMode;
  * ({@code .rgsgen_assemble.py}) and re-verify with {@link RtpSimulationVerificationTest}.
  *
  * <p>Pure math, no Spring/Postgres. Tagged {@code slow} so it stays out of the default build. Run with:
- * <pre>{@code mvn -Prtp test -Dtest=GameRtpCalibrationHarness}</pre>
+ * <pre>{@code mvn -Pcalibrate test -Dtest=GameRtpCalibrationHarness}</pre>
  */
 @Tag("slow")
+@Tag("calibration")
 class GameRtpCalibrationHarness {
 
     private static final String MATH_VERSION = "v1";

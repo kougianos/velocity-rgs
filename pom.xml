@@ -34,7 +34,8 @@
         <skip.openapi.gen>true</skip.openapi.gen>
 
         <!-- Test groups. By default the slow statistical tests (e.g. RTP convergence) are excluded;
-             run them with the `rtp` profile or by overriding these properties. -->
+             run them with the `rtp` profile (guards) or `calibrate` profile (design aids), or by
+             overriding these properties. -->
         <test.groups></test.groups>
         <test.excludedGroups>slow</test.excludedGroups>
     </properties>
@@ -289,11 +290,23 @@
                 <skip.openapi.gen>false</skip.openapi.gen>
             </properties>
         </profile>
-        <!-- Runs ONLY the slow statistical tests (e.g. RTP convergence). Usage: mvn -Prtp test -->
+        <!-- Runs the slow statistical GUARDS (RTP convergence assertions). This is what the nightly
+             CI job runs; every test it selects asserts something and can fail. Usage: mvn -Prtp test -->
         <profile>
             <id>rtp</id>
             <properties>
                 <test.groups>slow</test.groups>
+                <test.excludedGroups>calibration</test.excludedGroups>
+            </properties>
+        </profile>
+        <!-- Runs the slow CALIBRATION design aids only. These assert nothing - they print the
+             measured constants you feed back into the game JSON, then re-verify with -Prtp.
+             Deliberately kept out of CI: they cannot fail, so they carry no signal.
+             Usage: mvn -Pcalibrate test [-Dtest=GameRtpCalibrationHarness] -->
+        <profile>
+            <id>calibrate</id>
+            <properties>
+                <test.groups>calibration</test.groups>
                 <test.excludedGroups></test.excludedGroups>
             </properties>
         </profile>

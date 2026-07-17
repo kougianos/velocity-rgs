@@ -1,0 +1,108 @@
+name: RTP
+
+# Statistical regression guard for game math.
+#
+# These tests are excluded from the default `mvn verify` (tagged `slow`) because each one runs
+# millions of simulated rounds. They are the only thing standing between a paytable edit and a
+# game that silently pays the wrong RTP, so they run:
+#
+#   * on every PR/push that touches game math or configs - drift is caused by those files, and
+#     catching it at review time beats finding out the next morning;
+#   * nightly, to catch drift from dependency or JDK changes that touch nothing in `src/`;
+#   * on demand via the Actions tab.
+#
+# Only the GUARD tests run here (`-Prtp`). The calibration harnesses are design aids that assert
+# nothing, so they carry no CI signal - run those locally with `mvn -Pcalibrate test`.
+#
+# Note: GitHub disables scheduled workflows on public repos after 60 days of no repo activity
+# and emails the owner. Re-enable from the Actions tab, or just use "Run workflow".
+
+# The two path lists below MUST stay identical. A filter that fires on the PR but not on the merge
+# (or vice versa) is how a guard quietly stops guarding. They are duplicated rather than shared via
+# a YAML anchor because GitHub Actions does not reliably support anchors in workflow files.
+#
+# Scope is limited to what can actually move RTP - game configs, the math/engines, the RNG, and the
+# guard tests themselves - so an unrelated API test edit does not cost 10 minutes of CI.
+on:
+  pull_request:
+    paths:
+      - "src/main/resources/games/**"
+      - "src/main/java/com/velocity/rgs/slot/**"
+      - "src/main/java/com/velocity/rgs/roulette/engine/**"
+      - "src/main/java/com/velocity/rgs/blackjack/engine/**"
+      - "src/main/java/com/velocity/rgs/rng/**"
+      - "src/test/java/com/velocity/rgs/slot/service/**"
+      - "src/test/java/com/velocity/rgs/roulette/engine/**"
+      - "src/test/java/com/velocity/rgs/blackjack/engine/**"
+      - "pom.xml"
+      - ".github/workflows/rtp.yml"
+  push:
+    branches: [main]
+    paths:
+      - "src/main/resources/games/**"
+      - "src/main/java/com/velocity/rgs/slot/**"
+      - "src/main/java/com/velocity/rgs/roulette/engine/**"
+      - "src/main/java/com/velocity/rgs/blackjack/engine/**"
+      - "src/main/java/com/velocity/rgs/rng/**"
+      - "src/test/java/com/velocity/rgs/slot/service/**"
+      - "src/test/java/com/velocity/rgs/roulette/engine/**"
+      - "src/test/java/com/velocity/rgs/blackjack/engine/**"
+      - "pom.xml"
+      - ".github/workflows/rtp.yml"
+  schedule:
+    # 02:37 UTC. Deliberately off the hour: schedules queued at :00 are the most contended
+    # slot on GitHub's shared runners and get delayed the most.
+    - cron: "37 2 * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: rtp-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  guards:
+    name: RTP convergence guards
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+
+      # No Postgres/Redis service needed: every `slow` guard is pure math and wires its
+      # collaborators by hand - no Spring context, no Testcontainers.
+      - name: RTP guards
+        run: mvn -B -ntp -Prtp test
+
+      # The guards print `target / simulated / deviation` per game to stdout; Surefire captures
+      # that into the report files, so these are the measured RTP numbers for the run.
+      - name: Upload RTP reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rtp-reports
+          path: target/surefire-reports/
+          if-no-files-found: warn
+          retention-days: 30
+
+      # Surfaces the measured RTP lines on the run summary page so a result is readable without
+      # downloading the artifact. Note: Surefire writes captured stdout into the XML reports
+      # (<system-out>), NOT the .txt ones - those hold only the pass/fail counts.
+      - name: Summarise measured RTP
+        if: always()
+        run: |
+          {
+            echo "### Measured RTP"
+            echo ""
+            echo '```'
+            grep -rhoE "(BUY )?RTP verification \[[^]]*\]: [^<]*" target/surefire-reports/*.xml 2>/dev/null \
+              || echo "(no RTP lines captured)"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"

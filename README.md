@@ -130,7 +130,20 @@ POST /api/v1/admin/*                                 # demo mode: set balance, r
 ```bash
 docker compose up -d   # Postgres 16 + Redis 7
 mvn -B verify          # compile + tests (Testcontainers Postgres + Redis)
-mvn -Prtp test         # slow statistical tests (RTP convergence) - excluded from `verify` by default
 mvn -B package         # build runnable jar
 mvn spring-boot:run    # run locally (demo mode) → http://localhost:8080/
 ```
+
+### Game math tests
+
+The statistical tests are tagged `slow` and excluded from `verify` (they simulate millions of
+rounds). They split by intent:
+
+```bash
+mvn -Prtp test         # guards: assert each game converges to its declared RTP. Run in CI.
+mvn -Pcalibrate test   # design aids: print the constants you feed back into the game JSON.
+```
+
+`-Prtp` is the regression net for game math and runs on every change to `games/**` or the
+engines, plus nightly ([`.github/workflows/rtp.yml`](.github/workflows/rtp.yml)). `-Pcalibrate`
+asserts nothing and is deliberately kept out of CI.

@@ -29,9 +29,10 @@ import java.math.BigDecimal;
  * and the {@code BUY_SPINS}-spin award stay as authored), then guard with {@link BonusBuyRtpVerificationTest}.
  *
  * <p>Pure math, no Spring/Postgres. Tagged {@code slow}. Run with:
- * <pre>{@code mvn -Prtp test -Dtest=BonusBuyCalibrationHarness}</pre>
+ * <pre>{@code mvn -Pcalibrate test -Dtest=BonusBuyCalibrationHarness}</pre>
  */
 @Tag("slow")
+@Tag("calibration")
 class BonusBuyCalibrationHarness {
 
     private static final String MATH_VERSION = "v1";

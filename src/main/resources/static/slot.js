@@ -349,7 +349,7 @@ async function settleReels(matrix, winLines = []) {
     reel.classList.remove("spinning");
     reel.classList.add("landed");
   }
-  applyWins(winLines);
+  applyWins(winLines, matrix); // matrix needed so ways wins can find the cells to highlight
 }
 
 function renderWin(totalWin, winLines = []) {

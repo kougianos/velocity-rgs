@@ -57,7 +57,8 @@ Boot at `http://localhost:8080/` in demo mode - no separate frontend build, no N
 
 | Game | Type | Flow | Notes |
 |---|---|---|---|
-| Aztec Fire, Frost Crown, Inferno Riches | **Slot** | single-step spin | Distinct grids (4/5/6 reels), free spins, bonus-buy, pick & collect; base RTP ~96% |
+| Aztec Fire, Frost Crown, Inferno Riches | **Slot** | single-step spin | Fixed paylines. Distinct grids (4/5/6 reels), free spins, bonus-buy, pick & collect; base RTP 96% |
+| Jade Tiger | **Slot** | single-step spin | **243 ways** (no paylines) on a 5x3 grid - every left-to-right path pays. Free spins, pick & collect; base RTP 96% |
 | European Roulette | **Roulette** | single-step spin | Server-authoritative single-zero wheel, exact 36/37 payout math |
 | Classic Blackjack | **Blackjack** | stateful multi-step | 6-deck S17, 3:2, DAS, splits, insurance; round state persisted across deal/action calls |
 
@@ -95,7 +96,7 @@ velocity-rgs/
     │   │   └── observability/ # MDC trace filter, metrics
     │   └── resources/
     │       ├── application.yml             # Single config file (run-mode switches)
-    │       ├── games/{aztec-fire,frost-crown,inferno-riches,european-roulette,classic-blackjack}/v1.json
+    │       ├── games/{aztec-fire,frost-crown,inferno-riches,jade-tiger,european-roulette,classic-blackjack}/v1.json
     │       ├── db/migration/               # Flyway V1–V11
     │       └── static/                     # Built-in browser client (HTML/CSS/JS)
     └── test/                   # Unit + Testcontainers integration tests

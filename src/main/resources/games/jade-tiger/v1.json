@@ -1,0 +1,926 @@
+{
+  "presentation": {
+    "title": "Jade Tiger",
+    "tagline": "243 ways prowl the bamboo groves.",
+    "description": "No paylines - every left-to-right path pays. Wilds stalk the three inner reels, turning a single tiger into a screenful of ways. Medium-high volatility with a 12,000x ceiling.",
+    "logo": "🐯",
+    "theme": "jade",
+    "volatility": "Medium-High",
+    "spinDurationMillis": 500,
+    "symbols": {
+      "1": {
+        "glyph": "A",
+        "name": "Ace"
+      },
+      "2": {
+        "glyph": "K",
+        "name": "King"
+      },
+      "3": {
+        "glyph": "Q",
+        "name": "Queen"
+      },
+      "4": {
+        "glyph": "J",
+        "name": "Jack"
+      },
+      "5": {
+        "glyph": "10",
+        "name": "Ten"
+      },
+      "6": {
+        "glyph": "9",
+        "name": "Nine"
+      },
+      "7": {
+        "glyph": "🐯",
+        "name": "Tiger"
+      },
+      "8": {
+        "glyph": "🪷",
+        "name": "Lotus"
+      },
+      "9": {
+        "glyph": "☯️",
+        "name": "Wild"
+      },
+      "12": {
+        "glyph": "🎋",
+        "name": "Scatter"
+      }
+    },
+    "info": {
+      "paragraphs": [
+        "Jade Tiger drops the paylines entirely. Every left-to-right path through the reels is live - 243 of them - so a symbol only has to land somewhere on each reel to pay. Stack two tigers on one reel and every way through them counts twice.",
+        "Wilds prowl the three inner reels and stand in for any symbol, so one wild-heavy screen can pay several symbols at once. They never appear on the first reel: a run has to be anchored by a real symbol.",
+        "Land three Bamboo scatters to wake the free spins, where wilds run denser and the ways multiply fast. Power Bet raises every stake, and the Pick & Collect ritual banks jade credits until you hit the end tile."
+      ],
+      "stats": [
+        {
+          "label": "Game Theme",
+          "value": "Jungle, Tiger, Jade"
+        },
+        {
+          "label": "Volatility",
+          "value": "Medium-High"
+        },
+        {
+          "label": "RTP",
+          "value": "96.00%"
+        }
+      ],
+      "specs": [
+        {
+          "label": "Game Type",
+          "values": [
+            "Video Slot Game"
+          ]
+        },
+        {
+          "label": "Lines",
+          "values": [
+            "243 ways (no paylines)"
+          ]
+        },
+        {
+          "label": "Reel Type",
+          "values": [
+            "5x3"
+          ]
+        },
+        {
+          "label": "Winning Functionality",
+          "values": [
+            "Left to right on adjacent reels",
+            "Every path pays; ways = product of per-reel hits"
+          ]
+        },
+        {
+          "label": "Special Features",
+          "values": [
+            "Free Spins",
+            "Pick & Collect",
+            "Power Bet"
+          ]
+        },
+        {
+          "label": "Wild Behaviour",
+          "values": [
+            "Substitutes for all paying symbols",
+            "Reels 2-4 only",
+            "Does not pay on its own"
+          ]
+        },
+        {
+          "label": "Free Spins Symbol",
+          "values": [
+            "Scatter 🎋"
+          ]
+        },
+        {
+          "label": "Max Exposure",
+          "values": [
+            "Max multiplier: 12,000x",
+            "Max win: €1,200,000"
+          ]
+        },
+        {
+          "label": "Bet Values",
+          "values": [
+            "Min - €0.20",
+            "Default - €1.00",
+            "Max - €100.00"
+          ]
+        }
+      ]
+    }
+  },
+  "math": {
+    "gameId": "jade-tiger",
+    "mathVersion": "v1",
+    "targetRtp": 96.0,
+    "grid": {
+      "rows": 3,
+      "cols": 5
+    },
+    "winModel": "WAYS",
+    "symbols": [
+      {
+        "id": 1,
+        "name": "ACE",
+        "type": "STANDARD"
+      },
+      {
+        "id": 2,
+        "name": "KING",
+        "type": "STANDARD"
+      },
+      {
+        "id": 3,
+        "name": "QUEEN",
+        "type": "STANDARD"
+      },
+      {
+        "id": 4,
+        "name": "JACK",
+        "type": "STANDARD"
+      },
+      {
+        "id": 5,
+        "name": "TEN",
+        "type": "STANDARD"
+      },
+      {
+        "id": 6,
+        "name": "NINE",
+        "type": "STANDARD"
+      },
+      {
+        "id": 7,
+        "name": "TIGER",
+        "type": "STANDARD"
+      },
+      {
+        "id": 8,
+        "name": "LOTUS",
+        "type": "STANDARD"
+      },
+      {
+        "id": 9,
+        "name": "WILD",
+        "type": "WILD",
+        "substitutes": "STANDARD"
+      },
+      {
+        "id": 12,
+        "name": "SCATTER",
+        "type": "SCATTER"
+      }
+    ],
+    "paylines": [],
+    "payTable": {
+      "1": {
+        "3": 55.9717,
+        "4": 139.9293,
+        "5": 384.8055
+      },
+      "2": {
+        "3": 48.9751,
+        "4": 118.9401,
+        "5": 293.8512
+      },
+      "3": {
+        "3": 34.9825,
+        "4": 90.9542,
+        "5": 244.8762
+      },
+      "4": {
+        "3": 27.9859,
+        "4": 69.9643,
+        "5": 202.8977
+      },
+      "5": {
+        "3": 27.9859,
+        "4": 48.9751,
+        "5": 146.926
+      },
+      "6": {
+        "3": 27.9859,
+        "4": 55.9717,
+        "5": 146.926
+      },
+      "7": {
+        "3": 139.9293,
+        "4": 384.8055,
+        "5": 979.5053
+      },
+      "8": {
+        "3": 97.9502,
+        "4": 244.8762,
+        "5": 594.6998
+      }
+    },
+    "reelStrips": {
+      "BASE": [
+        [
+          12,
+          7,
+          8,
+          1,
+          2,
+          3,
+          4,
+          4,
+          1,
+          2,
+          3,
+          5,
+          5,
+          8,
+          4,
+          5,
+          1,
+          2,
+          3,
+          6,
+          7,
+          4,
+          5,
+          1,
+          2,
+          3,
+          8,
+          4,
+          5,
+          6,
+          6,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          6,
+          6
+        ],
+        [
+          12,
+          7,
+          8,
+          1,
+          2,
+          9,
+          3,
+          4,
+          9,
+          3,
+          1,
+          2,
+          4,
+          8,
+          5,
+          5,
+          9,
+          3,
+          4,
+          5,
+          7,
+          1,
+          2,
+          9,
+          3,
+          4,
+          8,
+          5,
+          6,
+          1,
+          2,
+          9,
+          3,
+          4,
+          5,
+          6,
+          6,
+          6,
+          6
+        ],
+        [
+          12,
+          7,
+          8,
+          1,
+          2,
+          9,
+          3,
+          4,
+          9,
+          3,
+          1,
+          2,
+          4,
+          8,
+          5,
+          5,
+          9,
+          3,
+          4,
+          5,
+          7,
+          1,
+          2,
+          9,
+          3,
+          4,
+          8,
+          5,
+          6,
+          1,
+          2,
+          9,
+          3,
+          4,
+          5,
+          6,
+          6,
+          6,
+          6
+        ],
+        [
+          12,
+          7,
+          8,
+          1,
+          2,
+          9,
+          3,
+          4,
+          9,
+          3,
+          1,
+          2,
+          4,
+          8,
+          5,
+          5,
+          9,
+          3,
+          4,
+          5,
+          7,
+          1,
+          2,
+          9,
+          3,
+          4,
+          8,
+          5,
+          6,
+          1,
+          2,
+          9,
+          3,
+          4,
+          5,
+          6,
+          6,
+          6,
+          6
+        ],
+        [
+          12,
+          7,
+          8,
+          1,
+          2,
+          3,
+          4,
+          4,
+          1,
+          2,
+          3,
+          5,
+          5,
+          8,
+          4,
+          5,
+          1,
+          2,
+          3,
+          6,
+          7,
+          4,
+          5,
+          1,
+          2,
+          3,
+          8,
+          4,
+          5,
+          6,
+          6,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          6,
+          6
+        ]
+      ],
+      "POWER_BET": [
+        [
+          12,
+          7,
+          8,
+          1,
+          2,
+          3,
+          4,
+          4,
+          1,
+          2,
+          3,
+          5,
+          5,
+          8,
+          4,
+          5,
+          1,
+          2,
+          3,
+          6,
+          7,
+          4,
+          5,
+          1,
+          2,
+          3,
+          8,
+          4,
+          5,
+          6,
+          6,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          6,
+          6
+        ],
+        [
+          12,
+          7,
+          8,
+          1,
+          2,
+          9,
+          3,
+          4,
+          9,
+          3,
+          1,
+          2,
+          4,
+          8,
+          5,
+          5,
+          9,
+          3,
+          4,
+          5,
+          7,
+          1,
+          2,
+          9,
+          3,
+          4,
+          8,
+          5,
+          6,
+          1,
+          2,
+          9,
+          3,
+          4,
+          5,
+          6,
+          6,
+          6,
+          6
+        ],
+        [
+          12,
+          7,
+          8,
+          1,
+          2,
+          9,
+          3,
+          4,
+          9,
+          3,
+          1,
+          2,
+          4,
+          8,
+          5,
+          5,
+          9,
+          3,
+          4,
+          5,
+          7,
+          1,
+          2,
+          9,
+          3,
+          4,
+          8,
+          5,
+          6,
+          1,
+          2,
+          9,
+          3,
+          4,
+          5,
+          6,
+          6,
+          6,
+          6
+        ],
+        [
+          12,
+          7,
+          8,
+          1,
+          2,
+          9,
+          3,
+          4,
+          9,
+          3,
+          1,
+          2,
+          4,
+          8,
+          5,
+          5,
+          9,
+          3,
+          4,
+          5,
+          7,
+          1,
+          2,
+          9,
+          3,
+          4,
+          8,
+          5,
+          6,
+          1,
+          2,
+          9,
+          3,
+          4,
+          5,
+          6,
+          6,
+          6,
+          6
+        ],
+        [
+          12,
+          7,
+          8,
+          1,
+          2,
+          3,
+          4,
+          4,
+          1,
+          2,
+          3,
+          5,
+          5,
+          8,
+          4,
+          5,
+          1,
+          2,
+          3,
+          6,
+          7,
+          4,
+          5,
+          1,
+          2,
+          3,
+          8,
+          4,
+          5,
+          6,
+          6,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          6,
+          6
+        ]
+      ],
+      "FREE_SPINS": [
+        [
+          7,
+          8,
+          1,
+          2,
+          3,
+          4,
+          5,
+          1,
+          2,
+          8,
+          3,
+          4,
+          7,
+          5,
+          6,
+          1,
+          2,
+          3,
+          8,
+          4,
+          5,
+          6,
+          1,
+          2,
+          3,
+          7,
+          4,
+          5,
+          8,
+          6,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          6
+        ],
+        [
+          7,
+          8,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          9,
+          9,
+          8,
+          1,
+          2,
+          7,
+          3,
+          4,
+          5,
+          6,
+          9,
+          8,
+          1,
+          2,
+          3,
+          4,
+          5,
+          7,
+          6,
+          9,
+          8,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          9,
+          9,
+          9
+        ],
+        [
+          7,
+          8,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          9,
+          9,
+          8,
+          1,
+          2,
+          7,
+          3,
+          4,
+          5,
+          6,
+          9,
+          8,
+          1,
+          2,
+          3,
+          4,
+          5,
+          7,
+          6,
+          9,
+          8,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          9,
+          9,
+          9
+        ],
+        [
+          7,
+          8,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          9,
+          9,
+          8,
+          1,
+          2,
+          7,
+          3,
+          4,
+          5,
+          6,
+          9,
+          8,
+          1,
+          2,
+          3,
+          4,
+          5,
+          7,
+          6,
+          9,
+          8,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          9,
+          9,
+          9
+        ],
+        [
+          7,
+          8,
+          1,
+          2,
+          3,
+          4,
+          5,
+          1,
+          2,
+          8,
+          3,
+          4,
+          7,
+          5,
+          6,
+          1,
+          2,
+          3,
+          8,
+          4,
+          5,
+          6,
+          1,
+          2,
+          3,
+          7,
+          4,
+          5,
+          8,
+          6,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          6
+        ]
+      ]
+    },
+    "scatterTriggers": {
+      "minCount": 3,
+      "freeSpinsAwarded": 10,
+      "retriggerAwards": 5
+    },
+    "freeSpins": {
+      "betLockedToTriggerBet": true,
+      "powerBetPersists": false,
+      "maxRetriggerStack": 50
+    },
+    "powerBet": {
+      "betMultiplier": 1.5
+    },
+    "bonusBuyOptions": [],
+    "pickCollect": {
+      "boardSize": 12,
+      "completion": {
+        "type": "END_TILE"
+      },
+      "triggerOneInN": 433,
+      "tileDistribution": [
+        {
+          "type": "CREDITS",
+          "weight": 45,
+          "valueRange": [
+            1,
+            12
+          ]
+        },
+        {
+          "type": "MULTIPLIER",
+          "weight": 15,
+          "valueRange": [
+            2,
+            3
+          ]
+        },
+        {
+          "type": "COLLECT",
+          "weight": 22
+        },
+        {
+          "type": "END",
+          "weight": 18
+        }
+      ],
+      "maxFeatureWinMultiplier": 5000
+    },
+    "limits": {
+      "maxWinPerRoundMultiplier": 12000
+    },
+    "betConfig": {
+      "values": [
+        0.2,
+        0.4,
+        0.6,
+        1.0,
+        2.0,
+        5.0,
+        10.0,
+        20.0,
+        50.0,
+        100.0
+      ],
+      "defaultBet": 1.0
+    }
+  }
+}

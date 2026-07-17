@@ -17,12 +17,17 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Long-running statistical verification that every game in the catalog returns its declared
- * {@code targetRtp} in the base game. The three shipped games deliberately share identical reel
- * strips but carry distinct, volatility-shaped pay tables (Frost Crown = low volatility / 2,000x cap,
- * Aztec Fire = medium / 10,000x, Inferno Riches = high / 25,000x). The BASE_GAME channel folds in both
- * naturally-triggered free spins and the organically-triggered Pick &amp; Collect feature (~4% RTP
- * each); each pay table is scaled so the combined base-game RTP converges to the same 96% - this test
- * is what guards that contract.
+ * {@code targetRtp} in the base game.
+ *
+ * <p>The three payline games deliberately share identical reel strips but carry distinct,
+ * volatility-shaped pay tables (Frost Crown = low volatility / 2,000x cap, Aztec Fire = medium /
+ * 10,000x, Inferno Riches = high / 25,000x). Jade Tiger is the odd one out: a 243-ways game
+ * ({@code winModel: WAYS}) with its own strips, so it also guards the ways evaluator - the only
+ * statistical cover that code path has.
+ *
+ * <p>The BASE_GAME channel folds in both naturally-triggered free spins and the organically-triggered
+ * Pick &amp; Collect feature (~4% RTP each); each pay table is scaled so the combined base-game RTP
+ * converges to the same 96% - this test is what guards that contract.
  *
  * <p>Tagged {@code slow} so it is excluded from the default {@code mvn test} / {@code mvn verify}
  * runs (each 1M-spin simulation takes several seconds). Run it explicitly with:
@@ -53,6 +58,11 @@ class RtpSimulationVerificationTest {
      * change: this test went 82s -> 272s (sublinear in spins - JIT warmup amortises), taking the
      * full {@code -Prtp} guard suite to ~9 min. Free on a public repo.
      *
+     * <p>Jade Tiger is the widest of the four: {@code GameRtpCalibrationHarness} measures its per-spin
+     * sigma at 5.05x against Aztec Fire's 3.80x, because a ways win pays several symbols at once. That
+     * puts it near 0.18pp at this horizon - still ~3.4 sigma inside tolerance, and the reason to check
+     * the harness's reported SE before adding a game rather than assuming this horizon covers it.
+     *
      * <p>If you tighten {@link #TOLERANCE}, re-measure the spread first - do not guess.
      */
     private static final long BASE_SPINS = 8_000_000L;
@@ -70,7 +80,7 @@ class RtpSimulationVerificationTest {
     }
 
     @ParameterizedTest(name = "{0} base-game RTP converges to declared target")
-    @ValueSource(strings = {"aztec-fire", "frost-crown", "inferno-riches"})
+    @ValueSource(strings = {"aztec-fire", "frost-crown", "inferno-riches", "jade-tiger"})
     void baseGameRtpConvergesToDeclaredTarget(String gameId) {
         SlotMathLoader loader = new SlotMathLoader();
         SlotMathDefinition math = loader.load(gameId, MATH_VERSION).math();

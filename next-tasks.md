@@ -1,63 +1,272 @@
-Your tech stack (Spring Boot, PostgreSQL, Redis, and HTML/CSS/JS) is excellent for iGaming because it emphasizes low-latency state management (Redis) and transactional integrity (Postgres). [1, 2, 3, 4, 5] 
-In the highly regulated, high-concurrency world of global iGaming, market leaders differentiate themselves through real-time engagement and extreme platform reliability. Here is how to apply industry standards to your specific architecture. [6, 7] 
-------------------------------
-## 1. Top 5 "Must-Have" Industry Standard Features
-To compete globally, your slot platform must offer these engagement and operational baselines:
+# Velocity RGS — Next Tasks
 
-* Multi-Level & Community Jackpots: Players expect progressives (Mini, Minor, Major, Mega). Market leaders feature "Community Jackpots" where if one player hits the Mega, everyone actively spinning at that moment gets a share of a secondary pool. [5, 8] 
-* Real-Time Promotional Tournaments: In-game live leaderboards where players earn points per spin or per multiplier win. This drives massive retention during peak hours.
-* Bonus Buy & Feature Drop: Giving players the option to bypass the base game by paying a premium (e.g., 100x the bet) to instantly trigger the free spins or bonus round.
-* Session State Resiliency (Crash Protection): If a player's browser crashes mid-spin, the state must recover seamlessly. When they log back in, the game must either replay the spin or immediately display the outcome and credit their wallet.
-* Responsible Gambling (RG) Hard-Locks: Regulatory frameworks (like MGA or UKGC) dictate mandatory, real-time feature limits. You need instant session timers, reality checks (pop-ups every 60 minutes), and self-exclusion buttons that sever active connection tokens immediately. [9] 
+Derived from reading `src/` at commit `aced129`, not from generic iGaming market advice.
 
-------------------------------
-## 2. 3 Emerging, Cutting-Edge Features for a Global Edge
+**Scope:** demo-money only. No real money, no operator integration, no production release, no
+target jurisdiction. The goal is a **solid demo-money platform that is genuinely mature** —
+broad mechanics, real features, nothing half-built.
 
-* Streamer-Mode & Social Bet-Sharing: Twitch and Kick slot streamers dominate acquisition. Build a "Share Bet Replay" feature that generates a unique link or lightweight video snippet of a massive win, allowing users to post their exact winning spin sequence directly to social media. [10] 
-* AI-Driven Micro-Bonusing: Move away from static generic bonuses. Integrate real-time personalization engines. If a player has a bad run of 10 dead spins, an automated trigger awards them 5 free spins or a "lucky multiplier" on their next spin to combat churn. [10, 11] 
-* Crypto/Fiat Omnichannel Wallets: Global players demand fluid, instant-payment rails. Seamlessly switching between a player's USDT/BTC balance and traditional fiat within the same game UI without forcing a page reload is a massive edge. [6] 
+That scope is doing a lot of work below. It kills most of what a standard iGaming checklist
+would tell you to build (see §5), and it promotes the things that were previously blocked on
+having an operator. **In demo mode you are the operator** — so jackpots, tournaments and
+promos stop being blocked and start being the point.
 
-------------------------------
-## 3. Tech Stack Review & Critical Bottlenecks
-While your core choices are solid, standard web architectures will break under high-concurrency iGaming loads unless configured correctly. [7] 
-## ⚠️ Frontend: HTML/CSS/JS (The Animation Bottleneck)
+---
 
-* The Issue: Raw JS DOM manipulation or basic CSS transitions will lag, stutter, or desynchronize when rendering multi-line slot animations, cascading reels, or particle effects.
-* The Fix: You need a dedicated, canvas-based rendering engine. Implement PixiJS or Phaser within your JS environment. Keep the core HTML/CSS only for wrapper elements (like menus or balance displays). [12] 
+## What "mature" means here
 
-## ⚠️ Networking: HTTP REST vs. WebSockets
+Not compliance. Not scale. For a demo-money RGS, maturity is two things:
 
-* The Issue: Polishing HTTP requests (/spin) for every single play adds massive overhead and ruins the "fast game" feel.
-* The Fix: Use Spring Boot's native STOMP over WebSockets. Establish a persistent connection upon game launch. Spin requests, RNG results, and wallet updates should stream as compressed JSON binaries over a single socket channel. [7, 13] 
+1. **Breadth of what the engine can express.** A slot platform is judged on mechanic
+   coverage. This is the biggest gap in the repo and §1 is entirely about it.
+2. **Depth of player-facing features.** Jackpots, tournaments, promos, shareable wins — the
+   things that make it read as a product rather than a math server with a test harness.
 
-## ⚠️ Database: Postgres Lock Contention (The Wallet Nightmare)
+### The finding that reorders everything
 
-* The Issue: If a player hits a fast-play button (spinning 3 times a second), writing every single win/loss directly to a users table balance column in PostgreSQL will cause severe write-locking issues, slowing down the database to a crawl.
-* The Fix: Treat Redis as the single source of truth for active sessions and live wallets.
-1. Read the player's balance from Postgres on login.
-   2. Load and mutate that balance strictly inside Redis during gameplay via fast atomic operations (DECRBY / INCRBY).
-   3. Offload the spin history and balance syncing asynchronously to Postgres using a message queue (Spring Kafka or RabbitMQ) to write to the permanent audit log without blocking the game thread. [1, 2, 4, 14, 15] 
+**You have one slot mechanic wearing three skins.**
 
-## ⚠️ Security: Client-Side RNG Manipulation
+`aztec-fire`, `frost-crown` and `inferno-riches` differ only in grid size (4/5/6 reels),
+paytable, reel strips, volatility tuning, and theme. All three share an identical symbol
+taxonomy (A/K/Q/J + themed) and all three run the same
+`ReelEvaluator.evaluate(int[][] matrix, bet, math) → EvaluationResult` — a single-shot payline
+scan. A grep across `slot/` and `games/` returns **zero** hits for cascade, tumble, avalanche,
+ways-to-win, cluster, Megaways, hold-and-spin, respin, and expanding/sticky/walking wilds.
 
-* The Issue: Because your frontend uses open JS, advanced players can attempt to reverse-engineer or manipulate client-side logic.
-* The Fix: Your frontend must be entirely dumb and visual. The JS should simply send a SPIN signal. The Spring Boot backend must execute the cryptographically secure Random Number Generator (using SecureRandom or an integration with a Hardware Security Module), determine the reel stop positions, calculate the payout, update Redis, and pass only the visual outcome back to the UI. [2, 12, 13, 16] 
+What *is* built is good and worth keeping in view: wilds, scatters, multipliers, free spins
+with retrigger, bonus buy with a policy service, pick & collect, power bet, deterministic
+replay, and an RTP simulator.
 
-If you would like to move forward, tell me: Are you using plain WebSockets or REST APIs for the spin actions right now, and do you have a Message Queue (like Kafka) implemented for your transactional logs?
+But three games on one evaluator is a **catalog**, not a **platform**. Adding a fourth
+payline game with a new theme adds nothing architecturally. Adding a second *evaluation model*
+doubles what the engine can express. That is where the maturity is.
 
-[1] [https://medium.com](https://medium.com/@nageshadhavbncoe/redis-with-nestjs-prisma-and-postgresql-a-production-ready-backend-example-134abe1e167e)
-[2] [https://softwareengineering.stackexchange.com](https://softwareengineering.stackexchange.com/questions/459136/system-design-for-low-latency-reliable-online-chess-game)
-[3] [https://medium.com](https://medium.com/@skisly_darwinapps.com/12-tech-stacks-that-actually-matter-in-2026-and-how-to-pick-yours-c87962f7c498)
-[4] [https://redis.io](https://redis.io/tutorials/matchmaking-and-game-session-state-with-redis/)
-[5] [https://webandcrafts.com](https://webandcrafts.com/blog/tech-stacks)
-[6] [https://igpgaming.com](https://igpgaming.com/spotlight/igaming-platform-trends-2026/)
-[7] [https://www.linkedin.com](https://www.linkedin.com/pulse/backend-architecture-high-performance-gambling-when-stakes-askerov-lybne)
-[8] [https://www.youtube.com](https://www.youtube.com/watch?v=cxWp0nYwqow&t=655)
-[9] [https://usa.inquirer.net](https://usa.inquirer.net/202933/why-igaming-consolidation-is-accelerating-in-2026)
-[10] [https://www.webopedia.com](https://www.webopedia.com/news/markets/best-igaming-trends-2026/)
-[11] [https://www.gammastack.com](https://www.gammastack.com/blog/igaming-platform-trends/)
-[12] [https://www.entrans.ai](https://www.entrans.ai/blog/slot-game-development-guide)
-[13] [https://www.alxafrica.com](https://www.alxafrica.com/building-the-backend-of-luck-how-online-casino-platforms-handle-real-time-gameplay/)
-[14] [https://www.wildnetedge.com](https://www.wildnetedge.com/blogs/redis-vs-postgresql-which-database-serves-better-for-speed)
-[15] [https://www.linkedin.com](https://www.linkedin.com/pulse/expert-insights-how-choose-right-tech-stack-your-software-eadoc)
-[16] [https://www.linkedin.com](https://www.linkedin.com/posts/nunnadineshkumar_webdevelopment-mernstack-students-activity-7388794179923058690-KIGa)
+---
+
+## §0 — Prerequisite: RTP regression in CI
+
+**Do this first. It gates all of §1.**
+
+`RtpSimulationService` exists and the `rtp` Maven profile already isolates the slow
+statistical tests — but `test.excludedGroups` defaults to `slow`, so **RTP convergence never
+runs in CI**. Every mechanic in §1 changes RTP math substantially; cascades in particular make
+the effective RTP wildly non-obvious. Adding them without a regression net means shipping
+broken games and not finding out.
+
+- [ ] Scheduled CI job (nightly, not per-PR — these are slow by design) running `mvn -Prtp test`.
+- [ ] Assert measured RTP per game converges within tolerance of its declared value; fail the build on drift.
+- [ ] Report measured RTP, hit frequency, and max-win distribution per game as a build artifact.
+- [ ] Extend the simulator to cover roulette and blackjack too — they have no equivalent net today.
+
+**Acceptance:** deliberately breaking a paytable turns the nightly build red.
+
+---
+
+## §1 — Engine breadth (highest value)
+
+Ordered by ratio of perceived-maturity to effort.
+
+### 1.1 Ways-to-win evaluator (243 / 1024 ways)
+The cheapest possible win: **same matrix, same reel strips, same RNG, different evaluator.**
+No new persistence, no client rework beyond win presentation. It is the single highest
+leverage-to-effort item in the repo.
+
+`ReelEvaluator` is already cleanly separated — `evaluate(matrix, bet, math)` takes the grid
+and returns wins. Ways-to-win is a sibling implementation, not a rewrite.
+
+- [ ] Extract a `WinEvaluator` interface; make the current payline logic one implementation.
+- [ ] Add a ways-to-win implementation (adjacent-reel symbol counting, left-to-right).
+- [ ] Select the model in game JSON (`"winModel": "paylines" | "ways"`); `Payline`/`PayTable` config becomes model-specific.
+- [ ] One new game config exercising it — no new engine code should be needed to ship it.
+
+### 1.2 Cascading / tumbling reels
+**The dominant modern slot mechanic** (Sweet Bonanza, Gates of Olympus). Its absence is the
+most conspicuous thing about the catalog, and it is the architecturally significant one.
+
+The engine is single-shot today: generate grid → evaluate once → return `EvaluationResult`.
+Cascades need winning symbols removed, the grid refilled from the strips, and re-evaluation in
+a loop until no wins — with a step multiplier that typically climbs per cascade.
+
+This touches more than the evaluator:
+
+- [ ] `EvaluationResult` becomes multi-step (`List<CascadeStep>`, each with its own grid, wins, and multiplier). Today it is a flat `(totalWin, winLines, reasonCodes)` record.
+- [ ] `GridGenerationEngine` gains refill generation — **refills must draw through the same `RngDrawSink`**, or deterministic replay breaks. This is the correctness-critical part.
+- [ ] `game_round.matrix` / `stop_positions` JSONB must persist the full cascade sequence, not a single grid. Verify `audit/replay/` reconstructs a cascade round bit-exact.
+- [ ] Per-cascade progressive multiplier in game config.
+- [ ] Client animates steps sequentially (`slot.js` renders one grid today).
+
+**Acceptance:** a cascade round replays bit-exact from persisted draws. That test is the whole
+point of the replay infrastructure — this is what it was built for.
+
+**Do not start before §0 lands.** Cascade RTP is not hand-calculable; you need the simulator.
+
+### 1.3 Hold & Spin / respin bonus
+The other dominant modern mechanic (Lightning Link style), and it is **the natural carrier for
+jackpots** (§2) — collect enough coin symbols, win a tier. Build after §2 so they land
+together, or design the two in one pass.
+
+- [ ] Respin state in the FSM — `SessionStateMachine` already models free spins, so the shape exists.
+- [ ] Sticky symbol accumulation persisted across respins (`active_feature_payload` JSONB already exists on `GameSession`).
+- [ ] Reset-on-win respin counter; jackpot award on full-grid.
+
+### 1.4 Symbol-behaviour mechanics
+Cheap once §1.1's evaluator seam exists. Batch them.
+
+- [ ] Expanding wilds, sticky wilds, walking wilds (config-driven per game).
+- [ ] Symbol upgrade / collection during free spins.
+- [ ] Win-both-ways (trivial once the evaluator is pluggable).
+
+---
+
+## §2 — Jackpots
+
+**Previously blocked on an operator. In demo mode, unblocked — and it is the single most
+recognizable "mature casino platform" feature.** Cross-game progressives (Mini/Minor/Major/
+Mega) shared across all three slots.
+
+Demo money makes this genuinely safe to build: the exactly-once award problem is real, but
+getting it wrong costs a reset, not a chargeback. That is exactly the kind of hard feature
+worth building while mistakes are free.
+
+- [ ] `jackpot_pool` table (Postgres as source of record; Redis as a read cache for the live ticker only — **not** the pool of record).
+- [ ] Contribution atomic with the bet debit, inside the existing `@Transactional` boundary in `SlotEngineService.spin()`.
+- [ ] Seed values, contribution rate, and award rules per tier in config; per-game contribution overrides.
+- [ ] Exactly-once award — the `Idempotency-Key` infrastructure already gives you the mechanism; use it.
+- [ ] `jackpot_win` audit rows + reconciliation coverage (`ReconciliationJob` will otherwise flag jackpot credits as unexplained).
+- [ ] Live pool ticker in the lobby — this is most of the visual payoff.
+
+**Community jackpot** (Mega hit shares a secondary pool with everyone spinning) is a genuine
+differentiator and demo mode is the ideal place to prototype it. Ship the four tiers first.
+
+---
+
+## §3 — Player-facing depth
+
+### 3.1 Share-a-win replay links
+**Best leverage-to-effort in the repo.** `audit/replay/` already reconstructs any round
+bit-exact from persisted draws, and `history.html` exists. This is a signed-URL and
+presentation job, not engine work — you have already paid for the hard part.
+
+- [ ] Signed, expiring public replay URL for a single round.
+- [ ] Public replay view rendering the round from persisted draws (cascades make this much more fun to watch — sequence with §1.2).
+- [ ] Scope the token to one round so it cannot enumerate other players' history.
+
+### 3.2 Tournaments and leaderboards
+Big, visible, demoable, and no longer blocked. This is also the one feature that would justify
+a push transport — **for leaderboard updates, not for spins.**
+
+- [ ] Tournament definition, opt-in, point accrual off the existing round stream.
+- [ ] Leaderboard in Redis sorted sets, settled to Postgres.
+- [ ] **SSE, not WebSockets.** A leaderboard is one-way; SSE gets you push without a STOMP dependency or touching the spin path.
+- [ ] Prize pools awarded in demo currency.
+
+### 3.3 Bonus / promo engine
+Nothing like this exists. It is the substrate for free-spin grants, welcome offers, and
+(eventually) the micro-bonusing idea — which needs the RG seam (§4.2) before it is defensible
+even in demo, since "award free spins to a losing player" is the exact pattern to be careful
+with.
+
+- [ ] Grantable free-spin awards independent of an in-game trigger (`remaining_free_spins` already exists on `GameSession` — the state is there, the grant path is not).
+- [ ] Bonus definitions, eligibility, expiry.
+- [ ] Wagering-requirement tracking (a genuine maturity signal, and demo money makes it safe to get wrong).
+
+---
+
+## §4 — The joints
+
+Quoted from the earlier review: *"there's no tenant column, no RG seam, and a wallet that
+structurally can't hold two currencies. The polish is running ahead of the joints."*
+
+Two of those three still hold under demo-only scope. **One does not, and I am dropping it —
+see 4.3.**
+
+### 4.1 The wallet is structurally single-currency per player
+`V2__wallet_balance.sql` declares `PRIMARY KEY (player_id)` with `currency` as a plain column,
+and `InternalWalletService.authenticate` throws `CURRENCY_MISMATCH` if the JWT currency differs
+from the stored row. **A player can hold exactly one currency, permanently.**
+
+Under demo scope this stops being a compliance concern and becomes **a feature**: a demo that
+switches between EUR/USD/GBP wallets is a better demo, and demo mode auto-seeds balances
+(`WalletDemoSeeder`) so multi-currency costs nothing to populate. It also happens to be a
+`PRIMARY KEY` change — free at zero rows, a data migration later.
+
+- [ ] Migration to `PRIMARY KEY (player_id, currency)`.
+- [ ] Audit every `balanceRepository.findById(playerId)` call site — each silently assumes one row and **the compiler will not catch it**. This is the actual work.
+- [ ] Seed multiple currency wallets per demo player; currency switcher in the lobby.
+- [ ] Keep `CURRENCY_MISMATCH` for round-level mismatch (bet currency ≠ session currency) — that check is correct.
+
+### 4.2 Cut the RG seam, and build RG as a product feature
+There is no point in the spin path where a player-level policy check could go.
+
+Reframed for demo scope: **RG here is not compliance, it is a maturity signal.** A demo that
+shows session timers, reality checks, loss limits and cool-off reads as a serious platform.
+And with no jurisdiction, you are free to build a sensible generic ruleset rather than guessing
+at MGA vs UKGC specifics — the seam is jurisdiction-neutral, so a real ruleset drops in later
+without touching the money path.
+
+**The pattern already exists in your own code.** `buyFeature()` is `@Transactional` and calls
+`BonusBuyPolicyService.validate(session, balance, betSize, jurisdiction)` inside the boundary,
+with `jurisdiction` threaded from the controller. RG needs that exact shape on `spin()` /
+`deal()` / `action()`.
+
+- [ ] `rg/` package with a policy interface invoked inside the existing `@Transactional` boundary of each entry point, mirroring `BonusBuyPolicyService`.
+- [ ] `RG_LIMIT_EXCEEDED` / `RG_SELF_EXCLUDED` in `common/error/ErrorCode`; FSM withholds `availableActions`.
+- [ ] Demo-able ruleset: session duration limit, loss limit, wager limit, reality-check interval, cool-off.
+- [ ] Self-exclusion needs token severing — a **Redis `jti` denylist** is enough here. Full asymmetric signing / JWKS is operator-integration work and stays out (§5).
+- [ ] Player-facing RG panel in the lobby. Half the value of this feature is that it is visible.
+
+### 4.3 Dropped: the `operator_id` / tenant column
+I flagged this earlier and **I am withdrawing it under the new scope.** It was justified by
+"you'll onboard a second operator eventually" — and with operator integration explicitly out,
+that is speculative generality: a column with exactly one value, forever, that every query has
+to carry.
+
+The multi-currency PK (4.1) is *not* the same class, despite my having grouped them before —
+it is exercised by a real demo feature on day one. The tenant column would not be exercised at
+all.
+
+Revisit if an operator ever becomes real. Until then it is dead weight.
+
+---
+
+## §5 — Explicitly out of scope
+
+Not backlog. **Deliberately not building**, so nobody re-raises them:
+
+| Item | Why not |
+|---|---|
+| Operator wallet resilience — retry, circuit breaker, pending-intent, timeout sweeper | `OperatorWalletGateway` is dead code under `wallet.mode=internal`. Operator integration is out. |
+| Fail-closed `rgs.mode` default | We are deliberately staying in demo. The default is now correct. |
+| Asymmetric JWT signing, JWKS, key rotation | Single-party demo. HS256 is fine. (Redis `jti` denylist for self-exclusion is in — see 4.2.) |
+| RNG certification evidence, entropy/reseed policy | No jurisdiction. Draws are already persisted, which is the hard part. §0 covers the correctness need. |
+| `game_round` partitioning / archival | No volume. Do not design for unobserved load. |
+| Reconciliation distributed lock (ShedLock) | Single instance. Revisit only if replicas appear. |
+| Rate limiting | No real traffic, no abuse surface. Add only if the demo gets hosted publicly. |
+| Real-money payments, crypto/fiat, AML/KYC | Out by definition. |
+| `be-requirements.md` restoration | **Deleted on purpose.** The README's dead links to it, `RUNNING_LOCALLY.md` and `CHANGELOG.md` are now removed (§6). |
+
+---
+
+## §6 — Hygiene
+
+- [x] Remove the dead `README.md` links (`be-requirements.md`, `RUNNING_LOCALLY.md`, `CHANGELOG.md`) — all three deleted, README still advertised them. **Done.**
+- [x] Fix README inconsistencies: `GET /api/v1/wallet/*` was wrong (only `/balance` is a GET; authenticate/debit/credit/rollback are POST), same for `/api/v1/admin/*` (set-balance and simulator/run are POST). `mvn -B verify` was described as running "all tests" while `test.excludedGroups` defaults to `slow`. **Done.**
+- [ ] Optional: generate `docs/openapi.yaml` via the existing `-Popenapi` profile (`skip.openapi.gen` defaults `true`). Nothing references it today — springdoc already serves live docs at `/swagger-ui.html` in demo mode, so this is only worth doing if a checked-in spec is wanted.
+
+---
+
+## Suggested order
+
+1. **§0 — RTP regression in CI.** Gates everything else. You cannot safely add mechanics without it, and it is the difference between a platform and three tuned games you are afraid to touch.
+2. **§1.1 — ways-to-win evaluator.** Cheapest real maturity gain; establishes the evaluator seam that §1.4 needs.
+3. **§2 — jackpots.** Biggest visible payoff, and demo money makes the hard part safe to get wrong.
+4. **§1.2 — cascades.** The big one. Do it after §2 so the replay/persistence rework happens once, with jackpot rounds already in the schema.
+5. **§3.1 — share-a-win links.** Cheap, and far more compelling once cascades exist to watch.
+6. **§4.1 + §4.2 — multi-currency, RG seam.** Both are visible demo features, not just joints.
+7. **§1.3 — hold & spin**, carrying jackpot tiers from §2.
+8. **§3.2 — tournaments**, then **§3.3 — promo engine**.
+9. **§6** whenever.
+
+**The one thing to keep checking:** every item above should either broaden what the engine can
+express or show up on screen. This codebase's existing failure mode is polish running ahead of
+product — a fourth payline reskin or a fifth audit report would be exactly that.

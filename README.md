@@ -73,10 +73,9 @@ lives at the top of the package tree; each game category has its own sub-package
 ```
 velocity-rgs/
 ├── docker-compose.yml          # Postgres 16 + Redis 7 (local infra)
-├── RUNNING_LOCALLY.md          # Step-by-step local setup guide
+├── Dockerfile
 ├── README.md
-├── CHANGELOG.md                # Milestone history
-├── be-requirements.md          # Full architectural blueprint (normative)
+├── next-tasks.md               # Prioritised roadmap
 ├── pom.xml
 └── src/
     ├── main/
@@ -116,9 +115,12 @@ POST /api/v1/roulette/{init,spin}
 
 POST /api/v1/blackjack/{init,deal,action}            # stateful: round state persisted between calls
 
-GET  /api/v1/wallet/*
+GET  /api/v1/wallet/balance
+POST /api/v1/wallet/{authenticate,debit,credit,rollback}
+
 POST /api/v1/dev/token                               # demo mode
-GET  /api/v1/admin/*                                  # demo mode: balance, sessions, rounds, replay, simulator
+GET  /api/v1/admin/*                                 # demo mode: sessions, rounds, replay
+POST /api/v1/admin/*                                 # demo mode: set balance, run simulator
 ```
 
 ---
@@ -127,7 +129,8 @@ GET  /api/v1/admin/*                                  # demo mode: balance, sess
 
 ```bash
 docker compose up -d   # Postgres 16 + Redis 7
-mvn -B verify          # compile + all tests (Testcontainers Postgres + Redis)
+mvn -B verify          # compile + tests (Testcontainers Postgres + Redis)
+mvn -Prtp test         # slow statistical tests (RTP convergence) - excluded from `verify` by default
 mvn -B package         # build runnable jar
 mvn spring-boot:run    # run locally (demo mode) → http://localhost:8080/
 ```

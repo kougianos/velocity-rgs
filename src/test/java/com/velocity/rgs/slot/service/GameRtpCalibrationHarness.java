@@ -52,7 +52,7 @@ class GameRtpCalibrationHarness {
     private final PickCollectEngine pickEngine = new PickCollectEngine();
 
     @ParameterizedTest(name = "calibrate {0}")
-    @ValueSource(strings = {"frost-crown", "aztec-fire", "inferno-riches"})
+    @ValueSource(strings = {"frost-crown", "aztec-fire", "inferno-riches", "jade-tiger"})
     void calibrate(String gameId) {
         SlotMathDefinition math = new SlotMathLoader().load(gameId, MATH_VERSION).math();
 

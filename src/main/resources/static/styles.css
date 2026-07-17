@@ -676,6 +676,16 @@ body[data-game="frost-crown"] .sym-8 { background: #00838f; }
 body[data-game="frost-crown"] .sym-9 { background: linear-gradient(135deg, #b3e5fc, #4fc3f7); color: #06324a; }
 body[data-game="frost-crown"] .sym-12 { background: linear-gradient(135deg, #5e35b1, #1e88e5); }
 
+body[data-game="jade-tiger"] {
+  --accent: #10b981;
+  --accent-2: #047857;
+  background: radial-gradient(circle at top, #0b2620 0%, #05120f 60%);
+}
+body[data-game="jade-tiger"] .sym-7 { background: #b45309; }
+body[data-game="jade-tiger"] .sym-8 { background: #9d174d; }
+body[data-game="jade-tiger"] .sym-9 { background: linear-gradient(135deg, #6ee7b7, #10b981); color: #06281f; }
+body[data-game="jade-tiger"] .sym-12 { background: linear-gradient(135deg, #84cc16, #15803d); }
+
 body[data-game="inferno-riches"] {
   --accent: #ff5722;
   --accent-2: #d84315;
@@ -1183,6 +1193,7 @@ body.history-page {
   --vx-inferno: #FF5A2C;
   --vx-aztec: #F5A524;
   --vx-frost: #38BDF8;
+  --vx-jade: #10B981;
   --vx-emerald: #22CE7D;
   --vx-violet: #8B6CFF;
 

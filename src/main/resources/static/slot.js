@@ -21,6 +21,7 @@
 let GAME_ID = new URLSearchParams(window.location.search).get("game") || "";
 let META = null;     // the resolved game summary from /api/v1/games
 let SYMBOLS = {};     // { symbolId: { glyph, name } }
+let WILD_SYMBOL_ID;   // used to highlight wilds that substituted into a ways win
 let PAYLINES = {};    // { lineId: [[row, col], …] } used for win highlighting
 let ROWS = 0;
 let COLS = 0;
@@ -54,6 +55,11 @@ function applyGameConfig(game) {
   FILLER_SYMBOL_IDS = Object.keys(SYMBOLS)
     .map(Number)
     .filter((id) => !/wild|scatter/i.test((SYMBOLS[id] && SYMBOLS[id].name) || ""));
+  // Ways wins name a symbol rather than a line, so highlighting them means finding the wilds that
+  // stood in for it. Identified by name, the same convention FILLER_SYMBOL_IDS already uses.
+  WILD_SYMBOL_ID = Object.keys(SYMBOLS)
+    .map(Number)
+    .find((id) => /wild/i.test((SYMBOLS[id] && SYMBOLS[id].name) || ""));
 }
 
 const state = {
@@ -263,12 +269,28 @@ function paintCell(r, c, id) {
   cell.innerHTML = `<span>${meta.glyph}</span><small>${meta.name}</small>`;
 }
 
-/** Toggle the gold win highlight on the positions covered by the given win lines. */
-function applyWins(winLines = []) {
+/**
+ * Toggle the gold win highlight on the positions covered by the given wins.
+ *
+ * Payline wins name a line, so the cells are read straight off its coords. Ways wins have no line
+ * (`lineId` is null) - the run covers the leftmost `count` reels, so every cell on them holding the
+ * symbol, or a wild standing in for it, is part of the win.
+ */
+function applyWins(winLines = [], matrix = null) {
   for (let r = 0; r < ROWS; r++)
     for (let c = 0; c < COLS; c++) gridCells[r][c].classList.remove("win");
   const wins = new Set();
   for (const w of winLines) {
+    if (w.lineId == null) {
+      if (!matrix) continue;
+      for (let c = 0; c < w.count && c < COLS; c++) {
+        for (let r = 0; r < ROWS; r++) {
+          const id = matrix[r][c];
+          if (id === w.symbolId || id === WILD_SYMBOL_ID) wins.add(`${r}:${c}`);
+        }
+      }
+      continue;
+    }
     const coords = PAYLINES[w.lineId];
     if (!coords) continue;
     for (let i = 0; i < w.count && i < coords.length; i++) {
@@ -284,7 +306,7 @@ function applyWins(winLines = []) {
 function renderMatrix(matrix, winLines = []) {
   for (let r = 0; r < ROWS; r++)
     for (let c = 0; c < COLS; c++) paintCell(r, c, matrix[r][c]);
-  applyWins(winLines);
+  applyWins(winLines, matrix);
 }
 
 /* ----------------------------------------------------------------- spin animation */
@@ -341,7 +363,11 @@ function renderWin(totalWin, winLines = []) {
     const chip = document.createElement("span");
     chip.className = "win-chip";
     const sym = SYMBOLS[w.symbolId];
-    chip.textContent = `Line ${w.lineId}: ${sym ? sym.name : w.symbolId} ×${w.count} → ${fmt(w.payout)}`;
+    const name = sym ? sym.name : w.symbolId;
+    // Ways wins have no line to name; they report how many of the grid's paths formed the run.
+    chip.textContent = w.lineId == null
+      ? `${name} ×${w.count} · ${w.ways} way${w.ways === 1 ? "" : "s"} → ${fmt(w.payout)}`
+      : `Line ${w.lineId}: ${name} ×${w.count} → ${fmt(w.payout)}`;
     els.winLines.appendChild(chip);
   }
 }

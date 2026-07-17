@@ -77,18 +77,42 @@ documented in the test so the next person does not silently re-introduce flake.
 
 Ordered by ratio of perceived-maturity to effort.
 
-### 1.1 Ways-to-win evaluator (243 / 1024 ways)
+### 1.1 Ways-to-win evaluator (243 / 1024 ways) — **DONE**
 The cheapest possible win: **same matrix, same reel strips, same RNG, different evaluator.**
-No new persistence, no client rework beyond win presentation. It is the single highest
-leverage-to-effort item in the repo.
 
-`ReelEvaluator` is already cleanly separated — `evaluate(matrix, bet, math)` takes the grid
-and returns wins. Ways-to-win is a sibling implementation, not a rewrite.
+**Done (commit 2 — the game):** **Jade Tiger**, a 3x5 / 243-ways game (`winModel: WAYS`), calibrated to
+96% and covered by the RTP guard.
 
-- [ ] Extract a `WinEvaluator` interface; make the current payline logic one implementation.
-- [ ] Add a ways-to-win implementation (adjacent-reel symbol counting, left-to-right).
-- [ ] Select the model in game JSON (`"winModel": "paylines" | "ways"`); `Payline`/`PayTable` config becomes model-specific.
-- [ ] One new game config exercising it — no new engine code should be needed to ship it.
+- [x] Hand-authored strips (symbols spread evenly rather than clumped — under ways, an accidental stack inflates per-reel hit counts and skews volatility). Wilds on reels 1–3 only; reels 0 and 4 are wild-free, mirroring `aztec-fire`, which **already had no wilds on reel 0** — the convention we enforced in commit 1 turned out to be the existing house style.
+- [x] Calibrated in **one pass**: the harness measured `L=153.45%, P=4.00% → s=0.5996`, and P (Pick & Collect) is independent of the pay table while free-spin wins scale linearly with it, so the scale lands directly. Guard result: **96.0240%, deviation 0.0240pp** — the tightest of the four.
+- [x] Added to `RtpSimulationVerificationTest` — ways now has statistical cover, not just unit tests. Guard runtime 9:04 → 13:28; workflow timeout raised 30 → 45 min.
+- [x] Client: ways wins highlight the cells on the matched reels holding the symbol or a substituting wild (wild found by name, the convention `FILLER_SYMBOL_IDS` already used), and the win chip reads `Tiger ×4 · 27 ways` instead of the "Line null" it would have shown. New `jade` theme + hue token.
+
+**A number worth keeping:** the real ways scale is **~7.3x** the payline coefficients, not the 12.15x (243/20) that the bet-split arithmetic suggests — because the average win hits ~1.7 ways. Not derivable on paper; the harness measured it.
+
+**Done (commit 1 — engine seam):**
+
+- [x] `WinEvaluator` interface (`model()` + `evaluate()`); `PaylineWinEvaluator` carries the original logic **verbatim**, `WaysWinEvaluator` is new. `ReelEvaluator` became the dispatcher and kept its name and no-arg constructor, so all four call sites (`SlotEngineService`, `ReplayService`, 3× `RtpSimulationService`) and every existing test compile untouched.
+- [x] `winModel` in the game JSON, defaulting to `PAYLINES` when absent — which is every game authored so far. Config validation rejects the incoherent combinations: `PAYLINES` with no paylines, `WAYS` with paylines.
+- [x] 11 unit tests covering ways counting, wild substitution, scatter breaks, multi-symbol wins, the cap, and both config rejections.
+- [x] **Verified no drift on the shipped games**: `mvn -Prtp test` green after the refactor (base deviations 0.128/0.029/0.054pp). This is exactly what §0 was built for — it turned "the refactor looks equivalent" into evidence.
+
+**Decisions worth knowing:**
+
+- **Ways = product of per-reel counts over the *matched* reels**, not enumeration of whole grid paths. Enumerating 5-reel paths counts a 3-reel run once per continuation, inflating a 2-way win to 18 — that is "243 paylines", not ways-to-win. Covered by `reelsBeyondTheRunDoNotMultiplyIt`.
+- **How wilds work under `WAYS`.** A wild-rich screen paying several symbols at once is *not* a defect — it is the point of a ways game. The single ambiguous case is a path made **entirely** of wilds: a wild belongs to every symbol's run simultaneously, so "wild substitutes for everything" and "wild pays as itself" cannot both hold without deciding what that path is worth. Resolving it exactly needs per-way inclusion-exclusion. Two config rules sidestep it instead, both enforced at load and both `WAYS`-only:
+  1. **No wilds on reel 0.** Runs are anchored on the leftmost reel, so this makes an all-wild run *structurally impossible* rather than merely disallowed, and bounds simultaneous wins to what reel 0 shows (≤ rows). It is also the common convention in real ways games.
+  2. **No wild pay table entries.** Rule 1 already makes a wild run unreachable, so such entries would be dead config — rejected rather than silently ignored.
+
+  `PAYLINES` keeps both wilds on reel 0 and their own pay table, which is what all three shipped games do; a line pays once, for the better of its two runs, so there is no overlap to resolve.
+
+  *Correction to an earlier draft of this file: I described wild-own-pay as causing "unbounded inflation calibration cannot absorb." That was overstated. The overlap needs a wild on every reel of the run at once, which is rare at normal wild density, and costs that one path up to 9x. Real, worth designing out — not catastrophic.*
+
+**Follow-ups this left open:**
+
+- [ ] **Jade Tiger has no bonus buy** (`bonusBuyOptions: []`), unlike the three payline games. Adding one needs its own calibration pass via `BonusBuyCalibrationHarness` plus a slot in `BonusBuyRtpVerificationTest`. Deliberately deferred to keep the ways work reviewable — the game is complete without it.
+- [ ] Optional: expose `winModel` on the catalog so the lobby can badge "243 Ways". Today the client infers ways from a null `lineId` and the spec sheet carries the text, which works but means the lobby can't distinguish the models.
+- [x] ~~Feed the scale into `.rgsgen_assemble.py`~~ — that generator was never committed and does not exist. `GameRtpCalibrationHarness`'s javadoc no longer points at it; game JSONs are hand-authored.
 
 ### 1.2 Cascading / tumbling reels
 **The dominant modern slot mechanic** (Sweet Bonanza, Gates of Olympus). Its absence is the
@@ -268,9 +292,9 @@ Not backlog. **Deliberately not building**, so nobody re-raises them:
 
 ## Suggested order
 
-1. **§0 — RTP regression in CI.** Gates everything else. You cannot safely add mechanics without it, and it is the difference between a platform and three tuned games you are afraid to touch.
-2. **§1.1 — ways-to-win evaluator.** Cheapest real maturity gain; establishes the evaluator seam that §1.4 needs.
-3. **§2 — jackpots.** Biggest visible payoff, and demo money makes the hard part safe to get wrong.
+1. ~~**§0 — RTP regression in CI.**~~ **Done.** Gated everything else, and paid for itself immediately: it is what proved the §1.1 refactor left the shipped games untouched, and it measured the ways scale that arithmetic got wrong.
+2. ~~**§1.1 — ways-to-win evaluator.**~~ **Done.** The engine now expresses two win models and the catalog is four slots across two mechanics rather than three skins on one. The `WinEvaluator` seam is what §1.4 builds on.
+3. **§2 — jackpots.** ← **next.** Biggest visible payoff, and demo money makes the hard part safe to get wrong.
 4. **§1.2 — cascades.** The big one. Do it after §2 so the replay/persistence rework happens once, with jackpot rounds already in the schema.
 5. **§3.1 — share-a-win links.** Cheap, and far more compelling once cascades exist to watch.
 6. **§4.1 + §4.2 — multi-currency, RG seam.** Both are visible demo features, not just joints.

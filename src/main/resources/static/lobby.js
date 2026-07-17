@@ -19,6 +19,7 @@ function hueFor(theme) {
     case "inferno": return "var(--vx-inferno)";
     case "fire": return "var(--vx-aztec)";
     case "frost": return "var(--vx-frost)";
+    case "jade": return "var(--vx-jade)";
     case "roulette": return "var(--vx-emerald)";
     case "blackjack": return "var(--vx-violet)";
     default: return "var(--vx-ignite)";

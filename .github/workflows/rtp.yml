@@ -63,7 +63,8 @@ jobs:
   guards:
     name: RTP convergence guards
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    # ~13.5 min locally with four games; GitHub's runners are slower, and each game added grows it.
+    timeout-minutes: 45
 
     steps:
       - name: Checkout

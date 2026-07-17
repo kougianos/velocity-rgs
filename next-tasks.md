@@ -77,8 +77,18 @@ documented in the test so the next person does not silently re-introduce flake.
 
 Ordered by ratio of perceived-maturity to effort.
 
-### 1.1 Ways-to-win evaluator (243 / 1024 ways) — **seam done, game pending**
+### 1.1 Ways-to-win evaluator (243 / 1024 ways) — **DONE**
 The cheapest possible win: **same matrix, same reel strips, same RNG, different evaluator.**
+
+**Done (commit 2 — the game):** **Jade Tiger**, a 3x5 / 243-ways game (`winModel: WAYS`), calibrated to
+96% and covered by the RTP guard.
+
+- [x] Hand-authored strips (symbols spread evenly rather than clumped — under ways, an accidental stack inflates per-reel hit counts and skews volatility). Wilds on reels 1–3 only; reels 0 and 4 are wild-free, mirroring `aztec-fire`, which **already had no wilds on reel 0** — the convention we enforced in commit 1 turned out to be the existing house style.
+- [x] Calibrated in **one pass**: the harness measured `L=153.45%, P=4.00% → s=0.5996`, and P (Pick & Collect) is independent of the pay table while free-spin wins scale linearly with it, so the scale lands directly. Guard result: **96.0240%, deviation 0.0240pp** — the tightest of the four.
+- [x] Added to `RtpSimulationVerificationTest` — ways now has statistical cover, not just unit tests. Guard runtime 9:04 → 13:28; workflow timeout raised 30 → 45 min.
+- [x] Client: ways wins highlight the cells on the matched reels holding the symbol or a substituting wild (wild found by name, the convention `FILLER_SYMBOL_IDS` already used), and the win chip reads `Tiger ×4 · 27 ways` instead of the "Line null" it would have shown. New `jade` theme + hue token.
+
+**A number worth keeping:** the real ways scale is **~7.3x** the payline coefficients, not the 12.15x (243/20) that the bet-split arithmetic suggests — because the average win hits ~1.7 ways. Not derivable on paper; the harness measured it.
 
 **Done (commit 1 — engine seam):**
 
@@ -98,11 +108,10 @@ The cheapest possible win: **same matrix, same reel strips, same RNG, different 
 
   *Correction to an earlier draft of this file: I described wild-own-pay as causing "unbounded inflation calibration cannot absorb." That was overstated. The overlap needs a wild on every reel of the run at once, which is rare at normal wild density, and costs that one path up to 9x. Real, worth designing out — not catastrophic.*
 
-**Remaining (commit 2 — the game):**
+**Follow-ups this left open:**
 
-- [ ] Hand-author a ways game (reel strips, pay table, symbols) and calibrate to 96% with `mvn -Pcalibrate test -Dtest=GameRtpCalibrationHarness`. Expect to iterate — Pick & Collect's contribution moves as the pay table moves. **Strip constraints:** no wilds on reel 0, no wild pay table entries (config rejects both). Wild density on reels 1+ is the main volatility lever, since it drives how often several symbols win at once.
-- [ ] Add it to `RtpSimulationVerificationTest`'s `@ValueSource` so the guard covers the ways path. **Until this lands, ways-to-win is proven by unit tests only, not statistically.**
-- [ ] Client rendering: `slot.js:272` looks up `PAYLINES[w.lineId]` and skips cleanly on a null (ways) id, so nothing breaks — but `slot.js:344` renders `Line ${w.lineId}`, which would read "Line null". Ways wins need cell-based highlighting and a "N ways" chip instead.
+- [ ] **Jade Tiger has no bonus buy** (`bonusBuyOptions: []`), unlike the three payline games. Adding one needs its own calibration pass via `BonusBuyCalibrationHarness` plus a slot in `BonusBuyRtpVerificationTest`. Deliberately deferred to keep the ways work reviewable — the game is complete without it.
+- [ ] Optional: expose `winModel` on the catalog so the lobby can badge "243 Ways". Today the client infers ways from a null `lineId` and the spec sheet carries the text, which works but means the lobby can't distinguish the models.
 - [x] ~~Feed the scale into `.rgsgen_assemble.py`~~ — that generator was never committed and does not exist. `GameRtpCalibrationHarness`'s javadoc no longer points at it; game JSONs are hand-authored.
 
 ### 1.2 Cascading / tumbling reels
@@ -283,9 +292,9 @@ Not backlog. **Deliberately not building**, so nobody re-raises them:
 
 ## Suggested order
 
-1. **§0 — RTP regression in CI.** Gates everything else. You cannot safely add mechanics without it, and it is the difference between a platform and three tuned games you are afraid to touch.
-2. **§1.1 — ways-to-win evaluator.** Cheapest real maturity gain; establishes the evaluator seam that §1.4 needs.
-3. **§2 — jackpots.** Biggest visible payoff, and demo money makes the hard part safe to get wrong.
+1. ~~**§0 — RTP regression in CI.**~~ **Done.** Gated everything else, and paid for itself immediately: it is what proved the §1.1 refactor left the shipped games untouched, and it measured the ways scale that arithmetic got wrong.
+2. ~~**§1.1 — ways-to-win evaluator.**~~ **Done.** The engine now expresses two win models and the catalog is four slots across two mechanics rather than three skins on one. The `WinEvaluator` seam is what §1.4 builds on.
+3. **§2 — jackpots.** ← **next.** Biggest visible payoff, and demo money makes the hard part safe to get wrong.
 4. **§1.2 — cascades.** The big one. Do it after §2 so the replay/persistence rework happens once, with jackpot rounds already in the schema.
 5. **§3.1 — share-a-win links.** Cheap, and far more compelling once cascades exist to watch.
 6. **§4.1 + §4.2 — multi-currency, RG seam.** Both are visible demo features, not just joints.

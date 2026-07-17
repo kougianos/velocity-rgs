@@ -24,8 +24,15 @@ import java.math.RoundingMode;
  * Design aid (not an assertion): for a freshly re-shaped game it measures the line+free-spins RTP
  * ({@code L}) with the <em>current</em> pay table and the standalone Pick &amp; Collect contribution
  * ({@code P}), using the real engine collaborators. The pay-table scale needed to land total base RTP
- * on the 96% target is then {@code s = (96 - P) / L}. Feed that {@code s} back into the JSON generator
- * ({@code .rgsgen_assemble.py}) and re-verify with {@link RtpSimulationVerificationTest}.
+ * on the 96% target is then {@code s = (96 - P) / L}.
+ *
+ * <p>Multiply every coefficient in the game's {@code payTable} by {@code s}, then re-verify with
+ * {@link RtpSimulationVerificationTest}. Expect to iterate: {@code P} shifts as the pay table moves, so
+ * one pass rarely lands it.
+ *
+ * <p>(Earlier revisions of this doc told you to feed {@code s} into a {@code .rgsgen_assemble.py}
+ * generator. That script is not in the repo and was never committed - the game JSONs are hand-authored.
+ * Do not go looking for it.)
  *
  * <p>Pure math, no Spring/Postgres. Tagged {@code slow} so it stays out of the default build. Run with:
  * <pre>{@code mvn -Pcalibrate test -Dtest=GameRtpCalibrationHarness}</pre>

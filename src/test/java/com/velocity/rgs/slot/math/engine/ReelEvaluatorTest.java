@@ -17,6 +17,7 @@ import com.velocity.rgs.slot.math.domain.ReelStrip;
 import com.velocity.rgs.slot.math.domain.ReelStripSet;
 import com.velocity.rgs.slot.math.domain.Symbol;
 import com.velocity.rgs.slot.math.domain.SymbolType;
+import com.velocity.rgs.slot.math.domain.WinModel;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
@@ -159,6 +160,7 @@ class ReelEvaluatorTest {
         return new SlotMathDefinition(
                 "test", "v1", new BigDecimal("96.0"),
                 new Grid(3, 5),
+                WinModel.PAYLINES,
                 symbols,
                 paylines,
                 payTable,

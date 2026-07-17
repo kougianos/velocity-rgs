@@ -77,18 +77,33 @@ documented in the test so the next person does not silently re-introduce flake.
 
 Ordered by ratio of perceived-maturity to effort.
 
-### 1.1 Ways-to-win evaluator (243 / 1024 ways)
+### 1.1 Ways-to-win evaluator (243 / 1024 ways) — **seam done, game pending**
 The cheapest possible win: **same matrix, same reel strips, same RNG, different evaluator.**
-No new persistence, no client rework beyond win presentation. It is the single highest
-leverage-to-effort item in the repo.
 
-`ReelEvaluator` is already cleanly separated — `evaluate(matrix, bet, math)` takes the grid
-and returns wins. Ways-to-win is a sibling implementation, not a rewrite.
+**Done (commit 1 — engine seam):**
 
-- [ ] Extract a `WinEvaluator` interface; make the current payline logic one implementation.
-- [ ] Add a ways-to-win implementation (adjacent-reel symbol counting, left-to-right).
-- [ ] Select the model in game JSON (`"winModel": "paylines" | "ways"`); `Payline`/`PayTable` config becomes model-specific.
-- [ ] One new game config exercising it — no new engine code should be needed to ship it.
+- [x] `WinEvaluator` interface (`model()` + `evaluate()`); `PaylineWinEvaluator` carries the original logic **verbatim**, `WaysWinEvaluator` is new. `ReelEvaluator` became the dispatcher and kept its name and no-arg constructor, so all four call sites (`SlotEngineService`, `ReplayService`, 3× `RtpSimulationService`) and every existing test compile untouched.
+- [x] `winModel` in the game JSON, defaulting to `PAYLINES` when absent — which is every game authored so far. Config validation rejects the incoherent combinations: `PAYLINES` with no paylines, `WAYS` with paylines.
+- [x] 11 unit tests covering ways counting, wild substitution, scatter breaks, multi-symbol wins, the cap, and both config rejections.
+- [x] **Verified no drift on the shipped games**: `mvn -Prtp test` green after the refactor (base deviations 0.128/0.029/0.054pp). This is exactly what §0 was built for — it turned "the refactor looks equivalent" into evidence.
+
+**Decisions worth knowing:**
+
+- **Ways = product of per-reel counts over the *matched* reels**, not enumeration of whole grid paths. Enumerating 5-reel paths counts a 3-reel run once per continuation, inflating a 2-way win to 18 — that is "243 paylines", not ways-to-win. Covered by `reelsBeyondTheRunDoNotMultiplyIt`.
+- **How wilds work under `WAYS`.** A wild-rich screen paying several symbols at once is *not* a defect — it is the point of a ways game. The single ambiguous case is a path made **entirely** of wilds: a wild belongs to every symbol's run simultaneously, so "wild substitutes for everything" and "wild pays as itself" cannot both hold without deciding what that path is worth. Resolving it exactly needs per-way inclusion-exclusion. Two config rules sidestep it instead, both enforced at load and both `WAYS`-only:
+  1. **No wilds on reel 0.** Runs are anchored on the leftmost reel, so this makes an all-wild run *structurally impossible* rather than merely disallowed, and bounds simultaneous wins to what reel 0 shows (≤ rows). It is also the common convention in real ways games.
+  2. **No wild pay table entries.** Rule 1 already makes a wild run unreachable, so such entries would be dead config — rejected rather than silently ignored.
+
+  `PAYLINES` keeps both wilds on reel 0 and their own pay table, which is what all three shipped games do; a line pays once, for the better of its two runs, so there is no overlap to resolve.
+
+  *Correction to an earlier draft of this file: I described wild-own-pay as causing "unbounded inflation calibration cannot absorb." That was overstated. The overlap needs a wild on every reel of the run at once, which is rare at normal wild density, and costs that one path up to 9x. Real, worth designing out — not catastrophic.*
+
+**Remaining (commit 2 — the game):**
+
+- [ ] Hand-author a ways game (reel strips, pay table, symbols) and calibrate to 96% with `mvn -Pcalibrate test -Dtest=GameRtpCalibrationHarness`. Expect to iterate — Pick & Collect's contribution moves as the pay table moves. **Strip constraints:** no wilds on reel 0, no wild pay table entries (config rejects both). Wild density on reels 1+ is the main volatility lever, since it drives how often several symbols win at once.
+- [ ] Add it to `RtpSimulationVerificationTest`'s `@ValueSource` so the guard covers the ways path. **Until this lands, ways-to-win is proven by unit tests only, not statistically.**
+- [ ] Client rendering: `slot.js:272` looks up `PAYLINES[w.lineId]` and skips cleanly on a null (ways) id, so nothing breaks — but `slot.js:344` renders `Line ${w.lineId}`, which would read "Line null". Ways wins need cell-based highlighting and a "N ways" chip instead.
+- [x] ~~Feed the scale into `.rgsgen_assemble.py`~~ — that generator was never committed and does not exist. `GameRtpCalibrationHarness`'s javadoc no longer points at it; game JSONs are hand-authored.
 
 ### 1.2 Cascading / tumbling reels
 **The dominant modern slot mechanic** (Sweet Bonanza, Gates of Olympus). Its absence is the

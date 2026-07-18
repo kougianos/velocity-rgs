@@ -34,11 +34,31 @@ class BonusBuyRtpVerificationTest {
 
     private static final String MATH_VERSION = "v1";
 
-    /** 1,000,000 bought features - enough to converge the high-volatility Inferno buy inside tolerance. */
-    private static final long BUYS = 1_000_000L;
+    /**
+     * 250,000 bought features.
+     *
+     * <p>Was 1,000,000, justified only by the assertion that it was "enough to converge the
+     * high-volatility Inferno buy" - never measured, unlike {@code BASE_SPINS} in
+     * {@link RtpSimulationVerificationTest}. Measuring it showed the horizon was ~4x oversized, and
+     * that mattered: at 1M this was the single most expensive test in the repo (833s of a 22-minute
+     * guard suite, more than the four 8M-spin base-game simulations combined).
+     *
+     * <p>Measured per-run sigma over 5 runs at this horizon: 0.073pp (aztec-fire), 0.155pp
+     * (frost-crown), 0.126pp (inferno-riches), 0.132pp (jade-tiger). The worst of those leaves 3.9
+     * sigma of headroom against the 0.6pp {@link #TOLERANCE} - roughly 0.04% chance of a spurious
+     * failure per run across all four games, matching the base-game guard's flake budget and clearing
+     * the >3.5 sigma bar {@code BASE_SPINS} was itself sized to.
+     *
+     * <p>Note the horizon only sharpens discrimination near the tolerance boundary; it does not move
+     * the boundary. If you cut it further, re-measure - do not extrapolate past what was sampled.
+     *
+     * <p>Overridable via {@code -Drtp.buys}; the pom carries the same default and {@code -Psmoke} drops
+     * it to a fast pre-commit horizon with a correspondingly wider {@link #TOLERANCE}.
+     */
+    private static final long BUYS = Long.getLong("rtp.buys", 250_000L);
 
     /** Acceptable absolute deviation from the declared RTP, in percentage points. */
-    private static final BigDecimal TOLERANCE = new BigDecimal("0.6");
+    private static final BigDecimal TOLERANCE = new BigDecimal(System.getProperty("rtp.tolerance", "0.6"));
 
     private RtpSimulationService newService(String gameId, SlotMathDefinition math) {
         SlotMathRegistry registry = new SlotMathRegistry(Map.of(gameId + "@" + MATH_VERSION, math));

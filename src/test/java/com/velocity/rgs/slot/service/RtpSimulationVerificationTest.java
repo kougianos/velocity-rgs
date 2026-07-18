@@ -64,14 +64,17 @@ class RtpSimulationVerificationTest {
      * the harness's reported SE before adding a game rather than assuming this horizon covers it.
      *
      * <p>If you tighten {@link #TOLERANCE}, re-measure the spread first - do not guess.
+     *
+     * <p>Overridable via {@code -Drtp.baseSpins} (the pom carries the same default, and {@code -Psmoke}
+     * drops it to a fast pre-commit horizon with a correspondingly wider {@link #TOLERANCE}).
      */
-    private static final long BASE_SPINS = 8_000_000L;
+    private static final long BASE_SPINS = Long.getLong("rtp.baseSpins", 8_000_000L);
 
     /**
      * Acceptable absolute deviation from the declared RTP, in percentage points. See {@link #BASE_SPINS}
      * for why this value and the spin count have to be chosen together.
      */
-    private static final BigDecimal TOLERANCE = new BigDecimal("0.6");
+    private static final BigDecimal TOLERANCE = new BigDecimal(System.getProperty("rtp.tolerance", "0.6"));
 
     private RtpSimulationService newService(String gameId, SlotMathDefinition math) {
         SlotMathRegistry registry = new SlotMathRegistry(Map.of(gameId + "@" + MATH_VERSION, math));

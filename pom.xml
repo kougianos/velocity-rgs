@@ -38,6 +38,13 @@
              overriding these properties. -->
         <test.groups></test.groups>
         <test.excludedGroups>slow</test.excludedGroups>
+
+        <!-- Full-horizon defaults for the statistical guards. Sized from measured sigma - see the
+             javadoc on RtpSimulationVerificationTest.BASE_SPINS before changing either number, since
+             the horizon and the tolerance only make sense chosen together. -Psmoke overrides them. -->
+        <rtp.baseSpins>8000000</rtp.baseSpins>
+        <rtp.buys>250000</rtp.buys>
+        <rtp.tolerance>0.6</rtp.tolerance>
     </properties>
 
     <dependencies>
@@ -194,6 +201,14 @@
                 <configuration>
                     <groups>${test.groups}</groups>
                     <excludedGroups>${test.excludedGroups}</excludedGroups>
+                    <!-- Horizon and tolerance for the statistical guards. The same defaults are
+                         repeated as fallbacks in the test classes so an IDE run (no Maven) still
+                         works; -Psmoke overrides them for a fast pre-commit check. -->
+                    <systemPropertyVariables>
+                        <rtp.baseSpins>${rtp.baseSpins}</rtp.baseSpins>
+                        <rtp.buys>${rtp.buys}</rtp.buys>
+                        <rtp.tolerance>${rtp.tolerance}</rtp.tolerance>
+                    </systemPropertyVariables>
                 </configuration>
             </plugin>
             <plugin>
@@ -303,6 +318,22 @@
              measured constants you feed back into the game JSON, then re-verify with -Prtp.
              Deliberately kept out of CI: they cannot fail, so they carry no signal.
              Usage: mvn -Pcalibrate test [-Dtest=GameRtpCalibrationHarness] -->
+        <!-- Same guards, short horizon: a pre-commit sanity check, NOT a substitute for -Prtp.
+             At 200k spins sampling sigma is ~6x the full-horizon value (~0.7-0.9pp), so the tolerance
+             widens to 3pp to stay ~3.5 sigma clear of flake. That is wide enough to miss real drift of
+             a few tenths of a point, and narrow enough to catch the errors worth catching in seconds:
+             a mis-set freeSpinsWinMultiplier or a broken evaluator lands tens of points out, not
+             tenths. Usage: mvn -Psmoke test -->
+        <profile>
+            <id>smoke</id>
+            <properties>
+                <test.groups>slow</test.groups>
+                <test.excludedGroups>calibration</test.excludedGroups>
+                <rtp.baseSpins>200000</rtp.baseSpins>
+                <rtp.buys>25000</rtp.buys>
+                <rtp.tolerance>3.0</rtp.tolerance>
+            </properties>
+        </profile>
         <profile>
             <id>calibrate</id>
             <properties>

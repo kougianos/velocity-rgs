@@ -47,7 +47,7 @@ class BonusBuyRtpVerificationTest {
     }
 
     @ParameterizedTest(name = "{0} bonus-buy free-spins RTP converges to declared target")
-    @ValueSource(strings = {"aztec-fire", "frost-crown", "inferno-riches"})
+    @ValueSource(strings = {"aztec-fire", "frost-crown", "inferno-riches", "jade-tiger"})
     void bonusBuyFreeSpinsRtpConvergesToTarget(String gameId) {
         SlotMathLoader loader = new SlotMathLoader();
         SlotMathDefinition math = loader.load(gameId, MATH_VERSION).math();

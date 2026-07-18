@@ -1,5 +1,7 @@
 package com.velocity.rgs.slot.service;
 
+import com.velocity.rgs.common.error.ErrorCode;
+import com.velocity.rgs.common.error.RgsException;
 import com.velocity.rgs.slot.feature.pickcollect.PickCollectEngine;
 import com.velocity.rgs.slot.feature.pickcollect.PickCollectState;
 import com.velocity.rgs.slot.math.config.BonusBuyOption;
@@ -68,8 +70,11 @@ public class RtpSimulationService {
             simulatePowerBetSpin(math, newRng(), request.bet(), powerBet, freeSpinTriggers, pickEntries,
                     request.pickStrategy());
         }
-        for (long i = 0; i < request.spinsBonusBuyFreeSpins(); i++) {
-            simulateBonusBuyFreeSpins(math, newRng(), request.bet(), buyFs);
+        if (request.spinsBonusBuyFreeSpins() > 0) {
+            BonusBuyOption buyOption = freeSpinsBuyOption(math);
+            for (long i = 0; i < request.spinsBonusBuyFreeSpins(); i++) {
+                simulateBonusBuyFreeSpins(math, buyOption, newRng(), request.bet(), buyFs);
+            }
         }
 
         Map<String, RtpReport.Channel> channels = new LinkedHashMap<>();
@@ -144,9 +149,8 @@ public class RtpSimulationService {
         }
     }
 
-    private void simulateBonusBuyFreeSpins(SlotMathDefinition math, RandomNumberGenerator rng,
-                                           BigDecimal bet, Aggregator agg) {
-        BonusBuyOption option = freeSpinsBuyOption(math);
+    private void simulateBonusBuyFreeSpins(SlotMathDefinition math, BonusBuyOption option,
+                                           RandomNumberGenerator rng, BigDecimal bet, Aggregator agg) {
         BigDecimal cost = bet.multiply(option.costMultiplier());
         int spins = bonusBuyFreeSpins(math, option);
         BigDecimal win = simulateFreeSpins(math, rng, bet, spins)
@@ -154,12 +158,24 @@ public class RtpSimulationService {
         agg.record(cost, win);
     }
 
+    /**
+     * The game's purchasable free-spins option. Resolved once per run rather than per spin, and only
+     * when the caller actually asked for buy rounds - a game with no buy is still perfectly simulable
+     * on its base and power-bet channels.
+     *
+     * <p>Raises {@code BONUS_BUY_DISABLED} (409) rather than an unchecked exception: requesting a
+     * channel the game does not offer is a caller error, and letting it escape as an
+     * {@link IllegalStateException} had {@link com.velocity.rgs.common.error.GlobalExceptionHandler}
+     * report a 500. This mirrors the live spin path, which already fails this way in
+     * {@code SessionStateMachine.findBuyOption}.
+     */
     private BonusBuyOption freeSpinsBuyOption(SlotMathDefinition math) {
         return math.bonusBuyOptions().stream()
                 .filter(o -> o.buyType() == BonusBuyType.FREE_SPINS_BUY)
                 .findFirst()
-                .orElseThrow(() -> new IllegalStateException(
-                        "No bonus-buy option configured for " + BonusBuyType.FREE_SPINS_BUY));
+                .orElseThrow(() -> new RgsException(ErrorCode.BONUS_BUY_DISABLED,
+                        "Game " + math.gameId() + "@" + math.mathVersion() + " offers no "
+                                + BonusBuyType.FREE_SPINS_BUY + " option; request 0 bonus-buy spins for it"));
     }
 
     /**

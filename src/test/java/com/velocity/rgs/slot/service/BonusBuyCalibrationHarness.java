@@ -37,7 +37,7 @@ class BonusBuyCalibrationHarness {
 
     private static final String MATH_VERSION = "v1";
     private static final int BUY_SPINS = 12;            // industry-standard 10–15 spin feature
-    private static final long PLAYS = 1_000_000L;
+    private static final long PLAYS = Long.getLong("calibrate.plays", 1_000_000L);
     private static final BigDecimal BET = BigDecimal.ONE;
     private static final double TARGET_RTP = 0.96;
 
@@ -48,6 +48,7 @@ class BonusBuyCalibrationHarness {
     @CsvSource({
             "frost-crown,80",
             "aztec-fire,100",
+            "jade-tiger,125",
             "inferno-riches,150",
     })
     void calibrate(String gameId, int cost) {

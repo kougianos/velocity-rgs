@@ -869,7 +869,15 @@
     "powerBet": {
       "betMultiplier": 1.5
     },
-    "bonusBuyOptions": [],
+    "bonusBuyOptions": [
+      {
+        "buyType": "FREE_SPINS_BUY",
+        "costMultiplier": 125,
+        "freeSpinsWinMultiplier": 5.7812,
+        "targetState": "FREE_SPINS_AWAITING",
+        "initialFeaturePayload": { "freeSpinsAwarded": 12 }
+      }
+    ],
     "pickCollect": {
       "boardSize": 12,
       "completion": {

@@ -76,7 +76,6 @@ velocity-rgs/
 ├── docker-compose.yml          # Postgres 16 + Redis 7 (local infra)
 ├── Dockerfile
 ├── README.md
-├── next-tasks.md               # Prioritised roadmap
 ├── pom.xml
 └── src/
     ├── main/

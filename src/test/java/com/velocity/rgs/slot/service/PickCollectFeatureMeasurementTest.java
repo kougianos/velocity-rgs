@@ -32,7 +32,7 @@ class PickCollectFeatureMeasurementTest {
     private static final BigDecimal BET = BigDecimal.ONE;
 
     @ParameterizedTest(name = "{0} feature E[W]")
-    @ValueSource(strings = {"aztec-fire", "frost-crown", "inferno-riches"})
+    @ValueSource(strings = {"aztec-fire", "frost-crown", "inferno-riches", "jade-tiger"})
     void measureFeatureAverageWin(String gameId) {
         SlotMathDefinition math = new SlotMathLoader().load(gameId, "v1").math();
         PickCollectConfig cfg = math.pickCollect();

@@ -236,6 +236,100 @@ body {
 .win-banner.is-empty .win-label,
 .win-banner.is-empty .win-amount { color: var(--text-dim); }
 
+/* ===== Cascading reels ===== */
+/* Which tumble of the chain is paying, and at what multiplier. Only shown while a cascading
+   round animates — a conventional spin never mounts it. */
+.cascade-badge {
+  font-family: var(--mono, monospace);
+  font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase;
+  padding: 3px 10px; border-radius: 999px;
+  color: var(--gold); background: rgba(245, 197, 24, 0.14);
+  border: 1px solid rgba(245, 197, 24, 0.45);
+}
+/* The shatter: a winning cell flashes and collapses before the reel refills over it. Kept
+   short — the whole chain has to read as one spin, not as several. */
+.cell.clearing {
+  animation: cell-shatter 220ms ease-in forwards;
+}
+@keyframes cell-shatter {
+  0%   { transform: scale(1.04); opacity: 1; }
+  45%  { transform: scale(1.16); opacity: 1; box-shadow: 0 0 20px rgba(245, 197, 24, 0.85); }
+  100% { transform: scale(0.35) rotate(8deg); opacity: 0; }
+}
+/* Refilled cells fall in from above so the drop reads as gravity rather than a repaint. */
+.cell.dropping {
+  animation: cell-drop 260ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+@keyframes cell-drop {
+  0%   { transform: translateY(-58%); opacity: 0.15; }
+  100% { transform: translateY(0); opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cell.clearing, .cell.dropping { animation: none; }
+  .cell.clearing { opacity: 0; }
+}
+
+/* ===== Round replay (history page) ===== */
+.btn-replay { padding: 4px 10px; font-size: 12px; }
+.replay-row > td { padding: 0 !important; background: rgba(255, 255, 255, 0.02); }
+.replay-panel { padding: 14px 16px; }
+.replay-verdicts { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+.replay-steps { display: flex; flex-wrap: wrap; gap: 14px; }
+.replay-step {
+  padding: 10px; border-radius: 10px;
+  background: rgba(255, 255, 255, 0.03); border: 1px solid var(--border);
+}
+.replay-step-head {
+  font-family: var(--mono, monospace); font-size: 11px; letter-spacing: 0.06em;
+  text-transform: uppercase; color: var(--gold); margin-bottom: 7px;
+}
+.replay-step-draws {
+  font-family: var(--mono, monospace); font-size: 10px; color: var(--text-dim); margin-top: 7px;
+}
+.replay-grid { border-collapse: separate; border-spacing: 3px; }
+.replay-cell {
+  width: 26px; height: 26px; text-align: center;
+  font-family: var(--mono, monospace); font-size: 12px;
+  background: rgba(255, 255, 255, 0.05); border-radius: 5px; color: var(--text);
+}
+
+/* ===== Hold & Spin ===== */
+.respin-panel {
+  margin-top: 14px; padding: 12px 14px; border-radius: var(--radius);
+  background: rgba(245, 197, 24, 0.07); border: 1px solid rgba(245, 197, 24, 0.32);
+}
+.respin-head {
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px 18px;
+  font-family: var(--mono, monospace); font-size: 12px; color: var(--text-dim);
+}
+.respin-title {
+  font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--gold);
+}
+.respin-head strong { color: var(--text); font-size: 14px; font-variant-numeric: tabular-nums; }
+.respin-jackpots { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+/* One chip per configured tier. `reached` is server-computed from the live coin count, so the
+   ladder lights up exactly when the player has actually earned the tier. */
+.respin-jp {
+  padding: 5px 10px; border-radius: 8px; font-family: var(--mono, monospace); font-size: 11px;
+  background: rgba(255, 255, 255, 0.04); border: 1px solid var(--border); color: var(--text-dim);
+}
+.respin-jp.reached {
+  background: rgba(245, 197, 24, 0.18); border-color: var(--gold); color: var(--gold);
+  font-weight: 700;
+}
+.respin-jp .jp-mult { opacity: 0.8; margin-left: 5px; }
+/* A locked coin. Held cells never re-draw, so the lock is the whole visual story. */
+.cell.locked {
+  border-color: var(--gold);
+  background: rgba(245, 197, 24, 0.16);
+  box-shadow: inset 0 0 0 1px rgba(245, 197, 24, 0.4);
+}
+.cell .coin-value {
+  position: absolute; bottom: 3px; right: 5px;
+  font-family: var(--mono, monospace); font-size: 11px; font-weight: 700; color: var(--gold);
+}
+.cell.locked { position: relative; }
+
 /* ===== Controls ===== */
 .controls {
   display: flex;
@@ -1365,6 +1459,15 @@ body.lobby-page ::selection { background: rgba(255, 46, 126, 0.30); }
   font-family: var(--vx-mono); font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase;
   padding: 4px 9px; border-radius: 999px; color: #fff;
   background: rgba(6, 8, 14, 0.55); border: 1px solid rgba(255, 255, 255, 0.2); backdrop-filter: blur(4px);
+}
+/* Win-model pill (e.g. "243 Ways") — server-named via the catalog's winModelLabel. Mirrors the
+   volatility pill on the opposite corner so a ways game reads as one at a glance in the rail. */
+.vx-model {
+  position: absolute; top: 12px; left: 12px;
+  font-family: var(--vx-mono); font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase;
+  padding: 4px 9px; border-radius: 999px; color: #fff;
+  background: color-mix(in srgb, var(--vx-hue) 42%, rgba(6, 8, 14, 0.72));
+  border: 1px solid color-mix(in srgb, var(--vx-hue) 55%, transparent); backdrop-filter: blur(4px);
 }
 .vx-body { padding: 16px 17px 18px; display: flex; flex-direction: column; flex: 1; }
 .vx-body h3 { margin: 0 0 4px; font-size: 20px; letter-spacing: 0.01em; }

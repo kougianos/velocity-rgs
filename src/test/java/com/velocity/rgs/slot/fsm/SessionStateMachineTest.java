@@ -2,6 +2,8 @@ package com.velocity.rgs.slot.fsm;
 
 import com.velocity.rgs.common.error.RgsException;
 import com.velocity.rgs.common.money.Money;
+import com.velocity.rgs.slot.math.config.CascadeConfig;
+import com.velocity.rgs.slot.math.config.RespinConfig;
 import com.velocity.rgs.slot.math.config.SlotMathDefinition;
 import com.velocity.rgs.slot.math.config.SlotMathLoader;
 import com.velocity.rgs.slot.math.domain.BonusBuyType;
@@ -199,7 +201,7 @@ class SessionStateMachineTest {
                 math.mathVersion(),
                 math.targetRtp(),
                 math.grid(),
-                math.winModel(),
+                math.winModel(), math.waysDirection(), math.wildFeatures(),
                 math.symbols(),
                 math.paylines(),
                 math.payTable(),
@@ -209,6 +211,7 @@ class SessionStateMachineTest {
                 math.powerBet(),
                 List.of(),
                 math.pickCollect(),
+                CascadeConfig.disabled(), RespinConfig.disabled(),
                 math.limits(),
                 math.betConfig());
         TransitionContext localCtx = new TransitionContext(stripped, "EUR");
@@ -228,7 +231,7 @@ class SessionStateMachineTest {
                 math.mathVersion(),
                 math.targetRtp(),
                 math.grid(),
-                math.winModel(),
+                math.winModel(), math.waysDirection(), math.wildFeatures(),
                 math.symbols(),
                 math.paylines(),
                 math.payTable(),
@@ -238,6 +241,7 @@ class SessionStateMachineTest {
                 math.powerBet(),
                 List.of(),
                 math.pickCollect(),
+                CascadeConfig.disabled(), RespinConfig.disabled(),
                 math.limits(),
                 math.betConfig());
         TransitionContext localCtx = new TransitionContext(stripped, "EUR");

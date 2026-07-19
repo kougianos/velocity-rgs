@@ -4,6 +4,8 @@ import com.velocity.rgs.common.error.ErrorCode;
 import com.velocity.rgs.common.error.RgsException;
 import com.velocity.rgs.slot.feature.pickcollect.PickCollectEngine;
 import com.velocity.rgs.slot.feature.pickcollect.PickCollectState;
+import com.velocity.rgs.slot.feature.respin.RespinEngine;
+import com.velocity.rgs.slot.feature.respin.RespinState;
 import com.velocity.rgs.slot.math.config.BonusBuyOption;
 import com.velocity.rgs.slot.math.config.SlotMathDefinition;
 import com.velocity.rgs.slot.math.config.SlotMathRegistry;
@@ -14,6 +16,7 @@ import com.velocity.rgs.slot.math.engine.EvaluationResult;
 import com.velocity.rgs.slot.math.engine.GridGenerationEngine;
 import com.velocity.rgs.slot.math.engine.GridGenerationResult;
 import com.velocity.rgs.slot.math.engine.ReelEvaluator;
+import com.velocity.rgs.slot.math.engine.WildFeatureEngine;
 import com.velocity.rgs.rng.RandomNumberGenerator;
 import com.velocity.rgs.rng.RngDrawSink;
 import com.velocity.rgs.rng.SecureRandomNumberGenerator;
@@ -52,6 +55,8 @@ public class RtpSimulationService {
     private final GridGenerationEngine gridEngine;
     private final ReelEvaluator reelEvaluator;
     private final PickCollectEngine pickCollectEngine;
+    private final RespinEngine respinEngine;
+    private final WildFeatureEngine wildFeatureEngine;
 
     public RtpReport run(RtpSimulationRequest request, String runId) {
         SlotMathDefinition math = mathRegistry.require(request.gameId(), request.mathVersion());
@@ -60,34 +65,46 @@ public class RtpSimulationService {
 
         LongAdder freeSpinTriggers = new LongAdder();
         LongAdder pickEntries = new LongAdder();
+        LongAdder respinEntries = new LongAdder();
 
         Aggregator base = simulateChannel(request.spinsBaseGame(), (rng, agg) ->
                 simulateBaseSpin(math, rng, request.bet(), agg, freeSpinTriggers, pickEntries,
-                        request.pickStrategy()));
+                        respinEntries, request.pickStrategy()));
         Aggregator powerBet = simulateChannel(request.spinsPowerBet(), (rng, agg) ->
                 simulatePowerBetSpin(math, rng, request.bet(), agg, freeSpinTriggers, pickEntries,
-                        request.pickStrategy()));
+                        respinEntries, request.pickStrategy()));
         Aggregator buyFs;
         if (request.spinsBonusBuyFreeSpins() > 0) {
-            BonusBuyOption buyOption = freeSpinsBuyOption(math);
+            BonusBuyOption buyOption = requireBuyOption(math, BonusBuyType.FREE_SPINS_BUY);
             buyFs = simulateChannel(request.spinsBonusBuyFreeSpins(), (rng, agg) ->
                     simulateBonusBuyFreeSpins(math, buyOption, rng, request.bet(), agg));
         } else {
             buyFs = new Aggregator();
+        }
+        Aggregator buyHoldSpin;
+        if (request.spinsBonusBuyHoldSpin() > 0) {
+            BonusBuyOption buyOption = requireBuyOption(math, BonusBuyType.HOLD_SPIN_BUY);
+            buyHoldSpin = simulateChannel(request.spinsBonusBuyHoldSpin(), (rng, agg) ->
+                    simulateBonusBuyHoldSpin(math, buyOption, rng, request.bet(), agg));
+        } else {
+            buyHoldSpin = new Aggregator();
         }
 
         Map<String, RtpReport.Channel> channels = new LinkedHashMap<>();
         channels.put("BASE_GAME", base.snapshot());
         channels.put("POWER_BET", powerBet.snapshot());
         channels.put("BONUS_BUY_FREE_SPINS", buyFs.snapshot());
+        channels.put("BONUS_BUY_HOLD_SPIN", buyHoldSpin.snapshot());
 
-        RtpReport.Channel overall = overall(base, powerBet, buyFs);
+        RtpReport.Channel overall = overall(base, powerBet, buyFs, buyHoldSpin);
         long elapsed = System.currentTimeMillis() - start;
 
-        log.info("RTP simulation runId={} game={}/{} bet={} elapsedMs={} BASE={}% POWER={}% FS_BUY={}% OVERALL={}% pickEntries={}",
+        log.info("RTP simulation runId={} game={}/{} bet={} elapsedMs={} BASE={}% POWER={}% FS_BUY={}% "
+                        + "OVERALL={}% pickEntries={} respinEntries={}",
                 effectiveRunId, request.gameId(), request.mathVersion(), request.bet(), elapsed,
                 channels.get("BASE_GAME").rtpPercent(), channels.get("POWER_BET").rtpPercent(),
-                channels.get("BONUS_BUY_FREE_SPINS").rtpPercent(), overall.rtpPercent(), pickEntries.sum());
+                channels.get("BONUS_BUY_FREE_SPINS").rtpPercent(), overall.rtpPercent(),
+                pickEntries.sum(), respinEntries.sum());
 
         return RtpReport.builder()
                 .runId(effectiveRunId)
@@ -100,6 +117,7 @@ public class RtpSimulationService {
                 .generatedAt(Instant.now())
                 .freeSpinTriggers(freeSpinTriggers.sum())
                 .pickEntries(pickEntries.sum())
+                .respinEntries(respinEntries.sum())
                 .build();
     }
 
@@ -149,21 +167,32 @@ public class RtpSimulationService {
 
     private void simulateBaseSpin(SlotMathDefinition math, RandomNumberGenerator rng, BigDecimal bet,
                                   Aggregator base, LongAdder freeSpinTriggers, LongAdder pickEntries,
-                                  RtpSimulationRequest.PickStrategy strategy) {
-        GridGenerationResult grid = gridEngine.generate(math, ReelStripSet.BASE, rng);
-        EvaluationResult eval = reelEvaluator.evaluate(grid.matrix(), bet, math);
-        base.record(bet, eval.totalWin());
+                                  LongAdder respinEntries, RtpSimulationRequest.PickStrategy strategy) {
+        GridGenerationResult drawn = gridEngine.generate(math, ReelStripSet.BASE, rng);
+        GridGenerationResult grid = new GridGenerationResult(
+                wildFeatureEngine.apply(drawn.matrix(), math, ReelStripSet.BASE, List.of()).matrix(),
+                drawn.stopPositions());
+        EvaluationResult eval = reelEvaluator.evaluateRound(grid.matrix(), grid.stopPositions(), bet,
+                math, ReelStripSet.BASE, rng);
+        BigDecimal roundWin = eval.totalWin();
         int scatters = countScatters(grid.matrix(), math);
-        if (scatters >= math.scatterTriggers().minCount()) {
+        // Trigger precedence mirrors SlotEngineService.postProcessSpin exactly: Hold & Spin outranks
+        // the scatter award, which outranks the organic Pick & Collect roll. Diverging here would make
+        // the simulator measure a game the live path does not deal.
+        if (respinEngine.triggers(grid.matrix(), math.respins())) {
+            respinEntries.increment();
+            roundWin = roundWin.add(simulateRespins(math, rng, grid.matrix(), bet));
+        } else if (scatters >= math.scatterTriggers().minCount()) {
             freeSpinTriggers.increment();
-            BigDecimal freeWin = simulateFreeSpins(math, rng, bet, math.scatterTriggers().freeSpinsAwarded());
-            base.recordWinOnly(freeWin);
+            roundWin = roundWin.add(
+                    simulateFreeSpins(math, rng, bet, math.scatterTriggers().freeSpinsAwarded()));
         } else if (rollPickCollectTrigger(math, rng)) {
             // Pick & Collect is triggered organically (and never on the same spin that awards free
             // spins). Its win is funded by base wagers, so it folds into the BASE_GAME channel.
             pickEntries.increment();
-            base.recordWinOnly(simulatePickCollect(math, rng, bet, strategy));
+            roundWin = roundWin.add(simulatePickCollect(math, rng, bet, strategy));
         }
+        base.record(bet, roundWin);
     }
 
     /**
@@ -174,20 +203,45 @@ public class RtpSimulationService {
      */
     private void simulatePowerBetSpin(SlotMathDefinition math, RandomNumberGenerator rng, BigDecimal bet,
                                       Aggregator powerBet, LongAdder freeSpinTriggers, LongAdder pickEntries,
+                                      LongAdder respinEntries,
                                       RtpSimulationRequest.PickStrategy strategy) {
         BigDecimal stake = bet.multiply(math.powerBet().betMultiplier());
-        GridGenerationResult grid = gridEngine.generate(math, ReelStripSet.POWER_BET, rng);
-        EvaluationResult eval = reelEvaluator.evaluate(grid.matrix(), stake, math);
-        powerBet.record(stake, eval.totalWin());
+        GridGenerationResult drawn = gridEngine.generate(math, ReelStripSet.POWER_BET, rng);
+        GridGenerationResult grid = new GridGenerationResult(
+                wildFeatureEngine.apply(drawn.matrix(), math, ReelStripSet.POWER_BET, List.of()).matrix(),
+                drawn.stopPositions());
+        EvaluationResult eval = reelEvaluator.evaluateRound(grid.matrix(), grid.stopPositions(), stake,
+                math, ReelStripSet.POWER_BET, rng);
+        BigDecimal roundWin = eval.totalWin();
         int scatters = countScatters(grid.matrix(), math);
-        if (scatters >= math.scatterTriggers().minCount()) {
+        if (respinEngine.triggers(grid.matrix(), math.respins())) {
+            respinEntries.increment();
+            roundWin = roundWin.add(simulateRespins(math, rng, grid.matrix(), stake));
+        } else if (scatters >= math.scatterTriggers().minCount()) {
             freeSpinTriggers.increment();
-            BigDecimal freeWin = simulateFreeSpins(math, rng, stake, math.scatterTriggers().freeSpinsAwarded());
-            powerBet.recordWinOnly(freeWin);
+            roundWin = roundWin.add(
+                    simulateFreeSpins(math, rng, stake, math.scatterTriggers().freeSpinsAwarded()));
         } else if (rollPickCollectTrigger(math, rng)) {
             pickEntries.increment();
-            powerBet.recordWinOnly(simulatePickCollect(math, rng, stake, strategy));
+            roundWin = roundWin.add(simulatePickCollect(math, rng, stake, strategy));
         }
+        powerBet.record(stake, roundWin);
+    }
+
+    /**
+     * Plays one Hold &amp; Spin feature to settlement and returns what it paid. Coins lock, the counter
+     * refills whenever one lands, and the feature ends on an exhausted counter or a full grid - the
+     * loop below is the same one {@code SlotEngineService.respinSpin} drives one HTTP call at a time.
+     */
+    private BigDecimal simulateRespins(SlotMathDefinition math, RandomNumberGenerator rng,
+                                       int[][] triggerGrid, BigDecimal bet) {
+        RespinState state = respinEngine.start(triggerGrid, math.respins(), rng);
+        RespinEngine.RespinOutcome outcome;
+        do {
+            outcome = respinEngine.respin(state, math, ReelStripSet.BASE, rng);
+            state = outcome.state();
+        } while (!outcome.finished());
+        return respinEngine.settle(state, math, bet, "EUR").win().amount();
     }
 
     private void simulateBonusBuyFreeSpins(SlotMathDefinition math, BonusBuyOption option,
@@ -200,9 +254,9 @@ public class RtpSimulationService {
     }
 
     /**
-     * The game's purchasable free-spins option. Resolved once per run rather than per spin, and only
-     * when the caller actually asked for buy rounds - a game with no buy is still perfectly simulable
-     * on its base and power-bet channels.
+     * One of the game's purchasable options. Resolved once per run rather than per spin, and only when
+     * the caller actually asked for that channel - a game with no buy is still perfectly simulable on
+     * its base and power-bet channels.
      *
      * <p>Raises {@code BONUS_BUY_DISABLED} (409) rather than an unchecked exception: requesting a
      * channel the game does not offer is a caller error, and letting it escape as an
@@ -210,13 +264,32 @@ public class RtpSimulationService {
      * report a 500. This mirrors the live spin path, which already fails this way in
      * {@code SessionStateMachine.findBuyOption}.
      */
-    private BonusBuyOption freeSpinsBuyOption(SlotMathDefinition math) {
+    private BonusBuyOption requireBuyOption(SlotMathDefinition math, BonusBuyType type) {
         return math.bonusBuyOptions().stream()
-                .filter(o -> o.buyType() == BonusBuyType.FREE_SPINS_BUY)
+                .filter(o -> o.buyType() == type)
                 .findFirst()
                 .orElseThrow(() -> new RgsException(ErrorCode.BONUS_BUY_DISABLED,
                         "Game " + math.gameId() + "@" + math.mathVersion() + " offers no "
-                                + BonusBuyType.FREE_SPINS_BUY + " option; request 0 bonus-buy spins for it"));
+                                + type + " option; request 0 bonus-buy spins for it"));
+    }
+
+    /**
+     * One purchased Hold &amp; Spin: the buy locks {@code initialFeaturePayload.coins} coins, then the
+     * feature runs to settlement exactly as a triggered one does.
+     */
+    private void simulateBonusBuyHoldSpin(SlotMathDefinition math, BonusBuyOption option,
+                                          RandomNumberGenerator rng, BigDecimal bet, Aggregator agg) {
+        BigDecimal cost = bet.multiply(option.costMultiplier());
+        Object raw = option.initialFeaturePayload().get("coins");
+        int coins = raw instanceof Number n ? n.intValue() : math.respins().triggerMinCount();
+
+        RespinState state = respinEngine.startBought(math, coins, rng);
+        RespinEngine.RespinOutcome outcome;
+        do {
+            outcome = respinEngine.respin(state, math, ReelStripSet.BASE, rng);
+            state = outcome.state();
+        } while (!outcome.finished());
+        agg.record(cost, respinEngine.settle(state, math, bet, "EUR").win().amount());
     }
 
     /**
@@ -257,11 +330,20 @@ public class RtpSimulationService {
                                          BigDecimal triggerBet, int initialSpins) {
         BigDecimal total = BigDecimal.ZERO;
         int remaining = initialSpins;
+        // Sticky and walking wilds persist across the feature's spins, so the carry has to be threaded
+        // through the loop exactly as SlotEngineService threads it through active_feature_payload.
+        // Dropping it here would have the simulator measure a materially poorer game than the one the
+        // player is dealt.
+        List<WildFeatureEngine.WildCell> carried = List.of();
         while (remaining > 0) {
-            GridGenerationResult grid = gridEngine.generate(math, ReelStripSet.FREE_SPINS, rng);
-            EvaluationResult eval = reelEvaluator.evaluate(grid.matrix(), triggerBet, math);
+            GridGenerationResult drawn = gridEngine.generate(math, ReelStripSet.FREE_SPINS, rng);
+            WildFeatureEngine.WildOutcome wilds = wildFeatureEngine.apply(drawn.matrix(), math,
+                    ReelStripSet.FREE_SPINS, carried);
+            carried = wilds.carryForward();
+            EvaluationResult eval = reelEvaluator.evaluateRound(wilds.matrix(), drawn.stopPositions(),
+                    triggerBet, math, ReelStripSet.FREE_SPINS, rng);
             total = total.add(eval.totalWin());
-            int scatters = countScatters(grid.matrix(), math);
+            int scatters = countScatters(wilds.matrix(), math);
             remaining--;
             if (scatters >= math.scatterTriggers().minCount()) {
                 remaining += math.scatterTriggers().retriggerAwards();
@@ -319,19 +401,17 @@ public class RtpSimulationService {
         return count;
     }
 
+    /**
+     * The wager-weighted aggregate across every sampled channel. Merging the tallies rather than
+     * re-deriving from their snapshots keeps the hit count and band histogram exact: each round already
+     * carries its own stake, so channels sampled at different effective bets combine without weighting.
+     */
     private RtpReport.Channel overall(Aggregator... aggs) {
-        BigDecimal totalBet = BigDecimal.ZERO;
-        BigDecimal totalWin = BigDecimal.ZERO;
-        long spins = 0;
+        Aggregator combined = new Aggregator();
         for (Aggregator a : aggs) {
-            totalBet = totalBet.add(a.totalBet());
-            totalWin = totalWin.add(a.totalWin());
-            spins += a.rounds();
+            combined.merge(a);
         }
-        BigDecimal rtp = totalBet.signum() == 0 ? BigDecimal.ZERO
-                : totalWin.multiply(HUNDRED).divide(totalBet, 4, RoundingMode.HALF_UP);
-        return RtpReport.Channel.builder()
-                .spins(spins).totalBet(totalBet).totalWin(totalWin).rtpPercent(rtp).build();
+        return combined.snapshot();
     }
 
     /**
@@ -348,26 +428,45 @@ public class RtpSimulationService {
     /**
      * Per-worker tally. Deliberately <em>not</em> thread-safe: each worker owns one and they are
      * {@link #merge merged} once at the end, which is what lets the hot loop run lock-free.
+     *
+     * <p>{@link #record} takes one <em>complete</em> round - stake and everything that round paid,
+     * features included. That single-call shape is what makes the hit and band statistics meaningful:
+     * counting a base spin and its free-spins award separately would report two rounds where the player
+     * experienced one, inflating the round count and splitting one win across two bands. The RTP totals
+     * are unaffected either way, since they only ever sum.
      */
     private static final class Aggregator {
         private long rounds;
+        private long hits;
         private BigDecimal totalBet = BigDecimal.ZERO;
         private BigDecimal totalWin = BigDecimal.ZERO;
+        private double maxWinMultiplier;
+        private final long[] bands = new long[WinBandScale.BAND_COUNT];
 
+        /** Records one complete round: its stake and the total it paid across base game and features. */
         void record(BigDecimal bet, BigDecimal win) {
             rounds++;
             totalBet = totalBet.add(bet);
             totalWin = totalWin.add(win);
-        }
-
-        void recordWinOnly(BigDecimal win) {
-            totalWin = totalWin.add(win);
+            double multiplier = bet.signum() == 0 ? 0.0 : win.doubleValue() / bet.doubleValue();
+            if (multiplier > 0.0) {
+                hits++;
+            }
+            if (multiplier > maxWinMultiplier) {
+                maxWinMultiplier = multiplier;
+            }
+            bands[WinBandScale.bandOf(multiplier)]++;
         }
 
         void merge(Aggregator other) {
             rounds += other.rounds;
+            hits += other.hits;
             totalBet = totalBet.add(other.totalBet);
             totalWin = totalWin.add(other.totalWin);
+            maxWinMultiplier = Math.max(maxWinMultiplier, other.maxWinMultiplier);
+            for (int i = 0; i < bands.length; i++) {
+                bands[i] += other.bands[i];
+            }
         }
 
         BigDecimal totalBet() { return totalBet; }
@@ -377,11 +476,18 @@ public class RtpSimulationService {
         RtpReport.Channel snapshot() {
             BigDecimal rtp = totalBet.signum() == 0 ? BigDecimal.ZERO
                     : totalWin.multiply(HUNDRED).divide(totalBet, 4, RoundingMode.HALF_UP);
+            BigDecimal hitFrequency = rounds == 0 ? BigDecimal.ZERO
+                    : BigDecimal.valueOf(hits).multiply(HUNDRED)
+                    .divide(BigDecimal.valueOf(rounds), 4, RoundingMode.HALF_UP);
             return RtpReport.Channel.builder()
                     .spins(rounds)
                     .totalBet(totalBet)
                     .totalWin(totalWin)
                     .rtpPercent(rtp)
+                    .hits(hits)
+                    .hitFrequencyPercent(hitFrequency)
+                    .maxWinMultiplier(BigDecimal.valueOf(maxWinMultiplier).setScale(4, RoundingMode.HALF_UP))
+                    .winDistribution(WinBandScale.toBands(bands, rounds))
                     .build();
         }
     }

@@ -131,6 +131,10 @@ function renderTable(rounds, games) {
         <td class="num ${net >= 0 ? "pos" : "neg"}">${net >= 0 ? "+" : "−"}${fmt(Math.abs(net))}</td>
         <td>${outcome}</td>
         <td class="col-round" title="${r.roundId}">${r.roundId}</td>
+        <td><button class="btn btn-ghost btn-replay" data-round="${r.roundId}">Replay</button></td>
+      </tr>
+      <tr class="replay-row hidden" data-replay-for="${r.roundId}">
+        <td colspan="9"><div class="replay-panel"></div></td>
       </tr>`;
   }).join("");
 
@@ -140,11 +144,92 @@ function renderTable(rounds, games) {
         <tr>
           <th>Time</th><th>Game</th><th>Context</th>
           <th class="num">Bet</th><th class="num">Win</th><th class="num">Net</th>
-          <th>Outcome</th><th>Round Id</th>
+          <th>Outcome</th><th>Round Id</th><th>Audit</th>
         </tr>
       </thead>
       <tbody>${rows}</tbody>
     </table>`;
+
+  for (const btn of els.body.querySelectorAll(".btn-replay")) {
+    btn.addEventListener("click", () => runReplay(btn.dataset.round, btn));
+  }
+}
+
+/* ------------------------------------------------------------------ replay */
+
+/**
+ * Reconstruct a round from its persisted RNG draws (POST /api/v1/admin/replay/{roundId}) and show the
+ * verdict inline.
+ *
+ * This is the audit story the whole replay infrastructure exists for, made visible: the server re-runs
+ * the recorded draws through the same engine and reports whether every grid came back identical. For a
+ * cascading round that means every drop, including the refills — which is the strictest check in the
+ * system, since a refill drawn outside the round's RNG would leave the sequence unreproducible.
+ */
+async function runReplay(roundId, btn) {
+  const row = els.body.querySelector(`tr[data-replay-for="${roundId}"]`);
+  const panel = row.querySelector(".replay-panel");
+
+  if (!row.classList.contains("hidden")) {
+    row.classList.add("hidden");
+    btn.textContent = "Replay";
+    return;
+  }
+  row.classList.remove("hidden");
+  btn.textContent = "Hide";
+  panel.innerHTML = `<p class="history-loading">Reconstructing round from persisted RNG draws…</p>`;
+
+  try {
+    const playerId = localStorage.getItem(PLAYER_KEY);
+    const token = await mintToken(playerId);
+    const res = await fetch(`/api/v1/admin/replay/${encodeURIComponent(roundId)}`, {
+      method: "POST",
+      headers: { Authorization: "Bearer " + token },
+    });
+    const body = await res.json();
+    // The server explains why a round cannot be reconstructed; showing that beats "HTTP 409".
+    if (!res.ok) throw new Error(body.message || `HTTP ${res.status}`);
+    panel.innerHTML = renderReplay(body);
+  } catch (e) {
+    panel.innerHTML = `<p class="history-error">Cannot replay this round: ${e.message}</p>`;
+    toast("Replay unavailable for this round", "error");
+  }
+}
+
+function renderReplay(r) {
+  const verdict = (ok, label) =>
+    `<span class="badge ${ok ? "badge-win" : "badge-loss"}">${ok ? "✓" : "✗"} ${label}</span>`;
+
+  const steps = r.reconstructedSequence || [];
+  const grids = steps.map((s, i) => `
+    <div class="replay-step">
+      <div class="replay-step-head">
+        ${steps.length > 1 ? (i === 0 ? "Drop 1" : `Tumble ${i}`) : "Grid"}
+        ${s.multiplier != null && Number(s.multiplier) !== 1 ? ` · ×${Number(s.multiplier)}` : ""}
+        ${Number(s.stepWin || 0) > 0 ? ` · ${fmt(s.stepWin)}` : ""}
+      </div>
+      ${renderGrid(s.grid)}
+      <div class="replay-step-draws">draws: [${(s.stopPositions || []).join(", ")}]</div>
+    </div>`).join("");
+
+  return `
+    <div class="replay-verdicts">
+      ${verdict(r.matrixMatches, steps.length > 1
+          ? `All ${steps.length} drops reconstructed bit-exact`
+          : "Grid reconstructed bit-exact")}
+      ${verdict(r.totalWinMatches, `Win matches (${fmt(r.originalTotalWin)})`)}
+      <span class="badge badge-power">${(r.rngDraws || []).length} RNG draws replayed</span>
+      <span class="badge badge-power">${r.reelStripSet}</span>
+    </div>
+    <div class="replay-steps">${grids}</div>`;
+}
+
+/** The reconstructed board, drawn from the symbol ids the engine produced. */
+function renderGrid(matrix) {
+  if (!Array.isArray(matrix)) return "";
+  const rows = matrix.map((row) =>
+    `<tr>${row.map((id) => `<td class="replay-cell">${id}</td>`).join("")}</tr>`).join("");
+  return `<table class="replay-grid"><tbody>${rows}</tbody></table>`;
 }
 
 async function load() {

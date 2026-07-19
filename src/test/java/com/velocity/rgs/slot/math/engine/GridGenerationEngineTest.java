@@ -1,6 +1,9 @@
 package com.velocity.rgs.slot.math.engine;
 
 import com.velocity.rgs.catalog.BetConfig;
+import com.velocity.rgs.slot.math.config.CascadeConfig;
+import com.velocity.rgs.slot.math.config.WildFeatureConfig;
+import com.velocity.rgs.slot.math.config.RespinConfig;
 import com.velocity.rgs.slot.math.config.FreeSpinsConfig;
 import com.velocity.rgs.slot.math.config.Grid;
 import com.velocity.rgs.slot.math.config.Limits;
@@ -17,6 +20,7 @@ import com.velocity.rgs.slot.math.domain.ReelStrip;
 import com.velocity.rgs.slot.math.domain.ReelStripSet;
 import com.velocity.rgs.slot.math.domain.Symbol;
 import com.velocity.rgs.slot.math.domain.SymbolType;
+import com.velocity.rgs.slot.math.domain.WaysDirection;
 import com.velocity.rgs.slot.math.domain.WinModel;
 import com.velocity.rgs.rng.RandomNumberGenerator;
 import org.junit.jupiter.api.Test;
@@ -66,7 +70,7 @@ class GridGenerationEngineTest {
     void stopNearEndOfStripWrapsAround() {
         SlotMathDefinition math = math();
         List<ReelStrip> strips = math.reelStrips().get(ReelStripSet.BASE);
-        // Force each reel to stop at the last index of its strip → matrix should read [last, first, second].
+        // Force each reel to stop at the last index of its strip â†’ matrix should read [last, first, second].
         int last0 = strips.get(0).length() - 1;
         int last1 = strips.get(1).length() - 1;
         int last2 = strips.get(2).length() - 1;
@@ -174,6 +178,8 @@ class GridGenerationEngineTest {
                 "test", "v1", new BigDecimal("96.0"),
                 new Grid(3, 5),
                 WinModel.PAYLINES,
+                WaysDirection.LEFT_TO_RIGHT,
+                WildFeatureConfig.none(),
                 symbols,
                 paylines,
                 payTable,
@@ -186,6 +192,7 @@ class GridGenerationEngineTest {
                         new PickCollectCompletion(PickCollectCompletion.CompletionType.FIXED_PICKS, 5),
                         List.of(new PickTileWeight(PickTileType.BLANK, 10, null)),
                         5000, 0),
+                CascadeConfig.disabled(), RespinConfig.disabled(),
                 new Limits(10_000),
                 new BetConfig(List.of(new BigDecimal("0.20"), new BigDecimal("1.00")), new BigDecimal("1.00"))
         );

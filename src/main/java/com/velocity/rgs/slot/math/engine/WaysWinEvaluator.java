@@ -2,6 +2,7 @@ package com.velocity.rgs.slot.math.engine;
 
 import com.velocity.rgs.slot.math.config.SlotMathDefinition;
 import com.velocity.rgs.slot.math.domain.Symbol;
+import com.velocity.rgs.slot.math.domain.WaysDirection;
 import com.velocity.rgs.slot.math.domain.WinModel;
 import org.springframework.stereotype.Component;
 
@@ -75,6 +76,8 @@ public class WaysWinEvaluator implements WinEvaluator {
 
         BigDecimal wayBet = bet.divide(BigDecimal.valueOf(rows).pow(cols), 12, RoundingMode.HALF_UP);
 
+        boolean bothWays = math.waysDirection() == WaysDirection.BOTH_WAYS;
+
         List<WinLine> wins = new ArrayList<>();
         BigDecimal total = BigDecimal.ZERO;
         for (Symbol symbol : math.symbols()) {
@@ -82,23 +85,73 @@ public class WaysWinEvaluator implements WinEvaluator {
             if (symbol.isScatter() || symbol.isWild()) {
                 continue;
             }
-            WinLine win = evaluateSymbol(symbol, matrix, rows, cols, bySymbolId, wayBet, math);
+            WinLine win = evaluateSymbol(symbol, matrix, rows, cols, bySymbolId, wayBet, math, false);
             if (win != null) {
                 wins.add(win);
                 total = total.add(win.payout());
             }
+            // Win-both-ways: the mirrored run is a separate win, exactly as it is in the games that
+            // advertise the feature - a symbol filling reels 0-2 and 3-4 pays twice on one screen. The
+            // two runs are evaluated independently; no attempt is made to net off the reels they share,
+            // because paying both in full is the mechanic rather than a double count.
+            if (bothWays) {
+                WinLine mirrored = evaluateSymbol(symbol, matrix, rows, cols, bySymbolId, wayBet, math, true);
+                if (mirrored != null) {
+                    wins.add(mirrored);
+                    total = total.add(mirrored.payout());
+                }
+            }
         }
 
         wins.sort(Comparator.comparing(WinLine::payout).reversed().thenComparing(WinLine::symbolId));
-        return EvaluationSupport.capped(total, wins, bet, math);
+        return EvaluationSupport.capped(total, wins, bet, math, matrix);
     }
 
+    /**
+     * A ways win names a symbol and a reel count rather than a path, so its footprint is every cell on
+     * the leftmost {@code count} reels holding that symbol - or a wild standing in for it. That is the
+     * same set the per-reel tally counted when it computed {@code ways}, re-read off the grid.
+     */
+    @Override
+    public boolean[][] winningMask(int[][] matrix, List<WinLine> wins, SlotMathDefinition math) {
+        int rows = math.grid().rows();
+        int cols = math.grid().cols();
+        boolean[][] mask = new boolean[rows][cols];
+        if (wins.isEmpty()) {
+            return mask;
+        }
+        Map<Integer, Symbol> bySymbolId = EvaluationSupport.indexSymbols(math.symbols());
+        for (WinLine w : wins) {
+            Symbol won = bySymbolId.get(w.symbolId());
+            if (won == null) {
+                continue;
+            }
+            // A mirrored win-both-ways run covers the rightmost reels, not the leftmost.
+            for (int step = 0; step < w.count() && step < cols; step++) {
+                int col = w.isRightToLeft() ? cols - 1 - step : step;
+                for (int row = 0; row < rows; row++) {
+                    Symbol cell = bySymbolId.get(matrix[row][col]);
+                    if (cell != null && (cell.id() == won.id() || cell.substitutesFor(won.type()))) {
+                        mask[row][col] = true;
+                    }
+                }
+            }
+        }
+        return mask;
+    }
+
+    /**
+     * One symbol's run. {@code rightToLeft} walks the reels from the rightmost inwards instead of from
+     * reel 0 outwards - the mirrored half of {@link WaysDirection#BOTH_WAYS}. Everything else about the
+     * count is identical, which is the point: both directions pay by the same rules.
+     */
     private WinLine evaluateSymbol(Symbol symbol, int[][] matrix, int rows, int cols,
                                    Map<Integer, Symbol> bySymbolId, BigDecimal wayBet,
-                                   SlotMathDefinition math) {
+                                   SlotMathDefinition math, boolean rightToLeft) {
         long ways = 1;
         int reels = 0;
-        for (int col = 0; col < cols; col++) {
+        for (int step = 0; step < cols; step++) {
+            int col = rightToLeft ? cols - 1 - step : step;
             int hits = 0;
             for (int row = 0; row < rows; row++) {
                 Symbol cell = bySymbolId.get(matrix[row][col]);
@@ -130,6 +183,8 @@ public class WaysWinEvaluator implements WinEvaluator {
         if (payout.signum() <= 0) {
             return null;
         }
-        return WinLine.ways(symbol.id(), reels, Math.toIntExact(ways), payout);
+        return rightToLeft
+                ? WinLine.waysRightToLeft(symbol.id(), reels, Math.toIntExact(ways), payout)
+                : WinLine.ways(symbol.id(), reels, Math.toIntExact(ways), payout);
     }
 }

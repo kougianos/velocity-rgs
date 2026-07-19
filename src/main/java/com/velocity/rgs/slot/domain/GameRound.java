@@ -8,6 +8,7 @@ import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -57,6 +58,23 @@ public class GameRound {
     @Column(name = "state_context", nullable = false, length = 32)
     private GameState stateContext;
 
+    /**
+     * How this round is reconstructed. Set explicitly by both write paths rather than defaulted on the
+     * field: Lombok's {@code @Builder.Default} strips the initializer from the no-args constructor,
+     * which is the one {@code SlotEngineService} actually uses, and the column is NOT NULL.
+     */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "round_kind", nullable = false, length = 16)
+    private RoundKind roundKind;
+
+    /**
+     * Input state a non-{@link RoundKind#SPIN} round needs to stand on its own - for a respin, the
+     * coins held before it. Null for an ordinary spin, which needs nothing beyond its draws.
+     */
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "feature_context", columnDefinition = "jsonb")
+    private String featureContext;
+
     @Column(name = "bet_amount", nullable = false, precision = 19, scale = 4)
     private BigDecimal betAmount;
 
@@ -103,4 +121,20 @@ public class GameRound {
 
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
+
+    /**
+     * A round with no kind set is an ordinary spin - which is what every row was before Hold &amp; Spin
+     * existed, and what any caller that does not know about the column means.
+     *
+     * <p>Done here rather than as a field initializer because the entity is built three different ways
+     * (the builder, the no-args constructor, and JPA hydration) and Lombok's {@code @Builder.Default}
+     * silently strips the initializer from the no-args path. A lifecycle hook holds for all of them,
+     * which matters because the column is NOT NULL.
+     */
+    @PrePersist
+    void defaultRoundKind() {
+        if (roundKind == null) {
+            roundKind = RoundKind.SPIN;
+        }
+    }
 }

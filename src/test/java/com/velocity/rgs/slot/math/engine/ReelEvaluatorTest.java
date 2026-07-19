@@ -1,6 +1,9 @@
 package com.velocity.rgs.slot.math.engine;
 
 import com.velocity.rgs.catalog.BetConfig;
+import com.velocity.rgs.slot.math.config.CascadeConfig;
+import com.velocity.rgs.slot.math.config.WildFeatureConfig;
+import com.velocity.rgs.slot.math.config.RespinConfig;
 import com.velocity.rgs.slot.math.config.FreeSpinsConfig;
 import com.velocity.rgs.slot.math.config.Grid;
 import com.velocity.rgs.slot.math.config.Limits;
@@ -17,6 +20,7 @@ import com.velocity.rgs.slot.math.domain.ReelStrip;
 import com.velocity.rgs.slot.math.domain.ReelStripSet;
 import com.velocity.rgs.slot.math.domain.Symbol;
 import com.velocity.rgs.slot.math.domain.SymbolType;
+import com.velocity.rgs.slot.math.domain.WaysDirection;
 import com.velocity.rgs.slot.math.domain.WinModel;
 import org.junit.jupiter.api.Test;
 
@@ -57,7 +61,7 @@ class ReelEvaluatorTest {
 
     @Test
     void wildSubstitutesForStandard() {
-        // Line 2 (middle row): WILD ACE ACE ACE KING → 4 ACEs.
+        // Line 2 (middle row): WILD ACE ACE ACE KING â†’ 4 ACEs.
         int[][] matrix = {
                 {KING,  KING,  KING,  KING,  KING},
                 {WILD,  ACE,   ACE,   ACE,   KING},
@@ -70,7 +74,7 @@ class ReelEvaluatorTest {
 
     @Test
     void scatterBreaksLineRun() {
-        // Line 2: ACE ACE SCATTER ACE ACE → only 2 ACEs before scatter → no payout.
+        // Line 2: ACE ACE SCATTER ACE ACE â†’ only 2 ACEs before scatter â†’ no payout.
         int[][] matrix = {
                 {KING,  KING,  KING,    KING,  KING},
                 {ACE,   ACE,   SCATTER, ACE,   ACE},
@@ -83,7 +87,7 @@ class ReelEvaluatorTest {
 
     @Test
     void partialLineThreeOfAKindPays() {
-        // Line 2: ACE ACE ACE KING QUEEN → 3 ACEs.
+        // Line 2: ACE ACE ACE KING QUEEN â†’ 3 ACEs.
         int[][] matrix = {
                 {KING,  KING,  KING,  KING,  KING},
                 {ACE,   ACE,   ACE,   KING,  QUEEN},
@@ -102,7 +106,7 @@ class ReelEvaluatorTest {
     void leadingWildsPickHigherOfWildOrBaseRun() {
         // Line 2: WILD WILD WILD QUEEN QUEEN.
         // Wild-only 3-of-a-kind pays 25; base-run (QUEEN) is only 2 reels (wilds + queens stop at 5
-        // → run = wild,wild,wild,queen,queen = 5 queens via wild substitution).
+        // â†’ run = wild,wild,wild,queen,queen = 5 queens via wild substitution).
         // 5 queens pay 60 (> 25 wild-3) so base wins.
         int[][] matrix = {
                 {KING,  KING,  KING,  KING,  KING},
@@ -120,7 +124,7 @@ class ReelEvaluatorTest {
 
     @Test
     void capsTotalWinAndEmitsReasonCode() {
-        // Tight cap (cap multiplier = 5 × bet 1.00 = 5.00). Even a tiny 3-of-a-kind ACE (5.00) hits cap.
+        // Tight cap (cap multiplier = 5 Ã— bet 1.00 = 5.00). Even a tiny 3-of-a-kind ACE (5.00) hits cap.
         int[][] matrix = {
                 {KING,  KING,  KING,  KING,  KING},
                 {ACE,   ACE,   ACE,   ACE,   ACE},
@@ -161,6 +165,8 @@ class ReelEvaluatorTest {
                 "test", "v1", new BigDecimal("96.0"),
                 new Grid(3, 5),
                 WinModel.PAYLINES,
+                WaysDirection.LEFT_TO_RIGHT,
+                WildFeatureConfig.none(),
                 symbols,
                 paylines,
                 payTable,
@@ -173,6 +179,7 @@ class ReelEvaluatorTest {
                         new PickCollectCompletion(PickCollectCompletion.CompletionType.FIXED_PICKS, 5),
                         List.of(new PickTileWeight(PickTileType.BLANK, 10, null)),
                         5000, 0),
+                CascadeConfig.disabled(), RespinConfig.disabled(),
                 new Limits(maxWinMultiplier),
                 new BetConfig(List.of(new BigDecimal("0.20"), new BigDecimal("1.00")), new BigDecimal("1.00"))
         );

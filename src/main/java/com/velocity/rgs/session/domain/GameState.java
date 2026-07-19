@@ -9,5 +9,9 @@ public enum GameState {
     FREE_SPINS_AWAITING,
     FREE_SPINS_LOOP,
     PICK_COLLECT_AWAITING,
-    PICK_COLLECT_LOOP
+    PICK_COLLECT_LOOP,
+    /** Hold &amp; Spin triggered; the player has not started the respins yet. */
+    RESPIN_AWAITING,
+    /** Hold &amp; Spin running: coins are locked and the unlocked cells respin. */
+    RESPIN_LOOP
 }

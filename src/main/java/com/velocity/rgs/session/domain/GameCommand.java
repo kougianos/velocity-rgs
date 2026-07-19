@@ -9,5 +9,7 @@ public enum GameCommand {
     START_FREE_SPINS,
     BUY_FEATURE,
     START_PICK_COLLECT,
-    PICK
+    PICK,
+    /** Enter the Hold &amp; Spin respin loop from RESPIN_AWAITING. */
+    START_RESPIN
 }

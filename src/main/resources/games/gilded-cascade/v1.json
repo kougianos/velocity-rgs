@@ -1,0 +1,163 @@
+{
+  "presentation": {
+    "title": "Gilded Cascade",
+    "tagline": "Wins tumble away and the multiplier climbs.",
+    "description": "Every winning symbol shatters and the reels refill from above. Each tumble in the same spin pays at a higher multiplier - 1x, 2x, 3x, 5x, then 10x for the rest of the chain. High volatility with a 20,000x ceiling.",
+    "logo": "🪙",
+    "theme": "gilded",
+    "volatility": "High",
+    "spinDurationMillis": 450,
+    "symbols": {
+      "1":  { "glyph": "A",  "name": "Ace"     },
+      "2":  { "glyph": "K",  "name": "King"    },
+      "3":  { "glyph": "Q",  "name": "Queen"   },
+      "4":  { "glyph": "J",  "name": "Jack"    },
+      "5":  { "glyph": "10", "name": "Ten"     },
+      "6":  { "glyph": "9",  "name": "Nine"    },
+      "7":  { "glyph": "⚱️", "name": "Urn"     },
+      "8":  { "glyph": "👑", "name": "Crown"   },
+      "9":  { "glyph": "💠", "name": "Wild"    },
+      "12": { "glyph": "🔔", "name": "Scatter" }
+    },
+    "info": {
+      "paragraphs": [
+        "Gilded Cascade does not stop at one result. Winning symbols are struck from the reels, everything above them drops into the gap, and fresh symbols fall in from the top - then the new board pays again. One spin can pay four, five, six times over.",
+        "The chain is what carries the game: each tumble in the same spin pays at a higher multiplier than the last, climbing 1x, 2x, 3x, 5x and holding at 10x for as long as the wins keep coming. A long chain is worth far more than its symbols suggest.",
+        "Land three Bells to wake the free spins, where the reels run richer and the chain starts more often. Power Bet raises every stake, and the Pick & Collect ritual banks gilded credits until the end tile turns up."
+      ],
+      "stats": [
+        { "label": "Game Theme", "value": "Gold, Antiquity, Cascade" },
+        { "label": "Volatility", "value": "High" },
+        { "label": "RTP", "value": "96.00%" }
+      ],
+      "specs": [
+        { "label": "Game Type", "values": ["Video Slot Game"] },
+        { "label": "Lines", "values": ["20 paylines"] },
+        { "label": "Reel Type", "values": ["5×3"] },
+        { "label": "Winning Functionality", "values": ["Left to right on adjacent reels", "Cascading reels - wins are removed and refilled"] },
+        { "label": "Special Features", "values": ["Cascading Reels", "Progressive Cascade Multiplier", "Free Spins", "Pick & Collect", "Power Bet"] },
+        { "label": "Cascade Multipliers", "values": ["1× · 2× · 3× · 5× · 10×", "Up to 8 tumbles per spin"] },
+        { "label": "Free Spins Symbol", "values": ["Scatter 🔔"] },
+        { "label": "Hit Frequency", "values": ["73.75% - for RTP 96.00%"] },
+        { "label": "Max Exposure", "values": ["Max multiplier: 20,000×", "Max win: €2,000,000"] },
+        { "label": "Bet Values", "values": ["Min - €0.20", "Default - €1.00", "Max - €100.00"] }
+      ]
+    }
+  },
+  "math": {
+    "gameId": "gilded-cascade",
+    "mathVersion": "v1",
+    "targetRtp": 96.0,
+    "grid": { "rows": 3, "cols": 5 },
+    "winModel": "PAYLINES",
+    "symbols": [
+      { "id": 1, "name": "ACE",     "type": "STANDARD" },
+      { "id": 2, "name": "KING",    "type": "STANDARD" },
+      { "id": 3, "name": "QUEEN",   "type": "STANDARD" },
+      { "id": 4, "name": "JACK",    "type": "STANDARD" },
+      { "id": 5, "name": "TEN",     "type": "STANDARD" },
+      { "id": 6, "name": "NINE",    "type": "STANDARD" },
+      { "id": 7, "name": "URN",     "type": "STANDARD" },
+      { "id": 8, "name": "CROWN",   "type": "STANDARD" },
+      { "id": 9, "name": "WILD",    "type": "WILD",    "substitutes": "STANDARD" },
+      { "id": 12, "name": "SCATTER","type": "SCATTER" }
+    ],
+    "paylines": [
+      { "id": 1,  "coords": [[0,0],[0,1],[0,2],[0,3],[0,4]] },
+      { "id": 2,  "coords": [[1,0],[1,1],[1,2],[1,3],[1,4]] },
+      { "id": 3,  "coords": [[2,0],[2,1],[2,2],[2,3],[2,4]] },
+      { "id": 4,  "coords": [[0,0],[1,1],[2,2],[1,3],[0,4]] },
+      { "id": 5,  "coords": [[2,0],[1,1],[0,2],[1,3],[2,4]] },
+      { "id": 6,  "coords": [[0,0],[0,1],[1,2],[2,3],[2,4]] },
+      { "id": 7,  "coords": [[2,0],[2,1],[1,2],[0,3],[0,4]] },
+      { "id": 8,  "coords": [[1,0],[0,1],[1,2],[2,3],[1,4]] },
+      { "id": 9,  "coords": [[1,0],[2,1],[1,2],[0,3],[1,4]] },
+      { "id": 10, "coords": [[0,0],[1,1],[1,2],[1,3],[0,4]] },
+      { "id": 11, "coords": [[2,0],[1,1],[1,2],[1,3],[2,4]] },
+      { "id": 12, "coords": [[1,0],[0,1],[0,2],[0,3],[1,4]] },
+      { "id": 13, "coords": [[1,0],[2,1],[2,2],[2,3],[1,4]] },
+      { "id": 14, "coords": [[0,0],[1,1],[0,2],[1,3],[0,4]] },
+      { "id": 15, "coords": [[2,0],[1,1],[2,2],[1,3],[2,4]] },
+      { "id": 16, "coords": [[0,0],[2,1],[0,2],[2,3],[0,4]] },
+      { "id": 17, "coords": [[2,0],[0,1],[2,2],[0,3],[2,4]] },
+      { "id": 18, "coords": [[1,0],[1,1],[0,2],[1,3],[1,4]] },
+      { "id": 19, "coords": [[1,0],[1,1],[2,2],[1,3],[1,4]] },
+      { "id": 20, "coords": [[0,0],[2,1],[2,2],[2,3],[0,4]] }
+    ],
+    "payTable": {
+      "1": { "3": 2.8643, "4": 7.1606, "5": 19.6916 },
+      "2": { "3": 2.5061, "4": 6.0864, "5": 15.0373 },
+      "3": { "3": 1.7897, "4": 4.6543, "5": 12.531 },
+      "4": { "3": 1.4321, "4": 3.5802, "5": 10.3828 },
+      "5": { "3": 1.4321, "4": 2.5061, "5": 7.5186 },
+      "6": { "3": 1.4321, "4": 2.8643, "5": 7.5186 },
+      "7": { "3": 7.1606, "4": 19.6916, "5": 50.1239 },
+      "8": { "3": 5.0124, "4": 12.531, "5": 30.4325 },
+      "9": { "3": 10.0249, "4": 25.0619, "5": 71.6058 }
+    },
+    "reelStrips": {
+      "BASE": [
+        [6,2,12,3,4,5,6,1,2,8,3,4,5,6,1,2,3,4,5,6,1,2,3,4,5,6,8,7,1,3,4,5],
+        [6,2,9,12,3,4,5,9,6,1,2,8,9,3,4,5,9,6,1,2,7,9,3,4,5,6,9,8,1,3,4,9,5],
+        [6,2,9,12,3,4,5,9,6,1,2,8,9,3,4,5,9,6,1,2,7,9,3,4,5,6,9,8,1,3,4,9,5],
+        [6,2,9,12,3,4,5,9,6,1,2,8,9,3,4,5,9,6,1,2,7,9,3,4,5,6,9,8,1,3,4,9,5],
+        [6,2,12,3,4,5,6,1,2,8,3,4,5,6,1,2,3,4,5,6,1,2,3,4,5,6,8,7,1,3,4,5]
+      ],
+      "POWER_BET": [
+        [6,2,12,3,4,5,6,1,2,8,3,4,5,6,1,2,3,4,5,6,1,2,3,4,5,6,8,7,1,3,4,5],
+        [6,2,9,12,3,4,5,9,6,1,2,8,9,3,4,5,9,6,1,2,7,9,3,4,5,6,9,8,1,3,4,9,5],
+        [6,2,9,12,3,4,5,9,6,1,2,8,9,3,4,5,9,6,1,2,7,9,3,4,5,6,9,8,1,3,4,9,5],
+        [6,2,9,12,3,4,5,9,6,1,2,8,9,3,4,5,9,6,1,2,7,9,3,4,5,6,9,8,1,3,4,9,5],
+        [6,2,12,3,4,5,6,1,2,8,3,4,5,6,1,2,3,4,5,6,1,2,3,4,5,6,8,7,1,3,4,5]
+      ],
+      "FREE_SPINS": [
+        [5,6,7,7,1,2,3,4,5,6,8,1,2,3,4,5,6,8,7,1,2,3,4,5,6,8,1,2,3,4,5,6,8,7,1,2,3,4,5,6,8,1,2,3,4],
+        [5,6,8,9,7,1,2,3,4,9,5,6,8,7,1,9,2,3,4,5,6,9,8,7,1,2,9,3,4,5,6,8,9,1,2,3,4,5,9,6,8,7,1,2,9,3,4],
+        [5,6,8,9,7,1,2,3,4,9,5,6,8,7,1,9,2,3,4,5,6,9,8,7,1,2,9,3,4,5,6,8,9,1,2,3,4,5,9,6,8,7,1,2,9,3,4],
+        [5,6,8,9,7,1,2,3,4,9,5,6,8,7,1,9,2,3,4,5,6,9,8,7,1,2,9,3,4,5,6,8,9,1,2,3,4,5,9,6,8,7,1,2,9,3,4],
+        [5,6,7,7,1,2,3,4,5,6,8,1,2,3,4,5,6,8,7,1,2,3,4,5,6,8,1,2,3,4,5,6,8,7,1,2,3,4,5,6,8,1,2,3,4]
+      ]
+    },
+    "cascades": {
+      "enabled": true,
+      "maxCascades": 8,
+      "stepMultipliers": [1, 2, 3, 5, 10]
+    },
+    "wildFeatures": {
+      "expanding": true,
+      "sticky": false,
+      "walking": false,
+      "stickySpins": 0,
+      "appliesTo": ["FREE_SPINS"]
+    },
+    "scatterTriggers": { "minCount": 3, "freeSpinsAwarded": 10, "retriggerAwards": 5 },
+    "freeSpins":       { "betLockedToTriggerBet": true, "powerBetPersists": false, "maxRetriggerStack": 50 },
+    "powerBet":        { "betMultiplier": 1.50 },
+    "bonusBuyOptions": [
+      {
+        "buyType": "FREE_SPINS_BUY",
+        "costMultiplier": 100,
+        "freeSpinsWinMultiplier": 2.55,
+        "targetState": "FREE_SPINS_AWAITING",
+        "initialFeaturePayload": { "freeSpinsAwarded": 12 }
+      }
+    ],
+    "pickCollect": {
+      "boardSize": 12,
+      "completion": { "type": "END_TILE" },
+      "triggerOneInN": 433,
+      "tileDistribution": [
+        { "type": "CREDITS",    "weight": 45, "valueRange": [1, 12] },
+        { "type": "MULTIPLIER", "weight": 15, "valueRange": [2, 3]  },
+        { "type": "COLLECT",    "weight": 22 },
+        { "type": "END",        "weight": 18 }
+      ],
+      "maxFeatureWinMultiplier": 5000
+    },
+    "limits": { "maxWinPerRoundMultiplier": 20000 },
+    "betConfig": {
+      "values": [0.20, 0.40, 0.60, 1.00, 2.00, 5.00, 10.00, 20.00, 50.00, 100.00],
+      "defaultBet": 1.00
+    }
+  }
+}

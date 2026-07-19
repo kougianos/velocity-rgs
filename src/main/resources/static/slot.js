@@ -91,6 +91,7 @@ const els = {
   winBanner: $("winBanner"),
   winAmount: $("winAmount"),
   winLines: $("winLines"),
+  cascadeBadge: $("cascadeBadge"),
   betSlider: $("betSlider"),
   betValue: $("betValue"),
   betMin: $("betMin"),
@@ -104,12 +105,19 @@ const els = {
   powerBetMultLabel: $("powerBetMultLabel"),
   spinBtn: $("spinBtn"),
   buyFreeSpins: $("buyFreeSpins"),
+  buyHoldSpin: $("buyHoldSpin"),
+  buyHoldSpinCost: $("buyHoldSpinCost"),
   startFeature: $("startFeature"),
   pickPanel: $("pickPanel"),
   pickBoard: $("pickBoard"),
   pickCollected: $("pickCollected"),
   pickTotal: $("pickTotal"),
   pickRemaining: $("pickRemaining"),
+  respinPanel: $("respinPanel"),
+  respinsLeft: $("respinsLeft"),
+  respinCoins: $("respinCoins"),
+  respinTotal: $("respinTotal"),
+  respinJackpots: $("respinJackpots"),
   resetSession: $("resetSession"),
   simSlider: $("simSlider"),
   simBetValue: $("simBetValue"),
@@ -151,6 +159,7 @@ function setBusy(busy) {
   if (busy) {
     els.spinBtn.disabled = true;
     els.buyFreeSpins.disabled = true;
+    els.buyHoldSpin.disabled = true;
     els.startFeature.disabled = true;
     return;
   }
@@ -314,6 +323,7 @@ function renderMatrix(matrix, winLines = []) {
 /** Lay a scrolling, motion-blurred symbol strip over every reel to fake the spin. */
 function startSpin() {
   applyWins([]); // clear any prior win highlight before the reels move
+  renderCascadeBadge(null); // and any tumble badge left over from the previous round
   for (let c = 0; c < COLS; c++) {
     const reel = els.reels.children[c];
     reel.classList.remove("landed");
@@ -352,6 +362,73 @@ async function settleReels(matrix, winLines = []) {
   applyWins(winLines, matrix); // matrix needed so ways wins can find the cells to highlight
 }
 
+/* ------------------------------------------------------------- cascading reels */
+
+/* How long a shattered cell is visible before the refill lands, and how long the refilled board
+   is held before it is evaluated on screen. Kept tight: a six-tumble chain still has to feel like
+   one spin. Both are halved against the CSS durations deliberately — the animations overlap. */
+const CASCADE_CLEAR_MS = 240;
+const CASCADE_SETTLE_MS = 300;
+
+/** Show/hide the "Tumble N · ×M" pill that tracks the chain while it plays. */
+function renderCascadeBadge(step) {
+  if (!els.cascadeBadge) return;
+  if (!step) {
+    els.cascadeBadge.classList.add("hidden");
+    return;
+  }
+  els.cascadeBadge.classList.remove("hidden");
+  els.cascadeBadge.textContent = step.index === 0
+    ? `Drop 1 · ×${Number(step.multiplier)}`
+    : `Tumble ${step.index} · ×${Number(step.multiplier)}`;
+}
+
+/** Flash the cells this drop cleared, then leave them empty for the refill to land in. */
+async function shatterCells(positions) {
+  for (const [r, c] of positions) {
+    const cell = gridCells[r] && gridCells[r][c];
+    if (cell) cell.classList.add("clearing");
+  }
+  await delay(CASCADE_CLEAR_MS);
+}
+
+/**
+ * Play a cascading round's drop sequence, in order, instead of snapping to the settled board.
+ *
+ * The server has already decided every grid, every win and every step multiplier — this walks the
+ * `cascadeSteps` it sent and renders them. Nothing here computes an outcome; the running total is
+ * only a display accumulation of the per-step wins the server reported, and the final figure is
+ * replaced by the server's `totalWin` at the end so rounding can never drift on screen.
+ */
+async function playCascade(steps, totalWin, allWinLines) {
+  let running = 0;
+  for (let i = 0; i < steps.length; i++) {
+    const step = steps[i];
+    if (i > 0) {
+      // Refill: paint the new board and let the changed cells fall in.
+      const cleared = new Set((steps[i - 1].clearedPositions || []).map(([r, c]) => `${r}:${c}`));
+      for (let r = 0; r < ROWS; r++) {
+        for (let c = 0; c < COLS; c++) {
+          paintCell(r, c, step.matrix[r][c]);
+          if (cleared.has(`${r}:${c}`)) gridCells[r][c].classList.add("dropping");
+        }
+      }
+      applyWins(step.winLines, step.matrix);
+      await delay(CASCADE_SETTLE_MS);
+    }
+    running += Number(step.stepWin ?? 0);
+    renderWin(running, step.winLines);
+    renderCascadeBadge(step);
+
+    const cleared = step.clearedPositions || [];
+    if (!cleared.length) break;
+    await shatterCells(cleared);
+  }
+  renderCascadeBadge(null);
+  // Settle on the server's authoritative figures — the running sum above is presentation only.
+  renderWin(totalWin, allWinLines);
+}
+
 function renderWin(totalWin, winLines = []) {
   const amount = Number(totalWin ?? 0);
   // The WIN box stays mounted in the layout at all times so it never shifts the
@@ -382,12 +459,18 @@ function renderActions() {
   const can = (a) => actions.includes(a);
   els.spinBtn.disabled = !can("SPIN");
   els.buyFreeSpins.disabled = !can("BUY_FEATURE");
+  els.buyHoldSpin.disabled = !can("BUY_FEATURE");
 
-  const needsStart = can("START_FREE_SPINS") || can("START_PICK_COLLECT");
+  const needsStart = can("START_FREE_SPINS") || can("START_PICK_COLLECT") || can("START_RESPIN");
   els.startFeature.classList.toggle("hidden", !needsStart);
   if (needsStart) {
-    els.startFeature.dataset.feature = can("START_FREE_SPINS") ? "FREE_SPINS" : "PICK_COLLECT";
-    els.startFeature.textContent = can("START_FREE_SPINS") ? "Start Free Spins" : "Start Pick & Collect";
+    const feature = can("START_FREE_SPINS") ? "FREE_SPINS"
+      : can("START_RESPIN") ? "RESPIN"
+      : "PICK_COLLECT";
+    const label = { FREE_SPINS: "Start Free Spins", RESPIN: "Start Hold & Spin",
+      PICK_COLLECT: "Start Pick & Collect" };
+    els.startFeature.dataset.feature = feature;
+    els.startFeature.textContent = label[feature];
   }
 }
 
@@ -420,6 +503,69 @@ function renderPickBoard(view) {
       if (canPick) tile.addEventListener("click", () => pickTile(i));
     }
     els.pickBoard.appendChild(tile);
+  }
+}
+
+/**
+ * Land one spin's result on the reels: stop them on the opening board, then, if the server reported
+ * a tumble, play the rest of the chain. A conventional spin sends no `cascadeSteps` at all and takes
+ * the same path it always has.
+ */
+async function settleRound(resp) {
+  await settleReels(resp.matrix, (resp.cascadeSteps || [])[0]?.winLines ?? resp.winLines);
+  if (resp.cascadeSteps && resp.cascadeSteps.length > 1) {
+    await playCascade(resp.cascadeSteps, resp.totalWin, resp.winLines);
+  } else {
+    renderWin(resp.totalWin, resp.winLines);
+  }
+  // A Hold & Spin respin reports its board through the same `matrix`; the locked coins are then
+  // stamped back over the cells that never re-drew.
+  renderRespin(resp.respinView);
+}
+
+/* ------------------------------------------------------------- Hold & Spin */
+
+/** The live respin view from the server, or null when the feature is not running. */
+let respinView = null;
+
+/**
+ * Render the Hold & Spin panel and lock the coin cells on the grid.
+ *
+ * Every value here is server-computed — the coin positions, their values, the respin counter and
+ * which jackpot tiers are reached all arrive in `respinView`. The client only decides where to draw
+ * them.
+ */
+function renderRespin(view) {
+  respinView = view || null;
+  if (!view) {
+    els.respinPanel.classList.add("hidden");
+    return;
+  }
+  els.respinPanel.classList.remove("hidden");
+  els.respinsLeft.textContent = view.remainingRespins;
+  els.respinCoins.textContent = `${view.coinCount} / ${view.gridCells}`;
+  els.respinTotal.textContent = Number(view.coinTotal ?? 0).toFixed(2);
+
+  els.respinJackpots.innerHTML = "";
+  for (const jp of view.jackpots || []) {
+    const chip = document.createElement("span");
+    chip.className = `respin-jp${jp.reached ? " reached" : ""}`;
+    chip.innerHTML = `${jp.tier} <span class="jp-mult">${jp.minCoins}+ · ×${Number(jp.multiplier)}</span>`;
+    els.respinJackpots.appendChild(chip);
+  }
+  paintLockedCoins(view);
+}
+
+/** Mark each held cell as locked and stamp its value, so the accumulation is visible on the reels. */
+function paintLockedCoins(view) {
+  for (const coin of view.coins || []) {
+    const cell = gridCells[coin.row] && gridCells[coin.row][coin.col];
+    if (!cell) continue;
+    cell.classList.add("locked");
+    const tag = document.createElement("span");
+    tag.className = "coin-value";
+    tag.textContent = `×${Number(coin.value)}`;
+    cell.appendChild(tag);
   }
 }
 
@@ -479,6 +625,7 @@ async function bootSession(forceNewPlayer = false) {
     renderHud();
     renderActions();
     renderPickBoard(init.activeFeatureView);
+    renderRespin(init.respinView);
     logResponse("init", init);
     toast(`Demo player ${state.playerId} ready`, "success");
   } catch (e) {
@@ -508,14 +655,14 @@ async function doSpin() {
       delay(SPIN_MS),
     ]);
     applySessionView(resp);
-    await settleReels(resp.matrix, resp.winLines);
-    renderWin(resp.totalWin, resp.winLines);
+    await settleRound(resp);
     await refreshBalance();
     renderActions();
     renderPickBoard(null);
     logResponse("spin", resp);
     announceFeatures(resp.featuresTriggered);
     await maybeOfferFreeSpins();
+    await maybeOfferRespins();
   } catch (e) {
     stopSpin();
     handleError("Spin failed", e);
@@ -526,8 +673,103 @@ async function doSpin() {
 
 function announceFeatures(f) {
   if (!f) return;
-  if (f.freeSpinsAwarded > 0) toast(`🎉 ${f.freeSpinsAwarded} free spins awarded!`, "success");
+  if (f.respinTriggered) toast("🪙 Hold & Spin triggered!", "success");
+  else if (f.freeSpinsAwarded > 0) toast(`🎉 ${f.freeSpinsAwarded} free spins awarded!`, "success");
   else if (f.pickCollectTriggered) toast("🎁 Pick & Collect triggered!", "success");
+}
+
+/**
+ * Hold & Spin entry, mirroring the free-spins offer: once coins have locked, ask whether to start,
+ * then auto-play the respins until the server settles the feature.
+ */
+async function maybeOfferRespins() {
+  if (!(state.availableActions || []).includes("START_RESPIN")) return;
+  const coins = respinView ? respinView.coinCount : 0;
+  const start = await showModal({
+    icon: "🪙",
+    title: "Hold & Spin!",
+    message: `${coins} coins locked in. Every new coin resets the respin counter — `
+      + `fill the grid for the GRAND jackpot. Start the respins?`,
+    confirmLabel: "Start Hold & Spin",
+    cancelLabel: "Later",
+  });
+  if (start) await runRespinAutoplay();
+}
+
+async function runRespinAutoplay() {
+  try {
+    setBusy(true);
+    els.startFeature.classList.add("hidden");
+
+    const startResp = await api("/api/v1/slot/feature/start", {
+      method: "POST",
+      idempotency: true,
+      body: {
+        gameId: GAME_ID,
+        sessionId: state.sessionId,
+        sessionVersion: state.sessionVersion,
+        featureType: "RESPIN",
+      },
+    });
+    applySessionView(startResp);
+    renderHud();
+    renderRespin(startResp.respinView);
+    logResponse("feature/start (respin)", startResp);
+
+    let totalWin = 0;
+    let respins = 0;
+    let jackpot = null;
+    while ((state.availableActions || []).includes("SPIN")
+        && state.currentState === "RESPIN_LOOP") {
+      startSpin();
+      const [spin] = await Promise.all([
+        api("/api/v1/slot/spin", {
+          method: "POST",
+          idempotency: true,
+          body: {
+            gameId: GAME_ID,
+            sessionId: state.sessionId,
+            sessionVersion: state.sessionVersion,
+            // The stake is locked to the triggering bet server-side, and Power Bet is refused
+            // mid-feature - the round that awarded the respins already paid for them.
+            betSize: betForRequest(),
+            powerBetActive: false,
+          },
+        }),
+        delay(SPIN_MS),
+      ]);
+      applySessionView(spin);
+      renderHud();   // the STATE readout has to track RESPIN_AWAITING -> RESPIN_LOOP -> BASE_GAME
+      await settleRound(spin);
+      logResponse(`respin ${++respins}`, spin);
+      if (spin.respinView && spin.respinView.awardedJackpotTier) {
+        jackpot = spin.respinView.awardedJackpotTier;
+      }
+      // The settling respin credits and reports the whole feature win.
+      if (state.currentState !== "RESPIN_LOOP") {
+        totalWin = Number(spin.totalWin ?? 0);
+      }
+    }
+
+    await refreshBalance();
+    renderActions();
+    renderRespin(null);
+
+    await showModal({
+      icon: jackpot ? "🏆" : "🪙",
+      title: jackpot ? `${jackpot} Jackpot!` : "Hold & Spin Complete",
+      message: `${respins} respin${respins === 1 ? "" : "s"} played · `
+        + `Total win ${fmt(totalWin)} ${CURRENCY}`,
+      confirmLabel: "Collect",
+    });
+    renderWin(totalWin);
+    toast(`Hold & Spin won ${fmt(totalWin)} ${CURRENCY}`, "success");
+  } catch (e) {
+    stopSpin();
+    handleError("Hold & Spin failed", e);
+  } finally {
+    setBusy(false);
+  }
 }
 
 async function buyFeature(buyType) {
@@ -546,11 +788,14 @@ async function buyFeature(buyType) {
     });
     applySessionView(resp);
     await refreshBalance();
+    renderHud();
     renderActions();
     renderPickBoard(resp.activeFeatureView);
+    renderRespin(resp.respinView);
     logResponse("feature/buy", resp);
     toast(`Bought ${buyType} for ${fmt(resp.cost)} ${CURRENCY}`, "success");
     await maybeOfferFreeSpins();
+    await maybeOfferRespins();
   } catch (e) {
     handleError("Feature buy failed", e);
   } finally {
@@ -644,8 +889,7 @@ async function runFreeSpinsAutoplay() {
         delay(SPIN_MS),
       ]);
       applySessionView(spin);
-      await settleReels(spin.matrix, spin.winLines);
-      renderWin(spin.totalWin, spin.winLines);
+      await settleRound(spin);
       logResponse(`free spin ${++spinsPlayed}`, spin);
 
       // On the settling spin the server credits and reports the whole feature win.
@@ -772,10 +1016,13 @@ function bindEvents() {
   els.spinBtn.addEventListener("click", doSpin);
   els.powerBet.addEventListener("change", applyPowerBetState);
   els.buyFreeSpins.addEventListener("click", () => buyFeature("FREE_SPINS_BUY"));
+  els.buyHoldSpin.addEventListener("click", () => buyFeature("HOLD_SPIN_BUY"));
   els.startFeature.addEventListener("click", () => {
     const feature = els.startFeature.dataset.feature || "FREE_SPINS";
-    // Free spins auto-play; Pick & Collect still enters its interactive board.
+    // Free spins and Hold & Spin auto-play (neither takes a player decision per iteration);
+    // Pick & Collect still enters its interactive board.
     if (feature === "FREE_SPINS") runFreeSpinsAutoplay();
+    else if (feature === "RESPIN") runRespinAutoplay();
     else startFeature(feature);
   });
   els.resetSession.addEventListener("click", () => bootSession(true));
@@ -788,6 +1035,13 @@ function bindEvents() {
 function applyGameInfo() {
   if (META && META.freeSpinsBuyCostMultiplier != null) {
     els.buyFreeSpinsCost.textContent = `(×${Number(META.freeSpinsBuyCostMultiplier)})`;
+  }
+  // Hold & Spin is only sold by games that configure a HOLD_SPIN_BUY option, so the button is
+  // mounted from the catalog rather than being present-but-broken everywhere else.
+  const holdSpinCost = META && META.holdSpinBuyCostMultiplier;
+  els.buyHoldSpin.classList.toggle("hidden", holdSpinCost == null);
+  if (holdSpinCost != null) {
+    els.buyHoldSpinCost.textContent = `(×${Number(holdSpinCost)})`;
   }
 }
 

@@ -4,6 +4,7 @@ import com.velocity.rgs.slot.math.config.SlotMathDefinition;
 import com.velocity.rgs.slot.math.domain.WinModel;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 /**
  * Turns a generated grid into wins under one {@link WinModel}. Implementations are stateless and must be
@@ -25,4 +26,17 @@ public interface WinEvaluator {
      * @param matrix indexed {@code [row][reel]}, sized to {@code math.grid()}
      */
     EvaluationResult evaluate(int[][] matrix, BigDecimal bet, SlotMathDefinition math);
+
+    /**
+     * Which cells the given wins actually cover - the footprint a cascading game clears before it
+     * refills, and the cells a client highlights.
+     *
+     * <p>This has to live with the evaluator because only the model knows the answer: a payline win
+     * covers the leading cells of one configured line, whereas a ways win covers every cell on the
+     * leftmost {@code count} reels that holds the symbol or a wild standing in for it. Deriving it
+     * anywhere else would mean a second place that encodes what a win means, and the two would drift.
+     *
+     * @return a {@code [rows][cols]} mask, {@code true} where a cell is part of a win
+     */
+    boolean[][] winningMask(int[][] matrix, List<WinLine> wins, SlotMathDefinition math);
 }

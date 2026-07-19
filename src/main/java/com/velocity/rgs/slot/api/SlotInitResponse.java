@@ -2,6 +2,7 @@ package com.velocity.rgs.slot.api;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.velocity.rgs.slot.feature.pickcollect.PickCollectFeatureView;
+import com.velocity.rgs.slot.feature.respin.RespinFeatureView;
 import com.velocity.rgs.session.domain.GameCommand;
 import com.velocity.rgs.session.domain.GameState;
 import lombok.Builder;
@@ -29,6 +30,7 @@ public record SlotInitResponse(
         BigDecimal currentBet,
         List<GameCommand> availableActions,
         Map<String, Object> featureFlags,
-        PickCollectFeatureView activeFeatureView
+        PickCollectFeatureView activeFeatureView,
+        RespinFeatureView respinView
 ) {
 }

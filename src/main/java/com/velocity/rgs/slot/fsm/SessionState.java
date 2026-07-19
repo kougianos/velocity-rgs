@@ -16,7 +16,9 @@ public sealed interface SessionState
                 SessionState.FreeSpinsAwaiting,
                 SessionState.FreeSpinsLoop,
                 SessionState.PickCollectAwaiting,
-                SessionState.PickCollectLoop {
+                SessionState.PickCollectLoop,
+                SessionState.RespinAwaiting,
+                SessionState.RespinLoop {
 
     GameState gameState();
 
@@ -60,5 +62,34 @@ public sealed interface SessionState
             featurePayload = Map.copyOf(featurePayload);
         }
         @Override public GameState gameState() { return GameState.PICK_COLLECT_LOOP; }
+    }
+
+    /**
+     * Hold &amp; Spin has been triggered and the coins that triggered it are already locked into
+     * {@code featurePayload}; the player has yet to send START_RESPIN. Mirrors
+     * {@link FreeSpinsAwaiting} - the award is decided the moment the trigger lands, and entering the
+     * loop is a separate, explicit command.
+     */
+    record RespinAwaiting(Map<String, Object> featurePayload, BigDecimal triggerBet)
+            implements SessionState {
+        public RespinAwaiting {
+            Objects.requireNonNull(featurePayload, "featurePayload");
+            Objects.requireNonNull(triggerBet, "triggerBet");
+            featurePayload = Map.copyOf(featurePayload);
+        }
+        @Override public GameState gameState() { return GameState.RESPIN_AWAITING; }
+    }
+
+    /**
+     * The respin loop. Every SPIN here re-draws only the unlocked cells; the stake is locked to the
+     * triggering bet because the feature is funded by the round that awarded it, not by new wagers.
+     */
+    record RespinLoop(Map<String, Object> featurePayload, BigDecimal triggerBet) implements SessionState {
+        public RespinLoop {
+            Objects.requireNonNull(featurePayload, "featurePayload");
+            Objects.requireNonNull(triggerBet, "triggerBet");
+            featurePayload = Map.copyOf(featurePayload);
+        }
+        @Override public GameState gameState() { return GameState.RESPIN_LOOP; }
     }
 }

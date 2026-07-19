@@ -16,6 +16,7 @@ import com.velocity.rgs.slot.math.config.GameDefinition;
 import com.velocity.rgs.slot.math.config.GamePresentation;
 import com.velocity.rgs.slot.math.config.SlotMathDefinition;
 import com.velocity.rgs.slot.math.domain.BonusBuyType;
+import com.velocity.rgs.slot.math.domain.WinModel;
 import lombok.Builder;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -81,7 +82,14 @@ public class GameCatalogController {
                 .maxBet(math.betConfig().maxBet())
                 .freeSpinsAwarded(math.scatterTriggers().freeSpinsAwarded())
                 .freeSpinsBuyCostMultiplier(buyCost(math, BonusBuyType.FREE_SPINS_BUY))
+                .holdSpinBuyCostMultiplier(buyCost(math, BonusBuyType.HOLD_SPIN_BUY))
                 .pickCollectTriggerOneInN(math.pickCollect().triggerOneInN())
+                // How the game turns a grid into wins. Named explicitly rather than left for the client
+                // to infer from a null lineId on a win it has not seen yet: the lobby has to badge
+                // "243 Ways" vs "20 Paylines" before a single spin has happened.
+                .winModel(math.winModel().name())
+                .winModelLabel(winModelLabel(math))
+                .waysCount(math.winModel() == WinModel.WAYS ? waysCount(math) : null)
                 // Reel layout
                 .rows(math.grid().rows())
                 .cols(math.grid().cols())
@@ -103,6 +111,23 @@ public class GameCatalogController {
                     return new SymbolView(s.id(), glyph, name);
                 })
                 .toList();
+    }
+
+    /**
+     * How many live paths a ways game has: one per combination of row choices across the reels, i.e.
+     * {@code rows ^ cols} - 243 for the shipped 3x5 board. Derived rather than configured so it cannot
+     * drift from the grid the evaluator actually walks.
+     */
+    private static int waysCount(SlotMathDefinition math) {
+        return (int) Math.pow(math.grid().rows(), math.grid().cols());
+    }
+
+    /** The display string the lobby badges: "243 Ways" or "20 Paylines". */
+    private static String winModelLabel(SlotMathDefinition math) {
+        return switch (math.winModel()) {
+            case WAYS -> waysCount(math) + " Ways";
+            case PAYLINES -> math.paylines().size() + " Payline" + (math.paylines().size() == 1 ? "" : "s");
+        };
     }
 
     private static BigDecimal buyCost(SlotMathDefinition math, BonusBuyType type) {
@@ -266,7 +291,11 @@ public class GameCatalogController {
             Integer maxWinMultiplier,
             Integer freeSpinsAwarded,
             BigDecimal freeSpinsBuyCostMultiplier,
+            BigDecimal holdSpinBuyCostMultiplier,
             Integer pickCollectTriggerOneInN,
+            String winModel,
+            String winModelLabel,
+            Integer waysCount,
             Integer rows,
             Integer cols,
             List<PaylineView> paylines,

@@ -20,6 +20,8 @@ function hueFor(theme) {
     case "fire": return "var(--vx-aztec)";
     case "frost": return "var(--vx-frost)";
     case "jade": return "var(--vx-jade)";
+    case "gilded": return "var(--vx-gold, #f5c518)";
+    case "hoard": return "var(--vx-violet)";
     case "roulette": return "var(--vx-emerald)";
     case "blackjack": return "var(--vx-violet)";
     default: return "var(--vx-ignite)";
@@ -119,8 +121,12 @@ function renderCard(g) {
     : g.gameType === "BLACKJACK" ? blackjackStats(g, rtp)
     : slotStats(g, rtp);
 
+  // Slots also badge their win model ("243 Ways" / "20 Paylines") straight from the catalog.
+  const model = isSlot(g) && g.winModelLabel
+    ? `<span class="vx-model">${g.winModelLabel}</span>` : "";
+
   card.innerHTML = `
-    <div class="vx-art"><span class="glyph">${g.logo}</span><span class="vx-vol">${badge}</span></div>
+    <div class="vx-art">${model}<span class="glyph">${g.logo}</span><span class="vx-vol">${badge}</span></div>
     <div class="vx-body">
       <h3>${g.title}</h3>
       <p class="vx-cardtag">${g.tagline}</p>
@@ -144,8 +150,18 @@ function slotStats(g, rtp) {
   return (
     stat("RTP", `${rtp}%`) +
     stat("Max win", `${fmtInt(g.maxWinMultiplier)}×`) +
-    stat("Free spins", g.freeSpinsAwarded)
+    stat(...winModelStat(g))
   );
+}
+
+/**
+ * The game's win model as a [label, value] pair — server-named via the catalog's winModel /
+ * winModelLabel / waysCount, so the lobby can badge "243 Ways" before a single spin has happened
+ * rather than inferring it from a null lineId on a win it has not seen yet.
+ */
+function winModelStat(g) {
+  if (g.winModel === "WAYS") return ["Ways", fmtInt(g.waysCount)];
+  return ["Lines", (g.paylines || []).length || "—"];
 }
 function rouletteStats(g, rtp) {
   const r = g.roulette || {};

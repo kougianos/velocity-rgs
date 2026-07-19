@@ -53,14 +53,28 @@ final class EvaluationSupport {
                 .orElseThrow(() -> new IllegalStateException("math has no WILD symbol"));
     }
 
-    /** Applies the per-round win cap, then rounds to currency scale. */
-    static EvaluationResult capped(BigDecimal total, List<WinLine> wins, BigDecimal bet, SlotMathDefinition math) {
+    /**
+     * Applies the per-round win cap, rounds to currency scale, and wraps the outcome as the round's
+     * single drop.
+     *
+     * <p>{@code stopPositions} is not available at this level - an evaluator is handed a grid, not the
+     * draws that produced it - so the step records an empty array. The two callers that care
+     * ({@code SlotEngineService} for persistence and {@link CascadeEngine} for the sequence) hold the
+     * real stops and stitch them in; nothing reads the placeholder.
+     */
+    static EvaluationResult capped(BigDecimal total, List<WinLine> wins, BigDecimal bet,
+                                   SlotMathDefinition math, int[][] matrix) {
         List<String> reasons = new ArrayList<>();
         BigDecimal cap = bet.multiply(BigDecimal.valueOf(math.limits().maxWinPerRoundMultiplier()));
         if (total.compareTo(cap) > 0) {
             total = cap;
             reasons.add(REASON_MAX_WIN_CAPPED);
         }
-        return new EvaluationResult(total.setScale(2, RoundingMode.HALF_UP), wins, reasons);
+        BigDecimal scaled = total.setScale(2, RoundingMode.HALF_UP);
+        CascadeStep step = new CascadeStep(0, matrix, NO_STOPS, wins, BigDecimal.ONE, scaled, NO_POSITIONS);
+        return new EvaluationResult(scaled, wins, reasons, List.of(step));
     }
+
+    private static final int[] NO_STOPS = new int[0];
+    private static final int[][] NO_POSITIONS = new int[0][];
 }

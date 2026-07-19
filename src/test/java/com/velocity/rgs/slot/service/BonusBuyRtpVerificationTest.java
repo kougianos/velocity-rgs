@@ -1,11 +1,13 @@
 package com.velocity.rgs.slot.service;
 
 import com.velocity.rgs.slot.feature.pickcollect.PickCollectEngine;
+import com.velocity.rgs.slot.feature.respin.RespinEngine;
 import com.velocity.rgs.slot.math.config.SlotMathDefinition;
 import com.velocity.rgs.slot.math.config.SlotMathLoader;
 import com.velocity.rgs.slot.math.config.SlotMathRegistry;
 import com.velocity.rgs.slot.math.engine.GridGenerationEngine;
 import com.velocity.rgs.slot.math.engine.ReelEvaluator;
+import com.velocity.rgs.slot.math.engine.WildFeatureEngine;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
@@ -63,7 +65,7 @@ class BonusBuyRtpVerificationTest {
     private RtpSimulationService newService(String gameId, SlotMathDefinition math) {
         SlotMathRegistry registry = new SlotMathRegistry(Map.of(gameId + "@" + MATH_VERSION, math));
         return new RtpSimulationService(registry, new GridGenerationEngine(),
-                new ReelEvaluator(), new PickCollectEngine());
+                new ReelEvaluator(), new PickCollectEngine(), new RespinEngine(new GridGenerationEngine()), new WildFeatureEngine());
     }
 
     @ParameterizedTest(name = "{0} bonus-buy free-spins RTP converges to declared target")

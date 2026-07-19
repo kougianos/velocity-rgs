@@ -3,11 +3,15 @@ package com.velocity.rgs.slot.service;
 import com.velocity.rgs.common.error.ErrorCode;
 import com.velocity.rgs.common.error.RgsException;
 import com.velocity.rgs.slot.feature.pickcollect.PickCollectEngine;
+import com.velocity.rgs.slot.feature.respin.RespinEngine;
+import com.velocity.rgs.slot.math.config.CascadeConfig;
+import com.velocity.rgs.slot.math.config.RespinConfig;
 import com.velocity.rgs.slot.math.config.SlotMathDefinition;
 import com.velocity.rgs.slot.math.config.SlotMathLoader;
 import com.velocity.rgs.slot.math.config.SlotMathRegistry;
 import com.velocity.rgs.slot.math.engine.GridGenerationEngine;
 import com.velocity.rgs.slot.math.engine.ReelEvaluator;
+import com.velocity.rgs.slot.math.engine.WildFeatureEngine;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
@@ -35,7 +39,7 @@ class RtpSimulationServiceTest {
     private RtpSimulationService newService(String gameId, SlotMathDefinition math) {
         SlotMathRegistry registry = new SlotMathRegistry(Map.of(gameId + "@" + MATH_VERSION, math));
         return new RtpSimulationService(registry, new GridGenerationEngine(),
-                new ReelEvaluator(), new PickCollectEngine());
+                new ReelEvaluator(), new PickCollectEngine(), new RespinEngine(new GridGenerationEngine()), new WildFeatureEngine());
     }
 
     private SlotMathDefinition load(String gameId) {
@@ -45,9 +49,9 @@ class RtpSimulationServiceTest {
     /** Same math, bonus-buy options stripped - stands in for a slot authored without a buy. */
     private SlotMathDefinition withoutBonusBuy(SlotMathDefinition m) {
         return new SlotMathDefinition(
-                m.gameId(), m.mathVersion(), m.targetRtp(), m.grid(), m.winModel(), m.symbols(),
+                m.gameId(), m.mathVersion(), m.targetRtp(), m.grid(), m.winModel(), m.waysDirection(), m.wildFeatures(), m.symbols(),
                 m.paylines(), m.payTable(), m.reelStrips(), m.scatterTriggers(), m.freeSpins(),
-                m.powerBet(), List.of(), m.pickCollect(), m.limits(), m.betConfig());
+                m.powerBet(), List.of(), m.pickCollect(), m.cascades(), m.respins(), m.limits(), m.betConfig());
     }
 
     private RtpSimulationRequest request(String gameId, long buys) {

@@ -149,6 +149,22 @@ class BlackjackControllerIntegrationTest {
                 .isEqualTo(first.getResponse().getContentAsString());
     }
 
+    /**
+     * Doubling stakes a second bet, draws exactly one card, and settles the round.
+     *
+     * <h4>Why the hand is chosen so carefully</h4>
+     *
+     * Being <em>offered</em> DOUBLE does not mean DOUBLE will apply. When the dealer's upcard is an
+     * Ace the round is in the insurance phase, and any action other than INSURANCE declines it and
+     * makes the dealer peek at the hole card. A dealer natural settles the round then and there -
+     * before the chosen action is applied - so the double never happens and the stake stays at 5.00.
+     * That is correct blackjack: nobody gets to act against a natural. It is also the only pre-emption
+     * path, because {@code BlackjackEngineService} peeks solely inside the insurance branch.
+     *
+     * <p>This test used to take the first hand that merely offered DOUBLE, which meant it silently
+     * depended on the dealer's hidden card and failed roughly one run in six. Skipping hands that also
+     * offer INSURANCE removes the dependency entirely rather than papering over it with retries.
+     */
     @Test
     void doubleDownDebitsExtraAndSettles() throws Exception {
         JsonNode init = initSession();
@@ -158,8 +174,10 @@ class BlackjackControllerIntegrationTest {
             JsonNode r = postJson("/api/v1/blackjack/deal", "idem-dd-" + i,
                     dealBody(init.get("sessionId").asText(), version, "5.00"));
             version = r.get("sessionVersion").asLong();
+            String actions = r.get("availableActions").toString();
             if ("IN_PROGRESS".equals(r.get("status").asText())
-                    && r.get("availableActions").toString().contains("DOUBLE")) {
+                    && actions.contains("DOUBLE")
+                    && !actions.contains("INSURANCE")) {
                 doubleable = r;
                 break;
             }
@@ -169,12 +187,20 @@ class BlackjackControllerIntegrationTest {
                 version = r.get("sessionVersion").asLong();
             }
         }
-        assertThat(doubleable).as("dealt a doubleable hand within 25 tries").isNotNull();
+        assertThat(doubleable)
+                .as("dealt a doubleable hand with no insurance decision pending within 25 tries")
+                .isNotNull();
 
         JsonNode settled = action(version, "DOUBLE", "idem-double-go");
+
         assertThat(settled.get("status").asText()).isEqualTo("SETTLED");
-        // the doubled hand staked 2x base
+        // The double actually happened: a second stake was taken and exactly one card drawn.
         assertThat(settled.get("totalBet").decimalValue()).isEqualByComparingTo(new BigDecimal("10.00"));
+        JsonNode hand = settled.get("playerHands").get(0);
+        assertThat(hand.get("cards")).hasSize(3);
+        assertThat(hand.get("bet").decimalValue()).isEqualByComparingTo(new BigDecimal("10.00"));
+        assertThat(walletTransactionRepository.findAll())
+                .anyMatch(t -> t.getTransactionId().contains("double"));
     }
 
     @Test

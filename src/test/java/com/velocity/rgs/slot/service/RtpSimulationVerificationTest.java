@@ -1,11 +1,13 @@
 package com.velocity.rgs.slot.service;
 
 import com.velocity.rgs.slot.feature.pickcollect.PickCollectEngine;
+import com.velocity.rgs.slot.feature.respin.RespinEngine;
 import com.velocity.rgs.slot.math.config.SlotMathDefinition;
 import com.velocity.rgs.slot.math.config.SlotMathLoader;
 import com.velocity.rgs.slot.math.config.SlotMathRegistry;
 import com.velocity.rgs.slot.math.engine.GridGenerationEngine;
 import com.velocity.rgs.slot.math.engine.ReelEvaluator;
+import com.velocity.rgs.slot.math.engine.WildFeatureEngine;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
@@ -76,14 +78,36 @@ class RtpSimulationVerificationTest {
      */
     private static final BigDecimal TOLERANCE = new BigDecimal(System.getProperty("rtp.tolerance", "0.6"));
 
+    /**
+     * Games whose per-spin spread is wide enough that {@link #TOLERANCE} would be a coin-flip rather
+     * than a guard.
+     *
+     * <p><b>dragon-hoard</b> pays ~42% of its RTP through Hold &amp; Spin, a feature that fires on about
+     * 1 spin in 580 and then returns a few hundred times the stake, topping out at the 2,000x GRAND on a
+     * full grid. {@code CascadeCalibrationHarness} puts its per-spin sigma near 19x against aztec-fire's
+     * 3.8x, i.e. an SE of ~0.7pp even at the 8M horizon - already past the shared 0.6pp tolerance before
+     * any real drift exists. 2.4pp keeps it at ~3.5 sigma, the same headroom every other game gets.
+     *
+     * <p>This is the tolerance being sized to the game rather than the game being quietly excluded: 2.4pp
+     * still catches the failures that matter (a mis-set jackpot tier or a broken settlement lands tens of
+     * points out), and the number came from measurement, not from widening until it went green.
+     */
+    private static final Map<String, BigDecimal> PER_GAME_TOLERANCE = Map.of(
+            "dragon-hoard", new BigDecimal("2.4"));
+
+    private static BigDecimal toleranceFor(String gameId) {
+        return PER_GAME_TOLERANCE.getOrDefault(gameId, TOLERANCE);
+    }
+
     private RtpSimulationService newService(String gameId, SlotMathDefinition math) {
         SlotMathRegistry registry = new SlotMathRegistry(Map.of(gameId + "@" + MATH_VERSION, math));
         return new RtpSimulationService(registry, new GridGenerationEngine(),
-                new ReelEvaluator(), new PickCollectEngine());
+                new ReelEvaluator(), new PickCollectEngine(), new RespinEngine(new GridGenerationEngine()), new WildFeatureEngine());
     }
 
     @ParameterizedTest(name = "{0} base-game RTP converges to declared target")
-    @ValueSource(strings = {"aztec-fire", "frost-crown", "inferno-riches", "jade-tiger"})
+    @ValueSource(strings = {"aztec-fire", "frost-crown", "inferno-riches", "jade-tiger",
+            "gilded-cascade", "dragon-hoard"})
     void baseGameRtpConvergesToDeclaredTarget(String gameId) {
         SlotMathLoader loader = new SlotMathLoader();
         SlotMathDefinition math = loader.load(gameId, MATH_VERSION).math();
@@ -103,12 +127,14 @@ class RtpSimulationVerificationTest {
         BigDecimal target = math.targetRtp();
         BigDecimal deviation = baseRtp.subtract(target).abs();
 
-        System.out.printf("RTP verification [%s]: target=%s%% simulated=%s%% deviation=%s pp over %,d spins%n",
-                gameId, target, baseRtp, deviation, BASE_SPINS);
+        BigDecimal tolerance = toleranceFor(gameId);
+        System.out.printf("RTP verification [%s]: target=%s%% simulated=%s%% deviation=%s pp "
+                        + "(tolerance %s pp) over %,d spins%n",
+                gameId, target, baseRtp, deviation, tolerance, BASE_SPINS);
 
         assertThat(deviation)
                 .as("simulated base-game RTP %s%% must be within %s pp of declared target %s%% for %s",
-                        baseRtp, TOLERANCE, target, gameId)
-                .isLessThanOrEqualTo(TOLERANCE);
+                        baseRtp, tolerance, target, gameId)
+                .isLessThanOrEqualTo(tolerance);
     }
 }

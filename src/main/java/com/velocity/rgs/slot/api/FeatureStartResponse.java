@@ -2,6 +2,7 @@ package com.velocity.rgs.slot.api;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.velocity.rgs.slot.feature.pickcollect.PickCollectFeatureView;
+import com.velocity.rgs.slot.feature.respin.RespinFeatureView;
 import com.velocity.rgs.session.domain.GameCommand;
 import com.velocity.rgs.session.domain.GameState;
 import lombok.Builder;
@@ -21,6 +22,7 @@ public record FeatureStartResponse(
         int remainingFreeSpins,
         BigDecimal accumulatedFreeSpinsWin,
         PickCollectFeatureView activeFeatureView,
+        RespinFeatureView respinView,
         List<GameCommand> availableActions
 ) {
 }

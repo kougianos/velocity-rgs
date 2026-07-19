@@ -1,6 +1,9 @@
 package com.velocity.rgs.slot.math.engine;
 
 import com.velocity.rgs.catalog.BetConfig;
+import com.velocity.rgs.slot.math.config.CascadeConfig;
+import com.velocity.rgs.slot.math.config.WildFeatureConfig;
+import com.velocity.rgs.slot.math.config.RespinConfig;
 import com.velocity.rgs.slot.math.config.FreeSpinsConfig;
 import com.velocity.rgs.slot.math.config.Grid;
 import com.velocity.rgs.slot.math.config.Limits;
@@ -17,6 +20,7 @@ import com.velocity.rgs.slot.math.domain.ReelStrip;
 import com.velocity.rgs.slot.math.domain.ReelStripSet;
 import com.velocity.rgs.slot.math.domain.Symbol;
 import com.velocity.rgs.slot.math.domain.SymbolType;
+import com.velocity.rgs.slot.math.domain.WaysDirection;
 import com.velocity.rgs.slot.math.domain.WinModel;
 import org.junit.jupiter.api.Test;
 
@@ -235,6 +239,92 @@ class WaysWinEvaluatorTest {
         ));
     }
 
+    // ================================================================ win-both-ways (§1.4)
+
+    @Test
+    void bothWaysPaysAMirroredRunThatLeftToRightIgnores() {
+        // QUEEN fills reels 4, 3 and 2 but has nothing on reel 0, so a left-to-right game sees nothing.
+        int[][] matrix = {
+                {FILLER, FILLER, QUEEN,  QUEEN,  QUEEN},
+                {FILLER, FILLER, FILLER, FILLER, FILLER},
+                {FILLER, FILLER, FILLER, FILLER, FILLER}
+        };
+
+        assertThat(evaluator.evaluate(matrix, BET, bothWaysMath(false)).winLines())
+                .as("no run is anchored on reel 0, so a left-to-right game pays nothing")
+                .isEmpty();
+
+        EvaluationResult result = evaluator.evaluate(matrix, BET, bothWaysMath(true));
+        assertThat(result.winLines()).hasSize(1);
+        WinLine win = result.winLines().get(0);
+        assertThat(win.symbolId()).isEqualTo(QUEEN);
+        assertThat(win.count()).isEqualTo(3);
+        assertThat(win.ways()).isEqualTo(1);
+        assertThat(win.isRightToLeft())
+                .as("the win is flagged so a client highlights the rightmost reels, not the leftmost")
+                .isTrue();
+        assertThat(win.payout()).isEqualByComparingTo("3.00");   // coef(QUEEN,3)=3 x 1 way
+    }
+
+    @Test
+    void aSymbolAnchoredAtBothEndsPaysTwiceOnOneScreen() {
+        // KING occupies reels 0-2 and 3-4 with a gap-free path in each direction.
+        int[][] matrix = {
+                {KING,   KING,   KING,   KING,   KING},
+                {FILLER, FILLER, FILLER, FILLER, FILLER},
+                {FILLER, FILLER, FILLER, FILLER, FILLER}
+        };
+        EvaluationResult result = evaluator.evaluate(matrix, BET, bothWaysMath(true));
+
+        assertThat(result.winLines())
+                .as("one run from each end")
+                .hasSize(2);
+        assertThat(result.winLines()).allSatisfy(w -> {
+            assertThat(w.symbolId()).isEqualTo(KING);
+            assertThat(w.count()).isEqualTo(5);
+        });
+        assertThat(result.winLines().stream().filter(WinLine::isRightToLeft).count()).isEqualTo(1);
+        assertThat(result.totalWin())
+                .as("both directions pay in full; the shared reels are not netted off")
+                .isEqualByComparingTo("160.00");   // coef(KING,5)=80, twice
+    }
+
+    @Test
+    void aBothWaysWinHighlightsTheRightmostReels() {
+        int[][] matrix = {
+                {FILLER, FILLER, QUEEN,  QUEEN,  QUEEN},
+                {FILLER, FILLER, FILLER, FILLER, FILLER},
+                {FILLER, FILLER, FILLER, FILLER, FILLER}
+        };
+        SlotMathDefinition math = bothWaysMath(true);
+        EvaluationResult result = evaluator.evaluate(matrix, BET, math);
+
+        boolean[][] mask = new WaysWinEvaluator().winningMask(matrix, result.winLines(), math);
+
+        assertThat(mask[0][4]).isTrue();
+        assertThat(mask[0][3]).isTrue();
+        assertThat(mask[0][2]).isTrue();
+        assertThat(mask[0][1]).as("reels the run never reached stay unlit").isFalse();
+        assertThat(mask[0][0]).isFalse();
+    }
+
+    @Test
+    void aDirectionIsOnlyMeaningfulUnderTheWaysModel() {
+        assertThatThrownBy(() -> math(10_000, WinModel.PAYLINES, WaysDirection.BOTH_WAYS,
+                List.of(new Payline(1, new int[][]{{0, 0}, {0, 1}, {0, 2}, {0, 3}, {0, 4}})),
+                payTable(), false))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("only meaningful under winModel=WAYS");
+    }
+
+    private SlotMathDefinition bothWaysMath(boolean bothWays) {
+        return math(10_000, WinModel.WAYS,
+                bothWays ? WaysDirection.BOTH_WAYS : WaysDirection.LEFT_TO_RIGHT,
+                List.of(), payTable(), true);
+    }
+
+    // ================================================================ fixtures
+
     private SlotMathDefinition math(int maxWinMultiplier) {
         return math(maxWinMultiplier, WinModel.WAYS, List.of(), payTable(), true);
     }
@@ -245,6 +335,12 @@ class WaysWinEvaluatorTest {
      */
     private SlotMathDefinition math(int maxWinMultiplier, WinModel winModel, List<Payline> paylines,
                                     PayTable payTable, boolean wildFreeReelZero) {
+        return math(maxWinMultiplier, winModel, WaysDirection.LEFT_TO_RIGHT, paylines, payTable,
+                wildFreeReelZero);
+    }
+
+    private SlotMathDefinition math(int maxWinMultiplier, WinModel winModel, WaysDirection waysDirection,
+                                    List<Payline> paylines, PayTable payTable, boolean wildFreeReelZero) {
         List<Symbol> symbols = List.of(
                 new Symbol(ACE, "ACE", SymbolType.STANDARD, null),
                 new Symbol(KING, "KING", SymbolType.STANDARD, null),
@@ -267,6 +363,8 @@ class WaysWinEvaluatorTest {
                 "test-ways", "v1", new BigDecimal("96.0"),
                 new Grid(3, 5),
                 winModel,
+                waysDirection,
+                WildFeatureConfig.none(),
                 symbols,
                 paylines,
                 payTable,
@@ -279,6 +377,7 @@ class WaysWinEvaluatorTest {
                         new PickCollectCompletion(PickCollectCompletion.CompletionType.FIXED_PICKS, 5),
                         List.of(new PickTileWeight(PickTileType.BLANK, 10, null)),
                         5000, 0),
+                CascadeConfig.disabled(), RespinConfig.disabled(),
                 new Limits(maxWinMultiplier),
                 new BetConfig(List.of(new BigDecimal("0.20"), new BigDecimal("1.00")), new BigDecimal("1.00"))
         );

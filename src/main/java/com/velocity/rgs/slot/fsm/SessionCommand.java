@@ -16,6 +16,7 @@ public sealed interface SessionCommand
                 SessionCommand.StartFreeSpinsCommand,
                 SessionCommand.BuyFeatureCommand,
                 SessionCommand.StartPickCollectCommand,
+                SessionCommand.StartRespinCommand,
                 SessionCommand.PickCommand {
 
     GameCommand command();
@@ -47,6 +48,10 @@ public sealed interface SessionCommand
 
     record StartPickCollectCommand() implements SessionCommand {
         @Override public GameCommand command() { return GameCommand.START_PICK_COLLECT; }
+    }
+
+    record StartRespinCommand() implements SessionCommand {
+        @Override public GameCommand command() { return GameCommand.START_RESPIN; }
     }
 
     record PickCommand(int position) implements SessionCommand {

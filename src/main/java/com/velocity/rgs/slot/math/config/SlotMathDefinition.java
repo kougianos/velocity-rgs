@@ -7,6 +7,7 @@ import com.velocity.rgs.slot.math.domain.ReelStrip;
 import com.velocity.rgs.slot.math.domain.ReelStripSet;
 import com.velocity.rgs.slot.math.domain.Symbol;
 import com.velocity.rgs.slot.math.domain.SymbolType;
+import com.velocity.rgs.slot.math.domain.WaysDirection;
 import com.velocity.rgs.slot.math.domain.WinModel;
 
 import java.math.BigDecimal;
@@ -27,6 +28,8 @@ public record SlotMathDefinition(
         BigDecimal targetRtp,
         Grid grid,
         WinModel winModel,
+        WaysDirection waysDirection,
+        WildFeatureConfig wildFeatures,
         List<Symbol> symbols,
         List<Payline> paylines,
         PayTable payTable,
@@ -36,6 +39,8 @@ public record SlotMathDefinition(
         PowerBetConfig powerBet,
         List<BonusBuyOption> bonusBuyOptions,
         PickCollectConfig pickCollect,
+        CascadeConfig cascades,
+        RespinConfig respins,
         Limits limits,
         BetConfig betConfig
 ) {
@@ -70,6 +75,25 @@ public record SlotMathDefinition(
         // Absent in every game authored before ways-to-win existed, and those are all payline games.
         if (winModel == null) {
             winModel = WinModel.PAYLINES;
+        }
+        // Likewise absent in every game authored before cascades existed: they drop once and settle.
+        if (cascades == null) {
+            cascades = CascadeConfig.disabled();
+        }
+        if (respins == null) {
+            respins = RespinConfig.disabled();
+        }
+        if (wildFeatures == null) {
+            wildFeatures = WildFeatureConfig.none();
+        }
+        // Only ways games have a direction to choose; a payline game's coordinates already say which
+        // way each line reads, so declaring one there would be config that does nothing.
+        if (waysDirection == null) {
+            waysDirection = WaysDirection.LEFT_TO_RIGHT;
+        } else if (winModel != WinModel.WAYS && waysDirection != WaysDirection.LEFT_TO_RIGHT) {
+            throw new IllegalArgumentException(
+                    "waysDirection=" + waysDirection + " is only meaningful under winModel=WAYS, found "
+                            + winModel);
         }
         // Each model owns the paylines list outright: PAYLINES needs it, WAYS derives paths from the
         // grid and must not carry one. Rejecting the overlap keeps config from claiming two things at
@@ -165,6 +189,11 @@ public record SlotMathDefinition(
                 }
             }
         }
+
+        // A Hold & Spin game names its coin by symbol id rather than by a dedicated type, so the
+        // reference has to be checked here or a typo would only surface as a feature that never
+        // triggers - silently, and only in production telemetry.
+        respins.requireCoinSymbol(List.copyOf(symbolIds));
 
         symbols = List.copyOf(symbols);
         paylines = List.copyOf(paylines);

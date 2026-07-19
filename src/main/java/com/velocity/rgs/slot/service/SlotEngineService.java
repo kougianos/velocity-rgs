@@ -20,14 +20,20 @@ import com.velocity.rgs.slot.api.SpinResponse;
 import com.velocity.rgs.slot.domain.FeaturePurchaseEvent;
 import com.velocity.rgs.slot.domain.GameRound;
 import com.velocity.rgs.slot.domain.PickCollectSnapshot;
+import com.velocity.rgs.slot.domain.RoundKind;
 import com.velocity.rgs.slot.feature.bonusbuy.BonusBuyPolicyService;
 import com.velocity.rgs.slot.feature.pickcollect.PickCollectEngine;
 import com.velocity.rgs.slot.feature.pickcollect.PickCollectFeatureView;
 import com.velocity.rgs.slot.feature.pickcollect.PickCollectState;
 import com.velocity.rgs.slot.feature.pickcollect.PickCollectTile;
+import com.velocity.rgs.slot.feature.respin.RespinEngine;
+import com.velocity.rgs.slot.feature.respin.RespinFeatureView;
+import com.velocity.rgs.slot.feature.respin.RespinPayloadCodec;
+import com.velocity.rgs.slot.feature.respin.RespinState;
 import com.velocity.rgs.slot.persistence.FeaturePurchaseEventRepository;
 import com.velocity.rgs.slot.persistence.GameRoundRepository;
 import com.velocity.rgs.slot.persistence.PickCollectSnapshotRepository;
+import com.velocity.rgs.slot.persistence.RoundGridCodec;
 import com.velocity.rgs.slot.math.config.BonusBuyOption;
 import com.velocity.rgs.slot.math.config.SlotMathDefinition;
 import com.velocity.rgs.slot.math.config.SlotMathRegistry;
@@ -38,6 +44,7 @@ import com.velocity.rgs.slot.math.engine.EvaluationResult;
 import com.velocity.rgs.slot.math.engine.GridGenerationEngine;
 import com.velocity.rgs.slot.math.engine.GridGenerationResult;
 import com.velocity.rgs.slot.math.engine.ReelEvaluator;
+import com.velocity.rgs.slot.math.engine.WildFeatureEngine;
 import com.velocity.rgs.rng.RandomNumberGenerator;
 import com.velocity.rgs.rng.RngDrawSink;
 import com.velocity.rgs.rng.SecureRandomNumberGenerator;
@@ -97,7 +104,10 @@ public class SlotEngineService {
     private final SessionStateMachine stateMachine;
     private final GridGenerationEngine gridEngine;
     private final ReelEvaluator reelEvaluator;
+    private final WildFeatureEngine wildFeatureEngine;
     private final PickCollectEngine pickCollectEngine;
+    private final RespinEngine respinEngine;
+    private final RespinPayloadCodec respinPayloadCodec;
     private final BonusBuyPolicyService bonusBuyPolicyService;
     private final SlotMathRegistry mathRegistry;
     private final WalletGateway walletGateway;
@@ -106,6 +116,7 @@ public class SlotEngineService {
     private final GameRoundRepository roundRepository;
     private final FeaturePurchaseEventRepository featurePurchaseRepository;
     private final PickCollectSnapshotRepository pickCollectRepository;
+    private final RoundGridCodec gridCodec;
     private final ObjectMapper objectMapper;
     private final ApplicationEventPublisher eventPublisher;
 
@@ -148,8 +159,11 @@ public class SlotEngineService {
                 .featureFlags(Map.<String, Object>of(
                         "powerBetEnabled", true,
                         "powerBetMultiplier", math.powerBet().betMultiplier(),
-                        "bonusBuyEnabled", !math.bonusBuyOptions().isEmpty()))
+                        "bonusBuyEnabled", !math.bonusBuyOptions().isEmpty(),
+                        "cascadesEnabled", math.cascades().enabled(),
+                        "respinsEnabled", math.respins().enabled()))
                 .activeFeatureView(view)
+                .respinView(respinViewIfActive(session, math))
                 .build();
     }
 
@@ -164,6 +178,13 @@ public class SlotEngineService {
             SlotMathDefinition math = mathRegistry.require(session.getGameId(), session.getMathVersion());
 
             SessionState currentState = rehydrate(session);
+            // A Hold & Spin respin re-draws only the unlocked cells and pays nothing per iteration, so
+            // it shares almost none of the base-spin flow below (no stake choice, no debit, no line
+            // evaluation). Branching here keeps both paths honest rather than threading conditionals
+            // through one.
+            if (currentState instanceof SessionState.RespinLoop respinLoop) {
+                return respinSpin(request, playerId, session, math, respinLoop);
+            }
             // The player only chooses a stake in the base game; free spins lock to the trigger bet and
             // bonus-buy flows have their own cost path. When the player does pick the stake, it must be one
             // of the game's configured bet values - the server is the authority, so a tampered or stale
@@ -186,8 +207,17 @@ public class SlotEngineService {
             RandomNumberGenerator rng = new SecureRandomNumberGenerator(sink);
             ReelStripSet stripSet = pickReelSet(currentState, request.powerBetActive());
 
-            GridGenerationResult grid = gridEngine.generate(math, stripSet, rng);
-            EvaluationResult evaluation = reelEvaluator.evaluate(grid.matrix(), effectiveBet, math);
+            GridGenerationResult drawn = gridEngine.generate(math, stripSet, rng);
+            // Expanding / sticky / walking wilds reshape the board before anything evaluates it. The
+            // transform is deterministic (it draws nothing), so it sits outside the replay contract -
+            // replaying the draws reproduces the same pre-transform grid and therefore the same result.
+            WildFeatureEngine.WildOutcome wilds = wildFeatureEngine.apply(drawn.matrix(), math, stripSet,
+                    carriedWilds(session, math));
+            GridGenerationResult grid = new GridGenerationResult(wilds.matrix(), drawn.stopPositions());
+            // The whole round, not just the opening board: a cascading game tumbles here, drawing its
+            // refills from the same `rng` (and therefore the same sink) so the round stays replayable.
+            EvaluationResult evaluation = reelEvaluator.evaluateRound(grid.matrix(), grid.stopPositions(),
+                    effectiveBet, math, stripSet, rng);
 
             BigDecimal betDebited = BigDecimal.ZERO;
             String betTxId = null;
@@ -214,7 +244,13 @@ public class SlotEngineService {
                 totalWin = post.creditAmount();
             }
 
+            reasonCodes.addAll(wilds.reasonCodes());
+
             applyStateToSession(session, newState, effectiveBet, post.bonusBuyExecuted());
+            // Sticky/walking wilds outlive the spin that drew them, so they ride alongside whatever
+            // else the new state put in the payload. Only meaningful while a feature is running: the
+            // BaseGame branch of applyStateToSession clears the payload, which ends the carry.
+            persistCarriedWilds(session, wilds.carryForward());
             session.setUpdatedAt(Instant.now());
             GameSession saved = sessionStore.save(session);
 
@@ -235,13 +271,16 @@ public class SlotEngineService {
                     .matrix(grid.matrix())
                     .stopPositions(grid.stopPositions())
                     .winLines(evaluation.winLines())
+                    .cascadeSteps(cascadeStepViews(evaluation))
                     .featuresTriggered(SpinResponse.FeaturesTriggered.builder()
                             .freeSpinsAwarded(post.freeSpinsAwarded())
                             .isPowerBetActive(request.powerBetActive())
                             .pickCollectTriggered(post.pickCollectTriggered())
                             .bonusBuyExecuted(post.bonusBuyExecuted())
+                            .respinTriggered(post.respinTriggered())
                             .reasonCodes(reasonCodes)
                             .build())
+                    .respinView(respinViewIfActive(saved, math))
                     .sessionState(SpinResponse.SessionStateView.builder()
                             .currentState(saved.getCurrentState())
                             .remainingFreeSpins(saved.getRemainingFreeSpins())
@@ -252,6 +291,93 @@ public class SlotEngineService {
         } finally {
             actionLock.release(handle);
         }
+    }
+
+    // ---------------------------------------------------------------- /spin (Hold & Spin respin)
+
+    /**
+     * One Hold &amp; Spin respin. The locked coins stay put, every other cell is re-drawn, and any coin
+     * that lands is locked and refills the respin counter. The feature settles - crediting the coin
+     * total plus whatever jackpot tier the final coin count earned - when the counter runs out or the
+     * grid fills.
+     *
+     * <p>No debit: the round that triggered the feature already paid for it. That is enforced by the
+     * FSM ({@code fromRespinLoop} emits {@link MonetaryEffect#none()}), not by this method choosing not
+     * to charge.
+     */
+    private SpinResponse respinSpin(SpinRequest request, String playerId, GameSession session,
+                                    SlotMathDefinition math, SessionState.RespinLoop currentState) {
+        BigDecimal triggerBet = currentState.triggerBet();
+        TransitionContext ctx = new TransitionContext(math, session.getCurrency());
+        stateMachine.transition(currentState,
+                new SessionCommand.SpinCommand(triggerBet, request.powerBetActive()), ctx);
+
+        String roundId = "rsp-" + UUID.randomUUID();
+        RngDrawSink sink = RngDrawSink.inMemory();
+        RandomNumberGenerator rng = new SecureRandomNumberGenerator(sink);
+
+        RespinState before = loadRespinState(session);
+        RespinEngine.RespinOutcome outcome = respinEngine.respin(before, math, ReelStripSet.BASE, rng);
+
+        List<String> reasonCodes = new ArrayList<>(outcome.reasonCodes());
+        BigDecimal totalWin = BigDecimal.ZERO;
+        String winTxId = null;
+        RespinState after = outcome.state();
+        SessionState newState;
+
+        if (outcome.finished()) {
+            RespinEngine.Settlement settlement = respinEngine.settle(after, math, triggerBet,
+                    session.getCurrency());
+            after = settlement.state();
+            reasonCodes.addAll(settlement.reasonCodes());
+            if (settlement.win().amount().signum() > 0) {
+                winTxId = roundId + ":win";
+                executeCredit(playerId, session, roundId, winTxId, settlement.win(),
+                        WalletTransactionType.FEATURE_WIN);
+                totalWin = settlement.win().amount();
+            }
+            newState = new SessionState.BaseGame();
+        } else {
+            newState = new SessionState.RespinLoop(serializeRespinPayload(after), triggerBet);
+        }
+
+        applyStateToSession(session, newState, triggerBet, false);
+        session.setUpdatedAt(Instant.now());
+        GameSession saved = sessionStore.save(session);
+
+        // A respin is a round in its own right: it consumed draws, so it needs a row to replay from.
+        // It carries no bet transaction, which is also how the free-spin iterations record.
+        GameRound round = persistRespinRound(session, roundId, triggerBet,
+                Money.of(totalWin, session.getCurrency()), before, outcome, sink, reasonCodes, winTxId,
+                newState.gameState());
+
+        return SpinResponse.builder()
+                .sessionId(saved.getSessionId())
+                .sessionVersion(saved.getSessionVersion())
+                .roundId(round.getRoundId())
+                .mathVersion(saved.getMathVersion())
+                .betDebited(BigDecimal.ZERO)
+                .totalWin(totalWin)
+                .matrix(outcome.matrix())
+                .stopPositions(new int[0])
+                .winLines(List.of())
+                .respinView(RespinFeatureView.of(after, math.respins(),
+                        math.grid().rows(), math.grid().cols()))
+                .featuresTriggered(SpinResponse.FeaturesTriggered.builder()
+                        .freeSpinsAwarded(0)
+                        .isPowerBetActive(false)
+                        .pickCollectTriggered(false)
+                        .bonusBuyExecuted(false)
+                        .respinTriggered(false)
+                        .reasonCodes(reasonCodes)
+                        .build())
+                .sessionState(SpinResponse.SessionStateView.builder()
+                        .currentState(saved.getCurrentState())
+                        .remainingFreeSpins(saved.getRemainingFreeSpins())
+                        .accumulatedFreeSpinsWin(saved.getAccumulatedFreeSpinsWin())
+                        .build())
+                .availableActions(transitionActions(newState, math, List.of()))
+                .build();
     }
 
     // ---------------------------------------------------------------- /feature/start
@@ -268,6 +394,7 @@ public class SlotEngineService {
             SessionCommand command = switch (request.featureType()) {
                 case "FREE_SPINS" -> new SessionCommand.StartFreeSpinsCommand();
                 case "PICK_COLLECT" -> new SessionCommand.StartPickCollectCommand();
+                case "RESPIN" -> new SessionCommand.StartRespinCommand();
                 default -> throw new RgsException(ErrorCode.VALIDATION_ERROR,
                         "Unknown featureType: " + request.featureType());
             };
@@ -297,6 +424,7 @@ public class SlotEngineService {
                     .remainingFreeSpins(saved.getRemainingFreeSpins())
                     .accumulatedFreeSpinsWin(saved.getAccumulatedFreeSpinsWin())
                     .activeFeatureView(view)
+                    .respinView(respinViewIfActive(saved, math))
                     .availableActions(transition.availableActions())
                     .build();
         } finally {
@@ -317,7 +445,10 @@ public class SlotEngineService {
             WalletBalanceResponse balance = walletGateway.balance(playerId);
             BonusBuyOption option = bonusBuyPolicyService.requireOption(math, request.buyType(),
                     session, balance.balance(), request.betSize(), jurisdiction);
-            BigDecimal cost = request.betSize().multiply(option.costMultiplier());
+            // Same rounding the FSM applies to the debit, so the charge, the recorded purchase event
+            // and the amount reported back to the player are one number.
+            BigDecimal cost = SessionStateMachine.buyCost(request.betSize(), option,
+                    session.getCurrency());
 
             SessionState currentState = rehydrate(session);
             TransitionContext ctx = new TransitionContext(math, session.getCurrency());
@@ -332,6 +463,17 @@ public class SlotEngineService {
 
             SessionState newState = transition.newState();
             PickCollectState pcState = null;
+            RespinState respinState = null;
+            if (option.targetState() == GameState.RESPIN_AWAITING) {
+                // The FSM established the purchase; the coins themselves need an RNG, so they are
+                // drawn here - and, like every other mutation on this path, through the round's sink
+                // so the bought feature is as replayable as a triggered one.
+                RngDrawSink buySink = RngDrawSink.inMemory();
+                respinState = respinEngine.startBought(math,
+                        boughtCoinCount(math, option), new SecureRandomNumberGenerator(buySink));
+                newState = new SessionState.RespinAwaiting(
+                        serializeRespinPayload(respinState), request.betSize());
+            }
             if (option.targetState() == GameState.PICK_COLLECT_AWAITING) {
                 pcState = pickCollectEngine.startFeature(math.pickCollect(),
                         request.betSize(),
@@ -378,6 +520,9 @@ public class SlotEngineService {
                     .remainingFreeSpins(saved.getRemainingFreeSpins())
                     .featureInitPayload(option.initialFeaturePayload())
                     .activeFeatureView(pcState != null ? PickCollectFeatureView.of(pcState) : null)
+                    .respinView(respinState == null ? null
+                            : RespinFeatureView.of(respinState, math.respins(),
+                                    math.grid().rows(), math.grid().cols()))
                     .availableActions(transition.availableActions())
                     .build();
         } finally {
@@ -542,6 +687,10 @@ public class SlotEngineService {
                     deserializeMap(session.getActiveFeaturePayload()));
             case PICK_COLLECT_LOOP -> new SessionState.PickCollectLoop(
                     deserializeMap(session.getActiveFeaturePayload()));
+            case RESPIN_AWAITING -> new SessionState.RespinAwaiting(
+                    deserializeMap(session.getActiveFeaturePayload()), bet);
+            case RESPIN_LOOP -> new SessionState.RespinLoop(
+                    deserializeMap(session.getActiveFeaturePayload()), bet);
         };
     }
 
@@ -592,13 +741,21 @@ public class SlotEngineService {
         SessionState newState = afterFsm;
         int freeSpinsAwarded = 0;
         boolean pickCollectTriggered = false;
+        boolean respinTriggered = false;
 
         if (afterFsm instanceof SessionState.BaseGame) {
             if (evaluation.totalWin().signum() > 0) {
                 creditAmount = evaluation.totalWin();
                 creditType = WalletTransactionType.WIN;
             }
-            if (scatterCount >= math.scatterTriggers().minCount()) {
+            // Hold & Spin outranks the scatter award: enough coins on screen is a rarer and richer
+            // event than a scatter trigger, and the two are mutually exclusive on one spin.
+            if (respinEngine.triggers(grid.matrix(), math.respins())) {
+                RespinState opening = respinEngine.start(grid.matrix(), math.respins(), rng);
+                newState = new SessionState.RespinAwaiting(serializeRespinPayload(opening), bet);
+                respinTriggered = true;
+                reasonCodes.add(RespinEngine.REASON_TRIGGERED);
+            } else if (scatterCount >= math.scatterTriggers().minCount()) {
                 freeSpinsAwarded = math.scatterTriggers().freeSpinsAwarded();
                 newState = new SessionState.FreeSpinsAwaiting(freeSpinsAwarded, bet);
                 reasonCodes.add("TRIGGERED_BY_SCATTER");
@@ -639,7 +796,7 @@ public class SlotEngineService {
             }
         }
         return new SpinPostProcessing(newState, creditAmount, creditType, reasonCodes,
-                freeSpinsAwarded, pickCollectTriggered, false);
+                freeSpinsAwarded, pickCollectTriggered, respinTriggered, false);
     }
 
     /**
@@ -760,6 +917,21 @@ public class SlotEngineService {
                 session.setActiveFeaturePayload(serializeToJson(loop.featurePayload()));
                 session.setNextActionAllowed(GameCommand.PICK.name());
             }
+            // The locked coins and the respin counter live entirely in active_feature_payload, so a
+            // Hold & Spin feature survives every request boundary the same way Pick & Collect's board
+            // does - and, critically, survives a session rehydrated from Postgres after a cache miss.
+            case SessionState.RespinAwaiting awaiting -> {
+                session.setRemainingFreeSpins(0);
+                session.setAccumulatedFreeSpinsWin(BigDecimal.ZERO);
+                session.setActiveFeaturePayload(serializeToJson(awaiting.featurePayload()));
+                session.setNextActionAllowed(GameCommand.START_RESPIN.name());
+            }
+            case SessionState.RespinLoop loop -> {
+                session.setRemainingFreeSpins(0);
+                session.setAccumulatedFreeSpinsWin(BigDecimal.ZERO);
+                session.setActiveFeaturePayload(serializeToJson(loop.featurePayload()));
+                session.setNextActionAllowed(GameCommand.SPIN.name());
+            }
         }
         if (bonusBuyExecuted) {
             session.setCurrentBet(currentBet);
@@ -775,6 +947,8 @@ public class SlotEngineService {
             case FREE_SPINS_LOOP -> List.of(GameCommand.SPIN);
             case PICK_COLLECT_AWAITING -> List.of(GameCommand.START_PICK_COLLECT);
             case PICK_COLLECT_LOOP -> List.of(GameCommand.PICK);
+            case RESPIN_AWAITING -> List.of(GameCommand.START_RESPIN);
+            case RESPIN_LOOP -> List.of(GameCommand.SPIN);
         };
     }
 
@@ -788,6 +962,8 @@ public class SlotEngineService {
             case SessionState.FreeSpinsLoop ignored -> List.of(GameCommand.SPIN);
             case SessionState.PickCollectAwaiting ignored -> List.of(GameCommand.START_PICK_COLLECT);
             case SessionState.PickCollectLoop ignored -> List.of(GameCommand.PICK);
+            case SessionState.RespinAwaiting ignored -> List.of(GameCommand.START_RESPIN);
+            case SessionState.RespinLoop ignored -> List.of(GameCommand.SPIN);
         };
     }
 
@@ -802,18 +978,167 @@ public class SlotEngineService {
         round.setGameId(session.getGameId());
         round.setMathVersion(session.getMathVersion());
         round.setStateContext(afterState);
+        round.setRoundKind(RoundKind.SPIN);
         round.setBetAmount(betAmount);
         round.setBetAmountMinor(Money.of(betAmount, session.getCurrency()).toMinor());
         round.setTotalWin(totalWin.amount());
         round.setTotalWinMinor(totalWin.toMinor());
         round.setCurrency(session.getCurrency());
-        round.setMatrix(serializeToJson(grid.matrix()));
-        round.setStopPositions(serializeToJson(grid.stopPositions()));
+        // The whole drop sequence, not just the opening board - a cascading round is only replayable if
+        // every intermediate grid is on the row alongside the draws that produced it. Non-cascading
+        // rounds still write the flat single-grid shape (see RoundGridCodec).
+        round.setMatrix(gridCodec.writeMatrices(evaluation.steps()));
+        round.setStopPositions(gridCodec.writeStopPositions(evaluation.steps()));
         round.setRngDraws(serializeToJson(sink.drawn()));
         round.setWinLines(serializeToJson(evaluation.winLines()));
         round.setReasonCodes(serializeToJson(reasonCodes));
         round.setPowerBetActive(powerBetActive);
         round.setBetTransactionId(betTxId);
+        round.setWinTransactionId(winTxId);
+        round.setCreatedAt(Instant.now());
+        return roundRepository.save(round);
+    }
+
+    /**
+     * The round's drop sequence as the client animates it, or {@code null} when the round settled in one
+     * drop. Omitting the field for conventional spins keeps their payload byte-identical to before
+     * cascades existed - the opening {@code matrix} already says everything there is to say.
+     */
+    private List<SpinResponse.CascadeStepView> cascadeStepViews(EvaluationResult evaluation) {
+        if (!evaluation.cascaded()) {
+            return null;
+        }
+        return evaluation.steps().stream()
+                .map(step -> SpinResponse.CascadeStepView.builder()
+                        .index(step.index())
+                        .matrix(step.grid())
+                        .winLines(step.winLines())
+                        .multiplier(step.multiplier())
+                        .stepWin(step.stepWin())
+                        .clearedPositions(step.clearedPositions())
+                        .build())
+                .toList();
+    }
+
+    // ------------------------------------------------------- sticky wild carry-over
+
+    /** Key under which sticky/walking wilds ride in {@code active_feature_payload}. */
+    private static final String STICKY_WILDS_KEY = "stickyWilds";
+
+    /**
+     * Wilds held over from the previous spin of the running feature. Empty in the base game and on the
+     * first spin of a feature, which is exactly right - nothing has stuck yet.
+     */
+    @SuppressWarnings("unchecked")
+    private List<WildFeatureEngine.WildCell> carriedWilds(GameSession session, SlotMathDefinition math) {
+        if (!math.wildFeatures().active()) {
+            return List.of();
+        }
+        String payload = session.getActiveFeaturePayload();
+        if (payload == null || payload.isBlank()) {
+            return List.of();
+        }
+        try {
+            Object raw = deserializeMap(payload).get(STICKY_WILDS_KEY);
+            if (!(raw instanceof List<?> list)) {
+                return List.of();
+            }
+            List<WildFeatureEngine.WildCell> cells = new ArrayList<>(list.size());
+            for (Object entry : list) {
+                Map<String, Object> cell = (Map<String, Object>) entry;
+                cells.add(new WildFeatureEngine.WildCell(
+                        ((Number) cell.get("row")).intValue(),
+                        ((Number) cell.get("col")).intValue(),
+                        ((Number) cell.get("remainingSpins")).intValue()));
+            }
+            return cells;
+        } catch (RuntimeException ex) {
+            // A payload written before sticky wilds existed simply has no entry; treat anything
+            // unreadable the same way rather than failing a spin over a presentation detail.
+            return List.of();
+        }
+    }
+
+    /**
+     * Merges the surviving sticky wilds into whatever {@code applyStateToSession} just wrote, so the
+     * carry never clobbers a feature's own payload (a Pick &amp; Collect board, a respin's coins).
+     */
+    private void persistCarriedWilds(GameSession session, List<WildFeatureEngine.WildCell> wilds) {
+        String payload = session.getActiveFeaturePayload();
+        if (wilds.isEmpty()) {
+            return;
+        }
+        Map<String, Object> merged = new LinkedHashMap<>(
+                payload == null || payload.isBlank() ? Map.of() : deserializeMap(payload));
+        merged.put(STICKY_WILDS_KEY, wilds.stream()
+                .map(w -> Map.<String, Object>of(
+                        "row", w.row(),
+                        "col", w.col(),
+                        "remainingSpins", w.remainingSpins()))
+                .toList());
+        session.setActiveFeaturePayload(serializeToJson(merged));
+    }
+
+    // ------------------------------------------------------- Hold & Spin payload round-trip
+
+    private Map<String, Object> serializeRespinPayload(RespinState state) {
+        return respinPayloadCodec.encode(state);
+    }
+
+    private RespinState loadRespinState(GameSession session) {
+        String payloadJson = session.getActiveFeaturePayload();
+        if (payloadJson == null || payloadJson.isBlank()) {
+            throw new RgsException(ErrorCode.ILLEGAL_STATE_TRANSITION,
+                    "Respin feature payload missing for session " + session.getSessionId());
+        }
+        return respinPayloadCodec.decode(deserializeMap(payloadJson));
+    }
+
+    /** The live Hold &amp; Spin view, or {@code null} when the session is not in the feature. */
+    private RespinFeatureView respinViewIfActive(GameSession session, SlotMathDefinition math) {
+        if (session.getCurrentState() != GameState.RESPIN_AWAITING
+                && session.getCurrentState() != GameState.RESPIN_LOOP) {
+            return null;
+        }
+        return RespinFeatureView.of(loadRespinState(session), math.respins(),
+                math.grid().rows(), math.grid().cols());
+    }
+
+    /**
+     * Persists one respin iteration. It carries no bet transaction (the triggering round paid) and no
+     * win lines (coins pay by value, not by line).
+     *
+     * <p>Crucially it also carries {@code feature_context}: the coins held <em>before</em> this respin.
+     * A respin re-draws only the unlocked cells, so its draws are meaningless without knowing which
+     * cells those were - the count and the strip bounds both depend on it. Persisting the input state
+     * alongside the draws is what makes a respin as independently replayable as a spin.
+     */
+    private GameRound persistRespinRound(GameSession session, String roundId, BigDecimal betAmount,
+                                         Money totalWin, RespinState heldBefore,
+                                         RespinEngine.RespinOutcome outcome,
+                                         RngDrawSink sink, List<String> reasonCodes, String winTxId,
+                                         GameState afterState) {
+        GameRound round = new GameRound();
+        round.setSessionId(session.getSessionId());
+        round.setPlayerId(session.getPlayerId());
+        round.setRoundId(roundId);
+        round.setGameId(session.getGameId());
+        round.setMathVersion(session.getMathVersion());
+        round.setStateContext(afterState);
+        round.setRoundKind(RoundKind.RESPIN);
+        round.setFeatureContext(serializeToJson(serializeRespinPayload(heldBefore)));
+        round.setBetAmount(betAmount);
+        round.setBetAmountMinor(Money.of(betAmount, session.getCurrency()).toMinor());
+        round.setTotalWin(totalWin.amount());
+        round.setTotalWinMinor(totalWin.toMinor());
+        round.setCurrency(session.getCurrency());
+        round.setMatrix(serializeToJson(outcome.matrix()));
+        round.setStopPositions(serializeToJson(new int[0]));
+        round.setRngDraws(serializeToJson(sink.drawn()));
+        round.setWinLines(serializeToJson(List.of()));
+        round.setReasonCodes(serializeToJson(reasonCodes));
+        round.setPowerBetActive(false);
+        round.setBetTransactionId(null);
         round.setWinTransactionId(winTxId);
         round.setCreatedAt(Instant.now());
         return roundRepository.save(round);
@@ -906,6 +1231,16 @@ public class SlotEngineService {
         return payload;
     }
 
+    /**
+     * How many coins a bought Hold &amp; Spin starts with, from the option's
+     * {@code initialFeaturePayload.coins}. Falls back to the organic trigger count, which is the
+     * honest default: buying the feature should hand over what landing it would have.
+     */
+    private int boughtCoinCount(SlotMathDefinition math, BonusBuyOption option) {
+        Object raw = option.initialFeaturePayload().get("coins");
+        return raw instanceof Number n ? n.intValue() : math.respins().triggerMinCount();
+    }
+
     private int initialPicksFor(SlotMathDefinition math, SessionState newState) {
         if (newState instanceof SessionState.PickCollectLoop loop) {
             Object maxPicks = loop.featurePayload().get("maxPicks");
@@ -947,6 +1282,7 @@ public class SlotEngineService {
             List<String> reasonCodes,
             int freeSpinsAwarded,
             boolean pickCollectTriggered,
+            boolean respinTriggered,
             boolean bonusBuyExecuted
     ) {
     }

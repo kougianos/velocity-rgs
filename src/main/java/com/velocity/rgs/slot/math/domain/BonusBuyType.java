@@ -5,5 +5,7 @@ package com.velocity.rgs.slot.math.domain;
  */
 public enum BonusBuyType {
     FREE_SPINS_BUY,
-    PICK_COLLECT_BUY
+    PICK_COLLECT_BUY,
+    /** Buys straight into Hold &amp; Spin with the trigger's worth of coins already locked. */
+    HOLD_SPIN_BUY
 }

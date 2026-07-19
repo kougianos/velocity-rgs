@@ -20,6 +20,7 @@ public record RtpSimulationRequest(
         @Min(0) long spinsBaseGame,
         @Min(0) long spinsPowerBet,
         @Min(0) long spinsBonusBuyFreeSpins,
+        @Min(0) long spinsBonusBuyHoldSpin,
         PickStrategy pickStrategy
 ) {
     public RtpSimulationRequest {

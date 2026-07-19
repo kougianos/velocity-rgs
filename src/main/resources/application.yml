@@ -163,6 +163,14 @@ rgs:
       # 243-ways game (winModel: WAYS). The others are payline games.
       - gameId: jade-tiger
         mathVersion: v1
+      # Cascading reels (math.cascades): wins are cleared and refilled, each tumble in the same
+      # spin paying at a higher multiplier.
+      - gameId: gilded-cascade
+        mathVersion: v1
+      # Hold & Spin respins (math.respins): coins lock, the counter resets on every catch, and a
+      # full grid pays the GRAND jackpot.
+      - gameId: dragon-hoard
+        mathVersion: v1
 
   # Roulette games (additive - an empty/absent list boots with slots only).
   roulette:

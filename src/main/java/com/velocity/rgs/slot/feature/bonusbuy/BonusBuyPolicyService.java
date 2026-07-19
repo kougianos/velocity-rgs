@@ -4,6 +4,7 @@ import com.velocity.rgs.common.error.ErrorCode;
 import com.velocity.rgs.common.error.RgsException;
 import com.velocity.rgs.slot.math.config.BonusBuyOption;
 import com.velocity.rgs.slot.math.config.SlotMathDefinition;
+import com.velocity.rgs.slot.fsm.SessionStateMachine;
 import com.velocity.rgs.slot.math.domain.BonusBuyType;
 import com.velocity.rgs.session.domain.GameSession;
 import com.velocity.rgs.session.domain.GameState;
@@ -53,7 +54,10 @@ public class BonusBuyPolicyService {
         BonusBuyOption option = match.orElseThrow(() -> new RgsException(ErrorCode.BONUS_BUY_DISABLED,
                 "Bonus Buy type not offered for game: " + type));
 
-        BigDecimal cost = betSize.multiply(option.costMultiplier());
+        // Rounded exactly as the debit will be. Checking affordability against the unrounded product
+        // would refuse a player holding precisely the amount they are about to be charged, whenever a
+        // fractional costMultiplier rounds the charge down.
+        BigDecimal cost = SessionStateMachine.buyCost(betSize, option, session.getCurrency());
         if (balance != null && balance.compareTo(cost) < 0) {
             throw new RgsException(ErrorCode.INSUFFICIENT_FUNDS,
                     "Insufficient funds for Bonus Buy: cost=" + cost + " balance=" + balance);

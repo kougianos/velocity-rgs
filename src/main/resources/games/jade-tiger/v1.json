@@ -118,6 +118,12 @@
           ]
         },
         {
+          "label": "Hit Frequency",
+          "values": [
+            "55.40% - for RTP 96.00%"
+          ]
+        },
+        {
           "label": "Max Exposure",
           "values": [
             "Max multiplier: 12,000x",

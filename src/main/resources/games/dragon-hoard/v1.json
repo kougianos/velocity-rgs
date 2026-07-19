@@ -1,0 +1,187 @@
+{
+  "presentation": {
+    "title": "Dragon Hoard",
+    "tagline": "Coins lock. The counter resets. The hoard grows.",
+    "description": "Land five or more coins and they lock in place for three respins - and every new coin resets the counter back to three. Fill all fifteen cells and the GRAND jackpot pays 2,000×. High volatility with a 25,000× ceiling.",
+    "logo": "🐉",
+    "theme": "hoard",
+    "volatility": "High",
+    "spinDurationMillis": 450,
+    "symbols": {
+      "1":  { "glyph": "A",  "name": "Ace"     },
+      "2":  { "glyph": "K",  "name": "King"    },
+      "3":  { "glyph": "Q",  "name": "Queen"   },
+      "4":  { "glyph": "J",  "name": "Jack"    },
+      "5":  { "glyph": "10", "name": "Ten"     },
+      "6":  { "glyph": "9",  "name": "Nine"    },
+      "7":  { "glyph": "🐲", "name": "Dragon"  },
+      "8":  { "glyph": "🗝️", "name": "Key"     },
+      "9":  { "glyph": "🔮", "name": "Wild"    },
+      "10": { "glyph": "🪙", "name": "Coin"    },
+      "12": { "glyph": "💰", "name": "Scatter" }
+    },
+    "info": {
+      "paragraphs": [
+        "Dragon Hoard is built around one moment: the coin that lands when you thought the feature was over. Five coins anywhere on the reels lock in place and award three respins, and only the cells that are not already holding a coin are re-drawn.",
+        "Every coin you catch locks too - and resets the counter straight back to three. A feature that looked finished can run for another dozen respins, and the hoard only grows, because a locked coin never leaves.",
+        "Six coins pays the MINI, nine the MINOR, twelve the MAJOR. Fill every one of the fifteen cells and the GRAND lands: 2,000× the stake on top of everything the coins are already worth."
+      ],
+      "stats": [
+        { "label": "Game Theme", "value": "Dragon, Treasure, Hoard" },
+        { "label": "Volatility", "value": "High" },
+        { "label": "RTP", "value": "96.00%" }
+      ],
+      "specs": [
+        { "label": "Game Type", "values": ["Video Slot Game"] },
+        { "label": "Lines", "values": ["20 paylines"] },
+        { "label": "Reel Type", "values": ["5×3"] },
+        { "label": "Winning Functionality", "values": ["Left to right on adjacent reels", "Hold & Spin - coins lock and respin"] },
+        { "label": "Special Features", "values": ["Hold & Spin Respins", "Jackpot Tiers", "Free Spins", "Pick & Collect", "Power Bet"] },
+        { "label": "Hold & Spin", "values": ["Triggered by 5+ 🪙 Coins", "3 respins, reset on every catch"] },
+        { "label": "Jackpots", "values": ["MINI 20× at 6 coins", "MINOR 60× at 9 coins", "MAJOR 250× at 12 coins", "GRAND 2,000× on a full grid"] },
+        { "label": "Free Spins Symbol", "values": ["Scatter 💰"] },
+        { "label": "Hit Frequency", "values": ["63.77% - for RTP 96.00%"] },
+        { "label": "Max Exposure", "values": ["Max multiplier: 25,000×", "Max win: €2,500,000"] },
+        { "label": "Bet Values", "values": ["Min - €0.20", "Default - €1.00", "Max - €100.00"] }
+      ]
+    }
+  },
+  "math": {
+    "gameId": "dragon-hoard",
+    "mathVersion": "v1",
+    "targetRtp": 96.0,
+    "grid": { "rows": 3, "cols": 5 },
+    "winModel": "PAYLINES",
+    "symbols": [
+      { "id": 1, "name": "ACE",     "type": "STANDARD" },
+      { "id": 2, "name": "KING",    "type": "STANDARD" },
+      { "id": 3, "name": "QUEEN",   "type": "STANDARD" },
+      { "id": 4, "name": "JACK",    "type": "STANDARD" },
+      { "id": 5, "name": "TEN",     "type": "STANDARD" },
+      { "id": 6, "name": "NINE",    "type": "STANDARD" },
+      { "id": 7, "name": "DRAGON",  "type": "STANDARD" },
+      { "id": 8, "name": "KEY",     "type": "STANDARD" },
+      { "id": 9, "name": "WILD",    "type": "WILD",    "substitutes": "STANDARD" },
+      { "id": 10, "name": "COIN",   "type": "STANDARD" },
+      { "id": 12, "name": "SCATTER","type": "SCATTER" }
+    ],
+    "paylines": [
+      { "id": 1,  "coords": [[0,0],[0,1],[0,2],[0,3],[0,4]] },
+      { "id": 2,  "coords": [[1,0],[1,1],[1,2],[1,3],[1,4]] },
+      { "id": 3,  "coords": [[2,0],[2,1],[2,2],[2,3],[2,4]] },
+      { "id": 4,  "coords": [[0,0],[1,1],[2,2],[1,3],[0,4]] },
+      { "id": 5,  "coords": [[2,0],[1,1],[0,2],[1,3],[2,4]] },
+      { "id": 6,  "coords": [[0,0],[0,1],[1,2],[2,3],[2,4]] },
+      { "id": 7,  "coords": [[2,0],[2,1],[1,2],[0,3],[0,4]] },
+      { "id": 8,  "coords": [[1,0],[0,1],[1,2],[2,3],[1,4]] },
+      { "id": 9,  "coords": [[1,0],[2,1],[1,2],[0,3],[1,4]] },
+      { "id": 10, "coords": [[0,0],[1,1],[1,2],[1,3],[0,4]] },
+      { "id": 11, "coords": [[2,0],[1,1],[1,2],[1,3],[2,4]] },
+      { "id": 12, "coords": [[1,0],[0,1],[0,2],[0,3],[1,4]] },
+      { "id": 13, "coords": [[1,0],[2,1],[2,2],[2,3],[1,4]] },
+      { "id": 14, "coords": [[0,0],[1,1],[0,2],[1,3],[0,4]] },
+      { "id": 15, "coords": [[2,0],[1,1],[2,2],[1,3],[2,4]] },
+      { "id": 16, "coords": [[0,0],[2,1],[0,2],[2,3],[0,4]] },
+      { "id": 17, "coords": [[2,0],[0,1],[2,2],[0,3],[2,4]] },
+      { "id": 18, "coords": [[1,0],[1,1],[0,2],[1,3],[1,4]] },
+      { "id": 19, "coords": [[1,0],[1,1],[2,2],[1,3],[1,4]] },
+      { "id": 20, "coords": [[0,0],[2,1],[2,2],[2,3],[0,4]] }
+    ],
+    "payTable": {
+      "1": { "3": 4.6586, "4": 11.6463, "5": 32.0273 },
+      "2": { "3": 4.0762, "4": 9.8994, "5": 24.4572 },
+      "3": { "3": 2.9115, "4": 7.57, "5": 20.3811 },
+      "4": { "3": 2.3292, "4": 5.823, "5": 16.887 },
+      "5": { "3": 2.3292, "4": 4.0762, "5": 12.2286 },
+      "6": { "3": 2.3292, "4": 4.6586, "5": 12.2286 },
+      "7": { "3": 11.6463, "4": 32.0273, "5": 81.5244 },
+      "8": { "3": 8.1524, "4": 20.3811, "5": 49.4969 },
+      "9": { "3": 16.305, "4": 40.7621, "5": 116.4634 }
+    },
+    "reelStrips": {
+      "BASE": [
+        [6,2,12,3,10,4,5,6,1,2,8,3,4,10,5,6,1,2,3,4,5,10,6,1,2,3,4,5,6,8,7,10,1,3,4,5],
+        [6,2,9,12,3,4,10,5,9,6,1,2,8,9,3,4,5,10,9,6,1,2,7,9,3,4,10,5,6,9,8,1,3,4,9,5],
+        [6,2,9,12,3,10,4,5,9,6,1,2,8,9,3,4,5,9,10,6,1,2,7,9,3,4,5,10,6,9,8,1,3,4,9,5],
+        [6,2,9,12,3,4,5,10,9,6,1,2,8,9,3,10,4,5,9,6,1,2,7,9,3,4,5,6,10,9,8,1,3,4,9,5],
+        [6,2,12,3,4,10,5,6,1,2,8,3,4,5,10,6,1,2,3,4,5,6,10,1,2,3,4,5,6,8,7,1,10,3,4,5]
+      ],
+      "POWER_BET": [
+        [6,2,12,3,10,4,5,6,1,2,8,3,4,10,5,6,1,2,3,4,5,10,6,1,2,3,4,5,6,8,7,10,1,3,4,5],
+        [6,2,9,12,3,4,10,5,9,6,1,2,8,9,3,4,5,10,9,6,1,2,7,9,3,4,10,5,6,9,8,1,3,4,9,5],
+        [6,2,9,12,3,10,4,5,9,6,1,2,8,9,3,4,5,9,10,6,1,2,7,9,3,4,5,10,6,9,8,1,3,4,9,5],
+        [6,2,9,12,3,4,5,10,9,6,1,2,8,9,3,10,4,5,9,6,1,2,7,9,3,4,5,6,10,9,8,1,3,4,9,5],
+        [6,2,12,3,4,10,5,6,1,2,8,3,4,5,10,6,1,2,3,4,5,6,10,1,2,3,4,5,6,8,7,1,10,3,4,5]
+      ],
+      "FREE_SPINS": [
+        [5,6,7,7,1,2,3,4,5,6,8,1,2,3,4,5,6,8,7,1,2,3,4,5,6,8,1,2,3,4,5,6,8,7,1,2,3,4,5,6,8,1,2,3,4],
+        [5,6,8,9,7,1,2,3,4,9,5,6,8,7,1,9,2,3,4,5,6,9,8,7,1,2,9,3,4,5,6,8,9,1,2,3,4,5,9,6,8,7,1,2,9,3,4],
+        [5,6,8,9,7,1,2,3,4,9,5,6,8,7,1,9,2,3,4,5,6,9,8,7,1,2,9,3,4,5,6,8,9,1,2,3,4,5,9,6,8,7,1,2,9,3,4],
+        [5,6,8,9,7,1,2,3,4,9,5,6,8,7,1,9,2,3,4,5,6,9,8,7,1,2,9,3,4,5,6,8,9,1,2,3,4,5,9,6,8,7,1,2,9,3,4],
+        [5,6,7,7,1,2,3,4,5,6,8,1,2,3,4,5,6,8,7,1,2,3,4,5,6,8,1,2,3,4,5,6,8,7,1,2,3,4,5,6,8,1,2,3,4]
+      ]
+    },
+    "respins": {
+      "enabled": true,
+      "coinSymbolId": 10,
+      "triggerMinCount": 5,
+      "respinsAwarded": 3,
+      "coinValues": [
+        { "weight": 40, "value": 1 },
+        { "weight": 26, "value": 2 },
+        { "weight": 16, "value": 3 },
+        { "weight": 10, "value": 5 },
+        { "weight": 6,  "value": 10 },
+        { "weight": 2,  "value": 25 }
+      ],
+      "jackpots": [
+        { "tier": "MINI",  "minCoins": 6,  "multiplier": 20 },
+        { "tier": "MINOR", "minCoins": 9,  "multiplier": 60 },
+        { "tier": "MAJOR", "minCoins": 12, "multiplier": 250 },
+        { "tier": "GRAND", "minCoins": 15, "multiplier": 2000 }
+      ]
+    },
+    "wildFeatures": {
+      "expanding": false,
+      "sticky": true,
+      "walking": true,
+      "stickySpins": 3,
+      "appliesTo": ["FREE_SPINS"]
+    },
+    "scatterTriggers": { "minCount": 3, "freeSpinsAwarded": 10, "retriggerAwards": 5 },
+    "freeSpins":       { "betLockedToTriggerBet": true, "powerBetPersists": false, "maxRetriggerStack": 50 },
+    "powerBet":        { "betMultiplier": 1.50 },
+    "bonusBuyOptions": [
+      {
+        "buyType": "FREE_SPINS_BUY",
+        "costMultiplier": 100,
+        "freeSpinsWinMultiplier": 13.9,
+        "targetState": "FREE_SPINS_AWAITING",
+        "initialFeaturePayload": { "freeSpinsAwarded": 12 }
+      },
+      {
+        "buyType": "HOLD_SPIN_BUY",
+        "costMultiplier": 230.76,
+        "targetState": "RESPIN_AWAITING",
+        "initialFeaturePayload": { "coins": 5 }
+      }
+    ],
+    "pickCollect": {
+      "boardSize": 12,
+      "completion": { "type": "END_TILE" },
+      "triggerOneInN": 433,
+      "tileDistribution": [
+        { "type": "CREDITS",    "weight": 45, "valueRange": [1, 12] },
+        { "type": "MULTIPLIER", "weight": 15, "valueRange": [2, 3]  },
+        { "type": "COLLECT",    "weight": 22 },
+        { "type": "END",        "weight": 18 }
+      ],
+      "maxFeatureWinMultiplier": 5000
+    },
+    "limits": { "maxWinPerRoundMultiplier": 25000 },
+    "betConfig": {
+      "values": [0.20, 0.40, 0.60, 1.00, 2.00, 5.00, 10.00, 20.00, 50.00, 100.00],
+      "defaultBet": 1.00
+    }
+  }
+}

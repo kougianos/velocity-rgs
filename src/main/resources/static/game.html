@@ -43,9 +43,24 @@
 
       <div id="reels" class="reels" aria-label="Slot grid"></div>
 
+      <!-- Hold & Spin: the locked coins, the respin counter and the jackpot ladder. Rendered only
+           while the feature is running; a game without math.respins never mounts it. -->
+      <div id="respinPanel" class="respin-panel hidden" aria-live="polite">
+        <div class="respin-head">
+          <span class="respin-title">Hold &amp; Spin</span>
+          <span class="respin-counter">Respins left <strong id="respinsLeft">-</strong></span>
+          <span class="respin-coins">Coins <strong id="respinCoins">-</strong></span>
+          <span class="respin-total">Collected <strong id="respinTotal">-</strong>×</span>
+        </div>
+        <div id="respinJackpots" class="respin-jackpots"></div>
+      </div>
+
       <div id="winBanner" class="win-banner is-empty">
         <span class="win-label">WIN</span>
         <span id="winAmount" class="win-amount">0.00</span>
+        <!-- Cascading games surface which tumble is paying and at what multiplier while the
+             sequence plays out; hidden entirely on games that settle in one drop. -->
+        <span id="cascadeBadge" class="cascade-badge hidden" aria-live="polite"></span>
       </div>
 
       <div class="controls">
@@ -73,6 +88,10 @@
       <div class="feature-actions">
         <button id="buyFreeSpins" class="btn btn-buy" data-buy="FREE_SPINS_BUY">
           Buy Free Spins <small id="buyFreeSpinsCost">(×-)</small>
+        </button>
+        <!-- Shown only for games that actually sell Hold & Spin (catalog holdSpinBuyCostMultiplier). -->
+        <button id="buyHoldSpin" class="btn btn-buy hidden" data-buy="HOLD_SPIN_BUY">
+          Buy Hold &amp; Spin <small id="buyHoldSpinCost">(×-)</small>
         </button>
         <button id="startFeature" class="btn btn-accent hidden">Start Feature</button>
       </div>

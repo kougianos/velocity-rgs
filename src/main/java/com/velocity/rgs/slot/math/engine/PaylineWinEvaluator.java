@@ -10,6 +10,7 @@ import org.springframework.stereotype.Component;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -65,7 +66,34 @@ public class PaylineWinEvaluator implements WinEvaluator {
         for (WinLine w : wins) {
             total = total.add(w.payout());
         }
-        return EvaluationSupport.capped(total, wins, bet, math);
+        return EvaluationSupport.capped(total, wins, bet, math, matrix);
+    }
+
+    /**
+     * A payline win covers the leading {@code count} coordinates of its own line - the run is contiguous
+     * from the leftmost reel by construction, so no re-reading of the grid is needed.
+     */
+    @Override
+    public boolean[][] winningMask(int[][] matrix, List<WinLine> wins, SlotMathDefinition math) {
+        boolean[][] mask = new boolean[math.grid().rows()][math.grid().cols()];
+        if (wins.isEmpty()) {
+            return mask;
+        }
+        Map<Integer, Payline> byId = new HashMap<>(math.paylines().size() * 2);
+        for (Payline p : math.paylines()) {
+            byId.put(p.id(), p);
+        }
+        for (WinLine w : wins) {
+            Payline line = w.lineId() == null ? null : byId.get(w.lineId());
+            if (line == null) {
+                continue;
+            }
+            int[][] coords = line.coords();
+            for (int i = 0; i < w.count() && i < coords.length; i++) {
+                mask[coords[i][0]][coords[i][1]] = true;
+            }
+        }
+        return mask;
     }
 
     private int[] readLine(int[][] matrix, int[][] coords) {

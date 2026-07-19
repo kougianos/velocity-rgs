@@ -2,6 +2,7 @@ package com.velocity.rgs.slot.api;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.velocity.rgs.slot.feature.pickcollect.PickCollectFeatureView;
+import com.velocity.rgs.slot.feature.respin.RespinFeatureView;
 import com.velocity.rgs.slot.math.domain.BonusBuyType;
 import com.velocity.rgs.session.domain.GameCommand;
 import com.velocity.rgs.session.domain.GameState;
@@ -26,6 +27,7 @@ public record FeatureBuyResponse(
         int remainingFreeSpins,
         Map<String, Object> featureInitPayload,
         PickCollectFeatureView activeFeatureView,
+        RespinFeatureView respinView,
         List<GameCommand> availableActions
 ) {
 }

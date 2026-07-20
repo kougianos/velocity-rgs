@@ -90,6 +90,10 @@ public class GameCatalogController {
                 .winModel(math.winModel().name())
                 .winModelLabel(winModelLabel(math))
                 .waysCount(math.winModel() == WinModel.WAYS ? waysCount(math) : null)
+                // The mechanics this game actually has, derived from the same math blocks that switch
+                // them on - see GameFeatureFactory. Turning a mechanic off in the JSON removes its
+                // card from the lobby in the same change that removes it from the engine.
+                .features(GameFeatureFactory.forSlot(math))
                 // Reel layout
                 .rows(math.grid().rows())
                 .cols(math.grid().cols())
@@ -143,6 +147,7 @@ public class GameCatalogController {
     private static GameSummary toRouletteSummary(RouletteGameDefinition game) {
         RouletteMathDefinition math = game.math();
         RoulettePresentation p = game.presentation();
+        RouletteView view = toRouletteView(math);
         return GameSummary.builder()
                 .gameId(math.gameId())
                 .mathVersion(math.mathVersion())
@@ -160,7 +165,8 @@ public class GameCatalogController {
                 .defaultBet(math.betConfig().defaultBet())
                 .minBet(math.betConfig().minBet())
                 .maxBet(math.betConfig().maxBet())
-                .roulette(toRouletteView(math))
+                .roulette(view)
+                .features(GameFeatureFactory.forRoulette(math, view.betTypes()))
                 .build();
     }
 
@@ -208,6 +214,7 @@ public class GameCatalogController {
     private static GameSummary toBlackjackSummary(BlackjackGameDefinition game) {
         BlackjackMathDefinition math = game.math();
         BlackjackPresentation p = game.presentation();
+        BlackjackView view = toBlackjackView(math);
         return GameSummary.builder()
                 .gameId(math.gameId())
                 .mathVersion(math.mathVersion())
@@ -224,7 +231,8 @@ public class GameCatalogController {
                 .defaultBet(math.betConfig().defaultBet())
                 .minBet(math.betConfig().minBet())
                 .maxBet(math.betConfig().maxBet())
-                .blackjack(toBlackjackView(math))
+                .blackjack(view)
+                .features(GameFeatureFactory.forBlackjack(math, view.blackjackPayoutLabel()))
                 .build();
     }
 
@@ -282,6 +290,9 @@ public class GameCatalogController {
             String volatility,
             int spinDurationMillis,
             GameInfo info,
+            // The mechanics the game ships, derived from its math config rather than authored beside
+            // it, so the lobby advertises exactly what the engine does. See GameFeatureFactory.
+            List<GameFeature> features,
             BigDecimal targetRtp,
             List<BigDecimal> betValues,
             BigDecimal defaultBet,

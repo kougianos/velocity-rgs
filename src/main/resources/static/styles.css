@@ -711,6 +711,12 @@ input[type="range"].bet-slider {
 }
 .info-stat-value { font-size: 16px; color: var(--text); }
 
+/* Server-derived mechanic cards inside the in-game info modal. Shares the .vx-feat chassis with the
+   lobby sheet; body.vx-game binds --vx-hue to the game's accent, so the cards tint themselves. */
+.info-features { display: grid; gap: 10px; margin-bottom: 24px; }
+.info-features:empty { display: none; }
+.info-features .vx-feat + .vx-feat { margin-top: 0; }   /* grid gap already spaces them */
+
 .info-body { margin-bottom: 24px; }
 .info-body p { margin: 0 0 12px; color: var(--text); font-size: 14.5px; line-height: 1.6; }
 .info-body p:last-child { margin-bottom: 0; }
@@ -1220,10 +1226,62 @@ body[data-theme="blackjack"] {
   body.lobby-page .vx-body { padding: 12px 13px 13px; }
   body.lobby-page .vx-body h3 { font-size: 17px; }
   body.lobby-page .vx-body .vx-cardtag { font-size: 12px; margin: 0 0 11px; }
+  body.lobby-page .vx-chips { gap: 5px; margin-bottom: 10px; }
+  body.lobby-page .vx-chip { font-size: 8.5px; padding: 3px 7px; letter-spacing: 0.08em; }
   body.lobby-page .vx-stats { gap: 7px; margin-bottom: 12px; }
   body.lobby-page .vx-stats .s { padding: 7px 6px; }
   body.lobby-page .vx-stats .sv { font-size: 13px; }
-  body.lobby-page .vx-play { padding: 9px; }
+  /* Both actions stay ≥44px tall so Play and Info are honest thumb targets. */
+  body.lobby-page .vx-actions { gap: 7px; }
+  body.lobby-page .vx-play { padding: 14px 9px; min-height: 44px; }
+  body.lobby-page .vx-info { padding: 14px 13px; min-height: 44px; letter-spacing: 0.08em; }
+
+  /* ----- Lobby info sheet: a true bottom sheet on phones -----
+     Anchored to the bottom edge, dragged away with the thumb that opened it, and
+     footed by a full-width CTA above the home indicator. Same markup as the desktop
+     dialog — only the chassis changes. */
+  body.lobby-page .vx-sheet { padding: 0; align-items: flex-end; }
+  body.lobby-page .vx-sheet-panel {
+    width: 100%; max-width: none; border-radius: 20px 20px 0 0; border-bottom: 0;
+    max-height: 88vh;
+    max-height: 88dvh;      /* dvh tracks the collapsing URL bar; vh above is the fallback */
+    opacity: 1; transform: translateY(100%);
+    transition: transform 0.28s cubic-bezier(0.32, 0.72, 0, 1);
+  }
+  body.lobby-page .vx-sheet.open .vx-sheet-panel { transform: none; }
+  body.lobby-page .vx-sheet-grab {
+    display: block; flex: 0 0 auto; width: 40px; height: 4px; border-radius: 999px;
+    background: var(--vx-hair2); margin: 10px auto 2px;
+  }
+  /* The handle and header own the drag gesture; the scroll body keeps its own. */
+  body.lobby-page .vx-sheet-grab, body.lobby-page .vx-sheet-head { touch-action: none; }
+  body.lobby-page .vx-sheet-head { padding: 10px 16px 14px; gap: 12px; }
+  body.lobby-page .vx-sheet-logo { font-size: 32px; }
+  body.lobby-page .vx-sheet-ident h2 { font-size: 18px; }
+  body.lobby-page .vx-sheet-tag { font-size: 12.5px; }
+  body.lobby-page .vx-sheet-x { width: 44px; height: 44px; }
+  body.lobby-page .vx-sheet-telem { padding: 0 16px 14px; gap: 6px; }
+  body.lobby-page .vx-tcell { min-width: 0; padding: 8px 9px; }
+  body.lobby-page .vx-tk { font-size: 8.5px; letter-spacing: 0.1em; }
+  body.lobby-page .vx-tv { font-size: 13px; }
+  body.lobby-page .vx-sheet-tabs { padding: 0 16px; }
+  body.lobby-page .vx-sheet-scroll { padding: 14px 16px 18px; }
+  /* Feature cards appear on both surfaces (lobby sheet, in-game info modal), so both body classes
+     are named — an unscoped .vx-feat here would lose to the base rules declared later in the file. */
+  body.lobby-page .vx-feat, body.vx-game .vx-feat { padding: 13px 14px; gap: 12px; }
+  body.lobby-page .vx-feat-icon, body.vx-game .vx-feat-icon { font-size: 22px; }
+  body.lobby-page .vx-feat-main h3, body.vx-game .vx-feat-main h3 { font-size: 14.5px; }
+  body.lobby-page .vx-feat-main p, body.vx-game .vx-feat-main p { font-size: 13px; margin-bottom: 10px; }
+  /* Spec rows stack: a 34% label column leaves nothing for the values on a phone. */
+  body.lobby-page .vx-sheet-specs { grid-template-columns: 1fr; }
+  body.lobby-page .vx-sheet-specs dt { padding-bottom: 4px; }
+  body.lobby-page .vx-sheet-specs dd { border-top: 0; padding: 0 0 12px; }
+  body.lobby-page .vx-sheet-foot {
+    flex-direction: column-reverse; align-items: stretch; gap: 11px;
+    padding: 12px 16px calc(14px + env(safe-area-inset-bottom));
+  }
+  body.lobby-page .vx-sheet-cta { justify-content: center; padding: 15px 20px; font-size: 14px; }
+  body.lobby-page .vx-sheet-trust { min-width: 0; font-size: 9.5px; }
 
   /* Game page: keep the topbar tight, and let the RTP table scroll inside its
      panel instead of forcing the page wide. */
@@ -1371,6 +1429,9 @@ body.lobby-page ::selection { background: rgba(255, 46, 126, 0.30); }
 .vx-hero .vx-tag { font-size: clamp(16px, 1.5vw, 18px); color: var(--vx-dim); max-width: 42ch; margin: 0 0 30px; }
 .vx-telem { display: flex; gap: 14px; flex-wrap: wrap; margin-bottom: 32px; }
 .vx-telem .cell {
+  /* The slot reel owns the global `.cell` and sets `aspect-ratio: 1/1` on it, which was silently
+     squaring these stat pills into 126x126 blocks. Opt back out. */
+  aspect-ratio: auto;
   padding: 12px 16px; border: 1px solid var(--vx-hair); border-radius: 11px;
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.03), transparent); min-width: 104px;
 }
@@ -1472,17 +1533,47 @@ body.lobby-page ::selection { background: rgba(255, 46, 126, 0.30); }
 .vx-body { padding: 16px 17px 18px; display: flex; flex-direction: column; flex: 1; }
 .vx-body h3 { margin: 0 0 4px; font-size: 20px; letter-spacing: 0.01em; }
 .vx-body .vx-cardtag { margin: 0 0 15px; font-size: 13.5px; color: var(--vx-dim); flex: 1; }
+/* Signature-mechanic chips — server-flagged headline features, merchandised on the card itself so a
+   cascading game reads as one from the rail. Collapses to nothing on games that ship no signature. */
+.vx-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 13px; }
+.vx-chips:empty { display: none; }
+.vx-chip {
+  font-family: var(--vx-mono); font-size: 9.5px; letter-spacing: 0.1em; text-transform: uppercase;
+  padding: 4px 9px; border-radius: 999px; white-space: nowrap;
+  color: color-mix(in srgb, var(--vx-hue) 65%, #fff);
+  background: color-mix(in srgb, var(--vx-hue) 13%, transparent);
+  border: 1px solid color-mix(in srgb, var(--vx-hue) 32%, transparent);
+}
 .vx-stats { display: flex; gap: 9px; margin-bottom: 16px; }
 .vx-stats .s { flex: 1; padding: 9px 8px; border-radius: 9px; text-align: center; background: var(--vx-slate); border: 1px solid var(--vx-hair); }
 .vx-stats .sl { font-family: var(--vx-mono); font-size: 9px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--vx-faint); display: block; }
 .vx-stats .sv { font-family: var(--vx-mono); font-variant-numeric: tabular-nums; font-size: 15px; font-weight: 600; margin-top: 3px; display: block; color: var(--vx-gold); }
+
+.vx-actions { display: flex; gap: 8px; align-items: stretch; }
 .vx-play {
+  flex: 1; text-decoration: none;
   display: flex; align-items: center; justify-content: center; gap: 8px;
   padding: 11px; border-radius: 9px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; font-size: 13px;
   color: #0b0710; background: var(--vx-hue); transition: filter 0.15s;
 }
+/* Stretched link: Play covers the whole card, so "click anywhere to play" survives the card becoming
+   an <article> (a <button> cannot legally live inside an <a>). The info button re-raises above it. */
+.vx-play::after { content: ""; position: absolute; inset: 0; z-index: 1; }
 .vx-card:hover .vx-play { filter: brightness(1.12); }
 .vx-play .arw { font-family: var(--vx-mono); }
+.vx-info {
+  position: relative; z-index: 2; flex: 0 0 auto; cursor: pointer;
+  display: inline-flex; align-items: center; gap: 7px; padding: 11px 13px; border-radius: 9px;
+  font-family: var(--vx-mono); font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase;
+  color: var(--vx-dim); background: var(--vx-slate); border: 1px solid var(--vx-hair2);
+  transition: color 0.15s, border-color 0.15s, background 0.15s;
+}
+.vx-info:hover { color: var(--vx-text); background: var(--vx-raise); border-color: color-mix(in srgb, var(--vx-hue) 55%, var(--vx-hair2)); }
+.vx-info:focus-visible { outline: 2px solid var(--vx-hue); outline-offset: 2px; }
+.vx-info-i {
+  width: 15px; height: 15px; flex: 0 0 auto; border-radius: 50%; border: 1px solid currentColor;
+  display: grid; place-items: center; font-size: 9px; font-weight: 700; font-style: italic;
+}
 
 /* ---- loading skeleton + error ---- */
 .vx-skel { background: linear-gradient(100deg, var(--vx-graphite) 30%, var(--vx-slate) 50%, var(--vx-graphite) 70%); background-size: 200% 100%; animation: vx-shim 1.3s linear infinite; border-radius: 14px; }
@@ -1510,8 +1601,157 @@ body.lobby-page ::selection { background: rgba(255, 46, 126, 0.30); }
 .vx-foot .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--vx-emerald); box-shadow: 0 0 8px var(--vx-emerald); }
 .vx-foot .spacer { flex: 1; }
 
+/* =========================================================================
+ * Game info sheet.
+ *
+ * One component with two shapes: a centered dialog here, a bottom sheet inside the
+ * mobile breakpoint above. Same markup, same content — only the chassis changes, so
+ * there is no second layout to keep in step. --vx-hue is set per game on open.
+ * ======================================================================= */
+.vx-sheet { position: fixed; inset: 0; z-index: 90; display: flex; align-items: center; justify-content: center; padding: 24px; }
+.vx-sheet-scrim {
+  position: absolute; inset: 0; background: rgba(5, 6, 12, 0.74);
+  backdrop-filter: blur(7px); opacity: 0; transition: opacity 0.22s ease;
+}
+.vx-sheet.open .vx-sheet-scrim { opacity: var(--vx-drag, 1); }
+.vx-sheet-panel {
+  position: relative; z-index: 1; width: min(700px, 100%); max-height: min(88vh, 900px);
+  display: flex; flex-direction: column; overflow: hidden;
+  background: var(--vx-graphite); border: 1px solid var(--vx-hair2); border-radius: 18px;
+  box-shadow: 0 40px 120px rgba(0, 0, 0, 0.72);
+  opacity: 0; transform: translateY(14px) scale(0.985);
+  transition: opacity 0.22s ease, transform 0.22s ease;
+}
+.vx-sheet.open .vx-sheet-panel { opacity: 1; transform: none; }
+.vx-sheet-panel::before {
+  content: ""; position: absolute; inset: 0 0 auto; height: 3px;
+  background: linear-gradient(90deg, var(--vx-hue), transparent 78%);
+}
+/* Grab handle is a mobile affordance; on desktop the × and the scrim do the work. */
+.vx-sheet-grab { display: none; }
+body.vx-locked { overflow: hidden; }
+
+.vx-sheet-head { display: flex; align-items: center; gap: 14px; padding: 22px 22px 16px; }
+.vx-sheet-logo { font-size: 40px; line-height: 1; flex: 0 0 auto; filter: drop-shadow(0 6px 16px rgba(0, 0, 0, 0.5)); }
+.vx-sheet-ident { flex: 1; min-width: 0; }
+.vx-sheet-ident h2 {
+  margin: 0; font-family: var(--vx-display); font-weight: 800; font-size: 23px;
+  letter-spacing: 0.02em; text-transform: uppercase;
+}
+.vx-sheet-tag { margin: 4px 0 0; font-size: 13.5px; color: var(--vx-dim); }
+.vx-sheet-x {
+  flex: 0 0 auto; width: 36px; height: 36px; border-radius: 10px; cursor: pointer; font-size: 20px;
+  color: var(--vx-dim); background: var(--vx-slate); border: 1px solid var(--vx-hair);
+  display: grid; place-items: center; line-height: 1; transition: color 0.15s, border-color 0.15s;
+}
+.vx-sheet-x:hover { color: var(--vx-text); border-color: var(--vx-hue); }
+
+.vx-sheet-telem { display: flex; gap: 8px; padding: 0 22px 16px; flex-wrap: wrap; }
+.vx-tcell {
+  flex: 1; min-width: 78px; padding: 9px 11px; border-radius: 10px;
+  background: var(--vx-slate); border: 1px solid var(--vx-hair);
+}
+.vx-tk { font-family: var(--vx-mono); font-size: 9px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--vx-faint); }
+.vx-tv { font-size: 15px; font-weight: 600; margin-top: 3px; color: var(--vx-text); }
+
+.vx-sheet-tabs { display: flex; gap: 4px; padding: 0 22px; border-bottom: 1px solid var(--vx-hair); }
+.vx-sheet-tabs button {
+  appearance: none; cursor: pointer; background: none; border: 0; padding: 11px 3px; margin-right: 20px;
+  font-family: var(--vx-mono); font-size: 11.5px; letter-spacing: 0.16em; text-transform: uppercase;
+  color: var(--vx-faint); border-bottom: 2px solid transparent; margin-bottom: -1px; transition: color 0.15s;
+}
+.vx-sheet-tabs button:hover { color: var(--vx-dim); }
+.vx-sheet-tabs button[aria-selected="true"] { color: var(--vx-text); border-bottom-color: var(--vx-hue); }
+
+.vx-sheet-scroll {
+  flex: 1; overflow-y: auto; overscroll-behavior: contain; padding: 18px 22px 22px;
+  scrollbar-width: thin; scrollbar-color: var(--vx-hair2) transparent;
+}
+.vx-sheet-scroll::-webkit-scrollbar { width: 8px; }
+.vx-sheet-scroll::-webkit-scrollbar-thumb { background: var(--vx-hair2); border-radius: 999px; }
+.vx-sheet-scroll::-webkit-scrollbar-track { background: transparent; }
+.vx-sheet-empty { color: var(--vx-dim); font-size: 13.5px; margin: 0; }
+
+/* ---- features pane ---- */
+.vx-feat {
+  display: flex; gap: 14px; padding: 15px 16px; border-radius: 13px;
+  background: var(--vx-slate); border: 1px solid var(--vx-hair);
+}
+.vx-feat + .vx-feat { margin-top: 10px; }
+.vx-feat.is-headline {
+  border-color: color-mix(in srgb, var(--vx-hue) 42%, var(--vx-hair));
+  background: linear-gradient(180deg, color-mix(in srgb, var(--vx-hue) 9%, var(--vx-slate)), var(--vx-slate));
+}
+.vx-feat-icon { font-size: 25px; line-height: 1.1; flex: 0 0 auto; }
+.vx-feat-main { min-width: 0; }
+.vx-feat-main h3 { margin: 0 0 6px; font-size: 15.5px; display: flex; align-items: center; gap: 9px; flex-wrap: wrap; }
+.vx-feat-flag {
+  font-family: var(--vx-mono); font-size: 8.5px; letter-spacing: 0.14em; text-transform: uppercase;
+  padding: 3px 7px; border-radius: 999px; color: #0b0710; background: var(--vx-hue);
+}
+.vx-feat-main p { margin: 0 0 11px; font-size: 13.5px; line-height: 1.55; color: var(--vx-dim); }
+.vx-feat-main ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 6px; }
+.vx-feat-main li {
+  position: relative; padding-left: 15px; font-family: var(--vx-mono); font-size: 11.5px;
+  line-height: 1.5; color: var(--vx-text);
+}
+.vx-feat-main li::before {
+  content: ""; position: absolute; left: 0; top: 6px; width: 5px; height: 5px;
+  border-radius: 1px; background: var(--vx-hue);
+}
+
+/* ---- details pane ---- */
+/* Scoped to the details pane: an unscoped `.vx-sheet-pane p` would out-specify both .vx-sheet-lede
+   and .vx-feat-main p (same 0-1-1 weight, declared later) and flatten them both. */
+.vx-sheet-pane[data-pane="details"] p { margin: 0 0 12px; font-size: 13.5px; line-height: 1.62; color: var(--vx-dim); }
+.vx-sheet-pane[data-pane="details"] p.vx-sheet-lede { margin-bottom: 12px; font-size: 14.5px; line-height: 1.6; color: var(--vx-text); }
+.vx-sheet-stats { display: flex; flex-wrap: wrap; gap: 8px; margin: 16px 0; }
+.vx-sheet-stats div {
+  flex: 1; min-width: 130px; padding: 10px 12px; border-radius: 10px;
+  background: var(--vx-slate); border: 1px solid var(--vx-hair);
+}
+.vx-sheet-stats span {
+  display: block; font-family: var(--vx-mono); font-size: 9px; letter-spacing: 0.14em;
+  text-transform: uppercase; color: var(--vx-hue);
+}
+.vx-sheet-stats strong { display: block; margin-top: 4px; font-size: 13.5px; font-weight: 600; }
+.vx-sheet-specs { margin: 0; display: grid; grid-template-columns: minmax(120px, 34%) 1fr; gap: 0; }
+.vx-sheet-specs dt, .vx-sheet-specs dd {
+  padding: 10px 0; border-top: 1px solid var(--vx-hair); margin: 0; align-self: start;
+}
+.vx-sheet-specs dt {
+  font-family: var(--vx-mono); font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase;
+  color: var(--vx-faint); padding-right: 14px;
+}
+.vx-sheet-specs dd { display: grid; gap: 3px; }
+.vx-sheet-specs dd span { font-size: 13px; color: var(--vx-text); }
+
+/* ---- footer ---- */
+.vx-sheet-foot {
+  border-top: 1px solid var(--vx-hair); padding: 14px 22px 18px;
+  background: linear-gradient(180deg, transparent, rgba(255, 255, 255, 0.018));
+  display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+}
+.vx-sheet-trust {
+  flex: 1; min-width: 220px; margin: 0; display: flex; align-items: baseline; gap: 9px;
+  font-family: var(--vx-mono); font-size: 10.5px; line-height: 1.5; color: var(--vx-faint);
+}
+.vx-sheet-trust .dot {
+  flex: 0 0 auto; width: 7px; height: 7px; border-radius: 50%;
+  background: var(--vx-emerald); box-shadow: 0 0 8px var(--vx-emerald);
+}
+.vx-sheet-cta {
+  flex: 0 0 auto; text-decoration: none; display: inline-flex; align-items: center; gap: 10px;
+  padding: 13px 22px; border-radius: 11px; color: #0b0710; background: var(--vx-hue);
+  font-family: var(--vx-display); font-weight: 800; font-size: 13px;
+  letter-spacing: 0.05em; text-transform: uppercase; transition: filter 0.15s;
+}
+.vx-sheet-cta:hover { filter: brightness(1.1); }
+.vx-sheet-cta .arw { font-family: var(--vx-mono); }
+
 @media (prefers-reduced-motion: reduce) {
   .vx-mark::after, .vx-cta::after, .vx-art::after, .vx-skel { animation: none !important; transition: none !important; }
+  .vx-sheet-panel, .vx-sheet-scrim { transition: none !important; }
 }
 
 /* =========================================================================

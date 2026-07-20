@@ -13,6 +13,9 @@
 const fmtInt = (n) => Number(n ?? 0).toLocaleString();
 const titleCase = (s) => (s || "").charAt(0).toUpperCase() + (s || "").slice(1).toLowerCase();
 
+/* esc() and renderFeatureCards() live in games.js — the game page's info modal renders the same
+   feature cards, so the renderer is shared rather than duplicated per page. */
+
 /** Map a game's server-defined theme to its accent hue token. */
 function hueFor(theme) {
   switch (theme) {
@@ -108,12 +111,17 @@ function renderRail(title, games, hue) {
   return sec;
 }
 
+/**
+ * One game card. The card is an <article>, not an <a>: it carries a real <button> for the info sheet,
+ * and interactive content cannot be nested inside a link. "Click anywhere to play" survives via the
+ * stretched-link pattern — .vx-play's ::after covers the whole card — so Play stays a genuine link
+ * (keyboard, middle-click, open-in-new-tab all work) while the info button sits above it on z-index.
+ */
 function renderCard(g) {
   const rtp = Number(g.targetRtp).toFixed(isSlot(g) ? 1 : 2);
-  const card = document.createElement("a");
+  const card = document.createElement("article");
   card.className = "vx-card";
   card.style.setProperty("--vx-hue", hueFor(g.theme));
-  card.href = `game.html?game=${encodeURIComponent(g.gameId)}`;
 
   const badge = cardBadge(g);
   const stats =
@@ -123,17 +131,37 @@ function renderCard(g) {
 
   // Slots also badge their win model ("243 Ways" / "20 Paylines") straight from the catalog.
   const model = isSlot(g) && g.winModelLabel
-    ? `<span class="vx-model">${g.winModelLabel}</span>` : "";
+    ? `<span class="vx-model">${esc(g.winModelLabel)}</span>` : "";
+
+  // The mechanics that *define* this game, flagged as headline by the server. Merchandising the
+  // cascades/respins on the card itself, not only behind the info button — a player scanning the rail
+  // should be able to see which game tumbles and which one locks coins.
+  const chips = headlineFeatures(g)
+    .map((f) => `<span class="vx-chip">${esc(f.icon)} ${esc(f.name)}</span>`).join("");
 
   card.innerHTML = `
-    <div class="vx-art">${model}<span class="glyph">${g.logo}</span><span class="vx-vol">${badge}</span></div>
+    <div class="vx-art">${model}<span class="glyph">${esc(g.logo)}</span><span class="vx-vol">${esc(badge)}</span></div>
     <div class="vx-body">
-      <h3>${g.title}</h3>
-      <p class="vx-cardtag">${g.tagline}</p>
+      <h3>${esc(g.title)}</h3>
+      <p class="vx-cardtag">${esc(g.tagline)}</p>
+      <div class="vx-chips">${chips}</div>
       <div class="vx-stats">${stats}</div>
-      <span class="vx-play">Play <span class="arw">→</span></span>
+      <div class="vx-actions">
+        <a class="vx-play" href="game.html?game=${encodeURIComponent(g.gameId)}">Play <span class="arw">→</span></a>
+        <button class="vx-info" type="button" aria-haspopup="dialog"
+                aria-label="Game info and features for ${esc(g.title)}">
+          <span class="vx-info-i" aria-hidden="true">i</span><span class="vx-info-t">Info</span>
+        </button>
+      </div>
     </div>`;
+
+  card.querySelector(".vx-info").addEventListener("click", (e) => openSheet(g, e.currentTarget));
   return card;
+}
+
+/** At most two server-flagged signature mechanics — enough to characterise a game, not enough to crowd. */
+function headlineFeatures(g) {
+  return (g.features || []).filter((f) => f.headline).slice(0, 2);
 }
 
 /** Corner badge: volatility for slots, the defining edge for table games. */
@@ -173,6 +201,238 @@ function blackjackStats(g, rtp) {
 }
 function stat(label, value) {
   return `<div class="s"><span class="sl">${label}</span><span class="sv">${value}</span></div>`;
+}
+
+/* =========================================================================
+ * Game info sheet — the "what's actually in this game" surface.
+ *
+ * One component, two presentations: a centered dialog on desktop, a bottom sheet
+ * on phones (drag-to-dismiss, thumb-reachable CTA, safe-area aware). Both render
+ * the same server-derived content, so there is no second code path to keep in step.
+ *
+ * The Features tab is built from catalog `features`, which the server derives from
+ * the math blocks that switch each mechanic on (see GameFeatureFactory) — the lobby
+ * cannot advertise a mechanic the engine does not run. The Details tab is the
+ * hand-authored `info` block (prose + spec sheet) behind it.
+ * ======================================================================= */
+
+const MOBILE = "(max-width: 500px)";
+const sheet = { root: null, panel: null, scroll: null, invoker: null, game: null, hideTimer: null };
+
+/** Build the sheet DOM once and reuse it — every game renders into the same shell. */
+function ensureSheet() {
+  if (sheet.root) return sheet.root;
+
+  const root = document.createElement("div");
+  root.className = "vx-sheet hidden";
+  root.setAttribute("role", "dialog");
+  root.setAttribute("aria-modal", "true");
+  root.setAttribute("aria-labelledby", "vxSheetTitle");
+  root.innerHTML = `
+    <div class="vx-sheet-scrim" data-close></div>
+    <div class="vx-sheet-panel">
+      <div class="vx-sheet-grab" aria-hidden="true"></div>
+      <header class="vx-sheet-head">
+        <span class="vx-sheet-logo"></span>
+        <div class="vx-sheet-ident">
+          <h2 id="vxSheetTitle"></h2>
+          <p class="vx-sheet-tag"></p>
+        </div>
+        <button class="vx-sheet-x" type="button" data-close aria-label="Close">×</button>
+      </header>
+      <div class="vx-sheet-telem"></div>
+      <div class="vx-sheet-tabs" role="tablist">
+        <button role="tab" type="button" data-tab="features" aria-selected="true">Features</button>
+        <button role="tab" type="button" data-tab="details" aria-selected="false">Details</button>
+      </div>
+      <div class="vx-sheet-scroll">
+        <div class="vx-sheet-pane" data-pane="features"></div>
+        <div class="vx-sheet-pane hidden" data-pane="details"></div>
+      </div>
+      <footer class="vx-sheet-foot">
+        <p class="vx-sheet-trust">
+          <span class="dot"></span>Every round is decided server-side, persisted, and replayable
+          bit-exact from its own RNG draws.
+        </p>
+        <a class="vx-sheet-cta"></a>
+      </footer>
+    </div>`;
+  document.body.appendChild(root);
+
+  sheet.root = root;
+  sheet.panel = root.querySelector(".vx-sheet-panel");
+  sheet.scroll = root.querySelector(".vx-sheet-scroll");
+
+  root.addEventListener("click", (e) => { if (e.target.closest("[data-close]")) closeSheet(); });
+  for (const tab of root.querySelectorAll("[data-tab]")) {
+    tab.addEventListener("click", () => selectTab(tab.dataset.tab));
+  }
+  // Escape lives on the document, not the dialog: clicking a paragraph inside the sheet moves focus to
+  // <body>, and a listener bound to the dialog would stop hearing keys at exactly that point.
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && !root.classList.contains("hidden")) closeSheet();
+  });
+  // Focus stays inside while open: a dialog you can Tab out of is a dialog screen readers wander off.
+  root.addEventListener("keydown", (e) => {
+    if (e.key !== "Tab") return;
+    const focusable = [...root.querySelectorAll("button, a[href], [tabindex]:not([tabindex='-1'])")]
+      .filter((el) => el.offsetParent !== null);
+    if (!focusable.length) return;
+    const first = focusable[0], last = focusable[focusable.length - 1];
+    if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+    else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+  });
+  initSheetDrag();
+  return root;
+}
+
+function openSheet(g, invoker) {
+  ensureSheet();
+  sheet.game = g;
+  sheet.invoker = invoker || null;
+  sheet.root.style.setProperty("--vx-hue", hueFor(g.theme));
+
+  sheet.root.querySelector(".vx-sheet-logo").textContent = g.logo || "🎰";
+  sheet.root.querySelector("#vxSheetTitle").textContent = g.title || "";
+  sheet.root.querySelector(".vx-sheet-tag").textContent = g.tagline || "";
+  sheet.root.querySelector(".vx-sheet-telem").innerHTML = sheetTelemetry(g);
+  sheet.root.querySelector("[data-pane='features']").innerHTML = renderFeatures(g);
+  sheet.root.querySelector("[data-pane='details']").innerHTML = renderDetails(g);
+
+  const cta = sheet.root.querySelector(".vx-sheet-cta");
+  cta.href = `game.html?game=${encodeURIComponent(g.gameId)}`;
+  cta.innerHTML = `Play ${esc(g.title)} <span class="arw">→</span>`;
+
+  selectTab("features");
+  sheet.scroll.scrollTop = 0;
+  // Reopening during the closing animation would otherwise let that pending timer hide the sheet we
+  // are in the middle of showing.
+  clearTimeout(sheet.hideTimer);
+  // Lock the page behind the sheet so a scroll gesture that runs past the end of the sheet does not
+  // start scrolling the lobby underneath it.
+  document.body.classList.add("vx-locked");
+  sheet.root.classList.remove("hidden");
+  // Force a reflow so the transition has a start value to animate from, rather than deferring the
+  // class to rAF — a backgrounded or non-painting tab never runs that callback, and the sheet would
+  // then sit there at opacity 0 having been "opened".
+  void sheet.root.offsetHeight;
+  sheet.root.classList.add("open");
+  sheet.root.querySelector(".vx-sheet-x").focus();
+}
+
+function closeSheet() {
+  if (!sheet.root || sheet.root.classList.contains("hidden")) return;
+  sheet.root.classList.remove("open");
+  document.body.classList.remove("vx-locked");
+  sheet.panel.style.transform = "";
+  const done = () => sheet.root.classList.add("hidden");
+  clearTimeout(sheet.hideTimer);
+  if (matchMedia("(prefers-reduced-motion: reduce)").matches) done();
+  else sheet.hideTimer = setTimeout(done, 300);   // outlasts the slower (mobile) slide-out
+  // Send focus back where it came from, or the keyboard user is dumped at the top of the document.
+  if (sheet.invoker) sheet.invoker.focus();
+  sheet.invoker = null;
+}
+
+function selectTab(name) {
+  for (const tab of sheet.root.querySelectorAll("[data-tab]")) {
+    tab.setAttribute("aria-selected", String(tab.dataset.tab === name));
+  }
+  for (const pane of sheet.root.querySelectorAll("[data-pane]")) {
+    pane.classList.toggle("hidden", pane.dataset.pane !== name);
+  }
+  sheet.scroll.scrollTop = 0;
+}
+
+/** The headline numbers, shown above the tabs so they survive whichever tab is open. */
+function sheetTelemetry(g) {
+  const cells = [["RTP", `${Number(g.targetRtp).toFixed(2)}%`]];
+  if (isSlot(g)) {
+    cells.push(["Max win", `${fmtInt(g.maxWinMultiplier)}×`]);
+    cells.push(winModelStat(g));
+  } else if (g.gameType === "ROULETTE") {
+    cells.push(["Pockets", (g.roulette || {}).pocketCount ?? 37]);
+    cells.push(["Top pay", "35:1"]);
+  } else {
+    cells.push(["Decks", (g.blackjack || {}).decks ?? "—"]);
+    cells.push(["BJ pays", (g.blackjack || {}).blackjackPayoutLabel || "3:2"]);
+  }
+  cells.push(["Volatility", (g.volatility || "—").toUpperCase()]);
+  // Namespaced classes, not the `cell`/`k`/`v` the hero uses: `.cell` is the slot reel's global class
+  // and carries `aspect-ratio: 1/1`, which turns anything reusing the name into a square.
+  return cells.map(([k, v]) =>
+    `<div class="vx-tcell"><div class="vx-tk">${esc(k)}</div>` +
+    `<div class="vx-tv vx-num">${esc(v)}</div></div>`).join("");
+}
+
+/** The mechanics themselves — one card per feature, signature ones flagged and accented. */
+function renderFeatures(g) {
+  if (!(g.features || []).length) {
+    return `<p class="vx-sheet-empty">This game ships no configurable mechanics.</p>`;
+  }
+  return renderFeatureCards(g.features);
+}
+
+/** The hand-authored spec sheet: marketing prose, stat cards, and the labelled spec rows. */
+function renderDetails(g) {
+  const info = g.info || {};
+  const parts = [];
+  if (g.description) parts.push(`<p class="vx-sheet-lede">${esc(g.description)}</p>`);
+  for (const p of info.paragraphs || []) parts.push(`<p>${esc(p)}</p>`);
+
+  if ((info.stats || []).length) {
+    parts.push(`<div class="vx-sheet-stats">${(info.stats).map((s) =>
+      `<div><span>${esc(s.label)}</span><strong>${esc(s.value)}</strong></div>`).join("")}</div>`);
+  }
+  if ((info.specs || []).length) {
+    parts.push(`<dl class="vx-sheet-specs">${(info.specs).map((s) =>
+      `<dt>${esc(s.label)}</dt><dd>${(s.values || []).map((v) =>
+        `<span>${esc(v)}</span>`).join("")}</dd>`).join("")}</dl>`);
+  }
+  return parts.join("") || `<p class="vx-sheet-empty">No further detail published for this game.</p>`;
+}
+
+/**
+ * Mobile drag-to-dismiss. A bottom sheet you can only close by aiming at a small × in the far corner
+ * is a bottom sheet fighting the platform: the whole point of the shape is that it is dismissed with
+ * the thumb that opened it. Drags on the grab handle and header (never the scrolling body, which owns
+ * its own gesture) track the finger, then either spring back or fall away past the threshold.
+ */
+function initSheetDrag() {
+  let startY = 0, startT = 0, dy = 0, dragging = false;
+
+  const onDown = (e) => {
+    if (!matchMedia(MOBILE).matches || e.target.closest("[data-close], [data-tab]")) return;
+    dragging = true; startY = e.clientY; startT = performance.now(); dy = 0;
+    sheet.panel.style.transition = "none";
+    sheet.panel.setPointerCapture(e.pointerId);
+  };
+  const onMove = (e) => {
+    if (!dragging) return;
+    dy = Math.max(0, e.clientY - startY);
+    sheet.panel.style.transform = `translateY(${dy}px)`;
+    sheet.root.style.setProperty("--vx-drag", String(1 - Math.min(dy / 320, 0.6)));
+  };
+  const onUp = () => {
+    if (!dragging) return;
+    dragging = false;
+    sheet.panel.style.transition = "";
+    sheet.root.style.removeProperty("--vx-drag");
+    // A short flick should dismiss as readily as a long drag, so velocity counts as well as distance.
+    // The flick path still needs real distance behind it, or a fast 20px twitch on the header — which
+    // is what a tap registers as if the thumb slips — throws the sheet away.
+    const velocity = dy / Math.max(performance.now() - startT, 1);
+    if (dy > 110 || (velocity > 0.55 && dy > 45)) closeSheet();
+    else sheet.panel.style.transform = "";
+  };
+
+  const head = sheet.panel.querySelector(".vx-sheet-head");
+  for (const el of [sheet.panel.querySelector(".vx-sheet-grab"), head]) {
+    el.addEventListener("pointerdown", onDown);
+  }
+  sheet.panel.addEventListener("pointermove", onMove);
+  sheet.panel.addEventListener("pointerup", onUp);
+  sheet.panel.addEventListener("pointercancel", onUp);
 }
 
 function renderError(title, message) {

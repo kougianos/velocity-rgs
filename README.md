@@ -91,6 +91,24 @@ mean nothing without the coins held going in. `game_round.round_kind` discrimina
 Rounds written before this existed are classified by the V12 backfill and refuse replay with a reason
 rather than failing.
 
+### What the lobby advertises, and why it cannot lie
+
+Every game card in the lobby carries an **Info** button opening a per-game sheet whose *Features* tab
+lists the mechanics that game actually ships - the cascade ladder, the Hold & Spin trigger and jackpot
+tiers, the wild behaviours, the buy prices.
+
+None of it is marketing copy kept in step by hand. `GameFeatureFactory` derives the list from the same
+`math` blocks that switch each mechanic on, and every number it quotes is read out of that block. A
+card exists **iff** the mechanic is configured, so deleting `math.cascades` removes "Cascading Reels"
+from the lobby in the same change that stops the reels tumbling.
+[`GameFeatureFactoryTest`](src/test/java/com/velocity/rgs/catalog/GameFeatureFactoryTest.java) asserts
+that biconditional over every shipped slot, in both directions.
+
+The sheet is one component in two shapes: a centered dialog on desktop, and on phones a bottom sheet
+that is dragged away with the thumb that opened it (distance- **or** velocity-dismissed, with the
+scrolling body keeping its own gesture). The same cards render inside the in-game info modal, so a
+player sees one description of a mechanic wherever they meet it.
+
 ### Replaying a round from the UI
 
 The **Round History** page (`/history.html`) lists every persisted round with a **Replay** button. It

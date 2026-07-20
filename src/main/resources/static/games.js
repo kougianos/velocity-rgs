@@ -52,14 +52,14 @@ function buildPaylineMap(game) {
 }
 
 /** Escape before interpolating catalog strings into a template. Trusted source, but these are
- *  long-form authored strings (feature prose, spec sheets) — cheaper to escape than to audit. */
+ *  long-form authored strings (feature prose, spec sheets) - cheaper to escape than to audit. */
 function esc(s) {
   return String(s ?? "").replace(/[&<>"']/g, (c) =>
     ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
 }
 
 /**
- * The game's mechanics as a stack of cards — shared by the lobby info sheet and the in-game info modal
+ * The game's mechanics as a stack of cards - shared by the lobby info sheet and the in-game info modal
  * so both advertise the same thing in the same shape.
  *
  * `features` is derived server-side from the math config that drives the engine (see

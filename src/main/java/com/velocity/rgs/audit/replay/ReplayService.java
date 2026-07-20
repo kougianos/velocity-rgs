@@ -13,6 +13,8 @@ import com.velocity.rgs.slot.persistence.GameRoundRepository;
 import com.velocity.rgs.slot.persistence.RoundGridCodec;
 import com.velocity.rgs.slot.math.config.SlotMathDefinition;
 import com.velocity.rgs.slot.math.config.SlotMathRegistry;
+import com.velocity.rgs.slot.math.config.WildFeatureConfig;
+import com.velocity.rgs.slot.math.engine.WildFeatureEngine;
 import com.velocity.rgs.slot.math.domain.ReelStripSet;
 import com.velocity.rgs.slot.math.engine.CascadeStep;
 import com.velocity.rgs.slot.math.engine.EvaluationResult;
@@ -38,6 +40,12 @@ import java.util.Map;
  * sequence MUST equal the stored one; divergence is reported in the {@link RoundReplayResult} for the
  * caller (and asserted via an exception when the grids differ).
  *
+ * <p>Not every persisted round can be rebuilt from its own draws. Two cannot, and both are refused with
+ * {@link ErrorCode#ROUND_NOT_REPLAYABLE} and a reason rather than being reported as a mismatch: a respin
+ * recorded before {@code feature_context} existed, and any round played with sticky or walking wilds,
+ * whose carry lives on the session. Reserving {@code INTERNAL_ERROR} for genuine divergence is what
+ * keeps a 500 from here worth reading.
+ *
  * <p>A cascading round is reconstructed the same way and is the strictest test of the whole scheme:
  * every drop after the first is built from refill draws, so the replay only lands if those draws were
  * captured in the round's sink, in the order the engine consumed them. The comparison is therefore over
@@ -55,6 +63,7 @@ public class ReplayService {
     private final RoundGridCodec gridCodec;
     private final RespinEngine respinEngine;
     private final RespinPayloadCodec respinPayloadCodec;
+    private final WildFeatureEngine wildFeatureEngine;
     private final ObjectMapper objectMapper;
 
     @Transactional(readOnly = true)
@@ -80,8 +89,16 @@ public class ReplayService {
             steps = replayRespin(round, math, replayRng);
             evaluation = null;
         } else {
+            requireReconstructableWilds(round, math, stripSet);
             GridGenerationResult opening = gridEngine.generate(math, stripSet, replayRng);
-            evaluation = reelEvaluator.evaluateRound(opening.matrix(),
+            // Wild features reshape the board before anything evaluates it, and it is the reshaped board
+            // that gets persisted - so the replay has to make the same transform or it compares the
+            // drawn grid against a board that was never only drawn. Carried wilds are empty here by
+            // construction: requireReconstructableWilds above has already refused any round that needed
+            // them. Refills inside evaluateRound are left untransformed, matching SlotEngineService,
+            // which applies wilds once to the opening grid.
+            int[][] board = wildFeatureEngine.apply(opening.matrix(), math, stripSet, List.of()).matrix();
+            evaluation = reelEvaluator.evaluateRound(board,
                     opening.stopPositions(), round.getBetAmount(), math, stripSet, replayRng);
             steps = evaluation.steps();
         }
@@ -141,7 +158,7 @@ public class ReplayService {
             // A round recorded before feature_context existed. Not a server fault and not something a
             // retry fixes - the input state was never captured - so it answers 409 with the reason
             // rather than a 500 that reads like the replay engine broke.
-            throw new RgsException(ErrorCode.ILLEGAL_STATE_TRANSITION,
+            throw new RgsException(ErrorCode.ROUND_NOT_REPLAYABLE,
                     "Round " + round.getRoundId() + " is a Hold & Spin respin recorded before its "
                             + "feature context was captured, so the coins held going into it are not "
                             + "known and the round cannot be reconstructed");
@@ -150,6 +167,35 @@ public class ReplayService {
         RespinEngine.RespinOutcome outcome = respinEngine.respin(before, math, ReelStripSet.BASE, replayRng);
         return List.of(new CascadeStep(0, outcome.matrix(), new int[0], List.of(),
                 BigDecimal.ONE, BigDecimal.ZERO, new int[0][]));
+    }
+
+    /**
+     * Refuses, up front, a round whose wild transform depended on state this round does not carry.
+     *
+     * <p>Expanding wilds are a pure function of the drawn grid, so they replay: the transform is simply
+     * re-applied. Sticky and walking wilds are not - they are seeded from wilds held over on the
+     * <em>session</em> ({@code active_feature_payload}), which no round records, so the board that was
+     * persisted is not derivable from this round's draws at any price. That is the same shortfall
+     * {@code feature_context} was added to fix for Hold &amp; Spin respins (V12), and the same fix is
+     * owed here.
+     *
+     * <p>Refused before replaying rather than after comparing, and refused for every spin of such a
+     * feature - including the first, whose carry happens to be empty and which would therefore have
+     * reconstructed. An audit surface should decline to claim a proof it cannot guarantee, and "it
+     * worked that time" is not a guarantee. A mismatch reaching {@code sequencesMatch} then means what
+     * it should: the engine genuinely diverged.
+     */
+    private void requireReconstructableWilds(GameRound round, SlotMathDefinition math,
+                                             ReelStripSet stripSet) {
+        WildFeatureConfig wilds = math.wildFeatures();
+        if (!wilds.appliesOn(stripSet) || !(wilds.sticky() || wilds.walking())) {
+            return;
+        }
+        throw new RgsException(ErrorCode.ROUND_NOT_REPLAYABLE,
+                "Round " + round.getRoundId() + " was played on " + stripSet + " with "
+                        + (wilds.walking() ? "walking" : "sticky") + " wilds, whose carried state lives "
+                        + "on the session rather than in the round, so the board cannot be rebuilt from "
+                        + "this round's draws alone");
     }
 
     /**

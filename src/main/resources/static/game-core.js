@@ -195,7 +195,7 @@ function initInfoModal(game) {
   // blank object rather than assuming the block is there.
   const inf = info || {};
 
-  // The mechanics, server-derived from the math config — same cards the lobby's info sheet shows.
+  // The mechanics, server-derived from the math config - same cards the lobby's info sheet shows.
   document.getElementById("infoFeatures").innerHTML = renderFeatureCards(features);
 
   document.getElementById("infoStats").replaceChildren(

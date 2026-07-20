@@ -86,7 +86,7 @@ function fmtAmount(value, currency) {
 }
 
 function fmtDateTime(iso) {
-  if (!iso) return "—";
+  if (!iso) return "-";
   const d = new Date(iso);
   return isNaN(d) ? iso : d.toLocaleString();
 }
@@ -220,7 +220,7 @@ function renderStep(step, i, r, cascading) {
       ${wins ? `<ul class="rp-step-wins">${wins}</ul>` : `<p class="rp-step-nowin">No win on this board</p>`}
       <footer class="rp-step-draws vx-num">
         <span class="vx-lab">${i === 0 ? "Reel stops" : "Refill draws"}</span>
-        ${(step.stopPositions || []).join(" · ") || "—"}
+        ${(step.stopPositions || []).join(" · ") || "-"}
       </footer>
     </article>`;
 }
@@ -260,7 +260,7 @@ function renderDraws(r) {
     <section class="rp-block">
       <div class="rp-block-head"><h2>The recorded draws</h2></div>
       <p class="rp-block-sub">Every value the RNG produced for this round, in the order the engine
-        consumed it — <span class="vx-num">value / bound</span>. These were written at round commit and
+        consumed it - <span class="vx-num">value / bound</span>. These were written at round commit and
         are what the reconstruction above was driven by.</p>
       <ul class="rp-draws">${chips}</ul>
     </section>`;
@@ -273,7 +273,7 @@ function renderExplainer(r, remaining) {
         <h2>Why this can be checked</h2>
         <p>Velocity decides every outcome server-side and stores the RNG draws that produced it. Nothing
           about the result lives in the browser, so a round can be re-run later through the same engine
-          and must land on the same board — or the mismatch is visible, as it would be above.</p>
+          and must land on the same board - or the mismatch is visible, as it would be above.</p>
         <p class="rp-explain-meta">
           Game math <code>${esc(r.gameId)} · ${esc(r.mathVersion)}</code>. Reconstruction ran when you
           opened this page, not when the link was made.
@@ -337,12 +337,12 @@ function renderProblem(err) {
       icon: "⏳",
       title: "This replay link has expired",
       body: `Proof links are deliberately short-lived. The round itself is untouched and still
-             reconstructable — ask whoever shared this for a fresh link.`,
+             reconstructable - ask whoever shared this for a fresh link.`,
     },
     REPLAY_LINK_INVALID: {
       icon: "⚠",
       title: "This replay link isn’t valid",
-      body: `The link is signed, and this one doesn’t verify — it was truncated in transit, edited, or
+      body: `The link is signed, and this one doesn’t verify - it was truncated in transit, edited, or
              never issued by this server. Nothing was disclosed.`,
     },
     SESSION_NOT_FOUND: {
@@ -351,7 +351,7 @@ function renderProblem(err) {
       body: `The link verified, but the round it points at isn’t on this server anymore. Demo data is
              periodically reset.`,
     },
-    ILLEGAL_STATE_TRANSITION: {
+    ROUND_NOT_REPLAYABLE: {
       icon: "🧩",
       title: "This round can’t be reconstructed",
       body: err.message || `The server has the round but not everything needed to rebuild it.`,

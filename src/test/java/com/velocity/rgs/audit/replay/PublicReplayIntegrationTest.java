@@ -125,7 +125,7 @@ class PublicReplayIntegrationTest {
     }
 
     /**
-     * An expired link answers 410 with its own code, not 401 or 400 — the page keys off that to tell the
+     * An expired link answers 410 with its own code, not 401 or 400 - the page keys off that to tell the
      * visitor the link ran out rather than that they did something wrong.
      *
      * <p>The token is minted by a throwaway service with a negative TTL. It shares the configured JWT

@@ -169,7 +169,7 @@ function renderTable(rounds, games) {
  * clipboard.
  *
  * The server replays the round before it signs anything, so a link only exists for a round that
- * reconstructs — you cannot hand someone a URL that fails in front of them. The returned link is
+ * reconstructs - you cannot hand someone a URL that fails in front of them. The returned link is
  * anonymous, scoped to this round alone, and expires; it is the one artifact of this project that works
  * for somebody with no account.
  */
@@ -187,7 +187,11 @@ async function shareReplay(roundId, btn) {
       headers: { Authorization: "Bearer " + token },
     });
     const body = await res.json();
-    if (!res.ok) throw new Error(body.message || `HTTP ${res.status}`);
+    if (!res.ok) {
+      const err = new Error(body.message || `HTTP ${res.status}`);
+      err.code = body.code;
+      throw err;
+    }
 
     // Clipboard access needs a secure context (https or localhost). Where it is unavailable the URL is
     // still rendered and selectable, so the feature degrades to "copy it yourself" rather than failing.
@@ -200,6 +204,17 @@ async function shareReplay(roundId, btn) {
     panel.innerHTML = renderShare(body, copied);
     toast(copied ? "Proof link copied to clipboard" : "Proof link ready", "ok");
   } catch (e) {
+    // A round the server declines to reconstruct is not a failure of this button, and shouldn't be
+    // dressed as one - no link exists because none can honestly be made.
+    if (e.code === "ROUND_NOT_REPLAYABLE") {
+      panel.innerHTML = `
+        <div class="share-panel">
+          <div class="share-head"><span class="badge badge-power">Not shareable</span></div>
+          <p class="share-hint">${e.message}</p>
+        </div>`;
+      toast("This round can’t be proved", "");
+      return;
+    }
     panel.innerHTML = `<p class="history-error">Could not mint a link: ${e.message}</p>`;
     toast("Share link failed", "error");
   }
@@ -221,7 +236,7 @@ function renderShare(link, copied) {
         <a class="btn btn-ghost" href="${link.url}" target="_blank" rel="noopener noreferrer">Open</a>
       </div>
       <p class="share-hint">
-        ${copied ? "Copied to your clipboard. " : ""}Opens for anyone, with no account — the page
+        ${copied ? "Copied to your clipboard. " : ""}Opens for anyone, with no account - the page
         rebuilds the round from its recorded RNG draws and shows the verdict.
       </p>
     </div>`;
@@ -235,7 +250,7 @@ function renderShare(link, copied) {
  *
  * This is the audit story the whole replay infrastructure exists for, made visible: the server re-runs
  * the recorded draws through the same engine and reports whether every grid came back identical. For a
- * cascading round that means every drop, including the refills — which is the strictest check in the
+ * cascading round that means every drop, including the refills - which is the strictest check in the
  * system, since a refill drawn outside the round's RNG would leave the sequence unreproducible.
  */
 async function runReplay(roundId, btn) {

@@ -17,6 +17,10 @@ public enum ErrorCode {
     REPLAY_LINK_INVALID(HttpStatus.BAD_REQUEST, Level.INFO),
     SESSION_NOT_FOUND(HttpStatus.NOT_FOUND, Level.WARN),
     ILLEGAL_STATE_TRANSITION(HttpStatus.CONFLICT, Level.WARN),
+    // A round whose inputs were never fully captured, so it cannot be rebuilt from its own draws. Not a
+    // server fault and not retryable, which is why it is not INTERNAL_ERROR: reserving 500 for genuine
+    // engine divergence is what makes a 500 from the replay path meaningful.
+    ROUND_NOT_REPLAYABLE(HttpStatus.CONFLICT, Level.WARN),
     SESSION_VERSION_CONFLICT(HttpStatus.CONFLICT, Level.WARN),
     IDEMPOTENCY_KEY_CONFLICT(HttpStatus.CONFLICT, Level.WARN),
     DUPLICATE_TRANSACTION(HttpStatus.CONFLICT, Level.WARN),

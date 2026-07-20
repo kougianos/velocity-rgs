@@ -124,7 +124,7 @@ class ReelEvaluatorTest {
 
     @Test
     void capsTotalWinAndEmitsReasonCode() {
-        // Tight cap (cap multiplier = 5 Ã— bet 1.00 = 5.00). Even a tiny 3-of-a-kind ACE (5.00) hits cap.
+        // Tight cap (cap multiplier = 5 × bet 1.00 = 5.00). Even a tiny 3-of-a-kind ACE (5.00) hits cap.
         int[][] matrix = {
                 {KING,  KING,  KING,  KING,  KING},
                 {ACE,   ACE,   ACE,   ACE,   ACE},

@@ -25,6 +25,7 @@ public record RoundReplayResult(
         String mathVersion,
         String reelStripSet,
         boolean powerBetActive,
+        String currency,
         BigDecimal betAmount,
         BigDecimal originalTotalWin,
         BigDecimal reconstructedTotalWin,

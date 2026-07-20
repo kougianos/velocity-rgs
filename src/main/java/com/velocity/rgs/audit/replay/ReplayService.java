@@ -108,6 +108,7 @@ public class ReplayService {
                 round.getMathVersion(),
                 stripSet.name(),
                 round.isPowerBetActive(),
+                round.getCurrency(),
                 round.getBetAmount(),
                 round.getTotalWin(),
                 reconstructedWin,

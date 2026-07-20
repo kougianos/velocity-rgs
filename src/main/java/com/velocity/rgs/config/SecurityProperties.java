@@ -21,6 +21,10 @@ public class SecurityProperties {
             "/v3/api-docs",
             "/v3/api-docs/**",
             "/swagger-ui.html",
-            "/swagger-ui/**"
+            "/swagger-ui/**",
+            // Public round-replay links. Anonymous on purpose and in every run mode: the endpoint is
+            // reached only with a signed token that names the single round it may read, so it stays in
+            // the default list rather than being a demo-mode concession.
+            "/api/v1/public/**"
     );
 }

@@ -59,10 +59,58 @@ function render(games) {
 
   root.innerHTML = "";
   root.appendChild(renderHero(featured));
+  root.appendChild(renderProofBand());
   if (slots.length) root.appendChild(renderRail("Slots", slots, "var(--vx-ignite)"));
   if (tables.length) root.appendChild(renderRail("Table games", tables, "var(--vx-emerald)"));
 
   startStreaks(document.getElementById("vxStreaks"));
+}
+
+/**
+ * The platform band: what the server does, stated once, above the shelf.
+ *
+ * Hardcoded on purpose, unlike the per-game feature chips — those are derived from each game's math
+ * config because a game can stop shipping a mechanic, whereas this describes the platform itself. It
+ * moves when the platform moves, which is a code change either way.
+ */
+function renderProofBand() {
+  const sec = document.createElement("section");
+  sec.className = "vx-proof";
+  sec.innerHTML = `
+    <div class="vx-proof-copy">
+      <div class="vx-proof-eye"><span class="tick"></span><span class="vx-lab">Platform · Provable fairness</span></div>
+      <h2>Every round leaves a receipt</h2>
+      <p class="vx-proof-lead">
+        Outcomes are decided server-side, and the RNG draws behind them are kept. Any round can be re-run
+        through the same engine later and has to land on the same board — and now that proof has a URL
+        you can hand to someone with no account.
+      </p>
+      <div class="vx-proof-cta">
+        <a class="vx-cta" href="/history.html">See it on a real round <span class="arw">→</span></a>
+        <span class="vx-proof-path vx-num">spin → History → Share proof</span>
+      </div>
+    </div>
+    <ul class="vx-proof-grid">
+      <li class="vx-proof-card">
+        <span class="vx-proof-i" aria-hidden="true">⟲</span>
+        <h3>Deterministic replay</h3>
+        <p>The recorded draws go back through the engine that produced them. A cascading round replays
+           <em>every</em> drop — reproducing only the opening board would prove nothing about the tumble.</p>
+      </li>
+      <li class="vx-proof-card">
+        <span class="vx-proof-i" aria-hidden="true">🔗</span>
+        <h3>Signed, expiring links</h3>
+        <p>The round id lives inside the signature and the endpoint takes no round parameter, so a link
+           cannot be pointed at anything else. Anonymous, and dead after 24 hours.</p>
+      </li>
+      <li class="vx-proof-card">
+        <span class="vx-proof-i" aria-hidden="true">✓</span>
+        <h3>Verified before it is shared</h3>
+        <p>A link is only signed for a round that reconstructs right now. You cannot send a proof that
+           does not hold — and the page re-checks it again when it is opened.</p>
+      </li>
+    </ul>`;
+  return sec;
 }
 
 function renderHero(g) {

@@ -117,6 +117,31 @@ engine and reports whether the reconstruction matched. A cascading round shows e
 with its multiplier, its win and the draws that produced it - which is the audit story the replay
 infrastructure exists for, made visible.
 
+### Sharing that proof with someone who has no account
+
+Every history row also carries **Share proof**, which mints a signed, expiring link -
+`/r/<token>` - to that one round. Opening it needs no login, no session and no local database: the
+[public replay page](src/main/resources/static/replay.js) rebuilds the round from its persisted draws,
+plays the drops back with the game's own symbols, and prints the raw `rng_draws` underneath so the
+claim can be checked rather than taken.
+
+The token is the whole authorisation, and it is deliberately narrow:
+
+| Property | How |
+|---|---|
+| Scoped to one round | The round id is the token's `sub` and the endpoint accepts **no** round parameter, so there is no request field to repoint at another round |
+| Not a player credential | Signed with a key derived from `rgs.security.jwt-secret` for this purpose alone, so it fails verification in `JwtAuthenticationFilter` - and a player's JWT fails verification as a link |
+| Anonymous | `PublicRoundReplay` is a redacted projection: no `playerId`, no `sessionId` |
+| Expiring | `rgs.replay.public-link-ttl` (default 24h). Links are stateless, so outstanding ones are revoked by rotating the secret, not individually |
+
+Minting replays the round first and returns that verdict with the link, so a link only ever exists for
+a round that reconstructs - you cannot hand someone a URL that fails in front of them. The page then
+re-runs the reconstruction when it is opened; nothing on it is a cached verdict.
+
+Expired and tampered links are answered with their own codes (`REPLAY_LINK_EXPIRED` → 410,
+`REPLAY_LINK_INVALID` → 400) and their own pages, because a public URL is the one surface a stranger
+meets in its broken state and "this ran out" is a different thing to say than "this was edited".
+
 ---
 
 ## Repository Layout
@@ -172,10 +197,16 @@ POST /api/v1/blackjack/{init,deal,action}            # stateful: round state per
 GET  /api/v1/wallet/balance
 POST /api/v1/wallet/{authenticate,debit,credit,rollback}
 
+GET  /api/v1/public/replay/{token}                    # anonymous: one round, from a signed link
+POST /api/v1/admin/replay/{roundId}/share             # mint that link (ADMIN)
+
 POST /api/v1/dev/token                               # demo mode
 GET  /api/v1/admin/*                                 # demo mode: sessions, rounds, replay
 POST /api/v1/admin/*                                 # demo mode: set balance, run simulator
 ```
+
+`/api/v1/public/**` is anonymous in **every** run mode, not just demo - a proof link that only worked
+on a laptop would not be worth minting.
 
 ---
 

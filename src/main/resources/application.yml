@@ -126,6 +126,17 @@ rgs:
       - /swagger-ui/**
       - /api/v1/dev/**
       - /api/v1/games
+      # Public round-replay links (§3.1). Anonymous by design and NOT a demo-mode concession: the
+      # endpoint takes a signed token that names the one round it may read, and answers with a payload
+      # carrying no player or session id. Keep this entry when trimming the list for production.
+      - /api/v1/public/**
+
+  replay:
+    # Lifetime of a shared public replay link. Long enough to survive being emailed and opened the next
+    # morning; short enough that one pasted somewhere public stops working. Links are stateless, so
+    # shortening this only affects links minted afterwards - to kill outstanding ones, rotate
+    # rgs.security.jwt-secret.
+    public-link-ttl: ${RGS_REPLAY_LINK_TTL:24h}
 
   idempotency:
     redis-cache-enabled: true

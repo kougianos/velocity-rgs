@@ -177,11 +177,13 @@ function applyGameChrome(game) {
  */
 function initInfoModal(game) {
   const info = game && game.info;
+  const features = (game && game.features) || [];
   const showBtn = document.getElementById("showInfo");
   const hasInfo =
-    info && ((info.paragraphs && info.paragraphs.length) ||
-             (info.stats && info.stats.length) ||
-             (info.specs && info.specs.length));
+    (info && ((info.paragraphs && info.paragraphs.length) ||
+              (info.stats && info.stats.length) ||
+              (info.specs && info.specs.length))) ||
+    features.length > 0;
   if (showBtn) showBtn.classList.toggle("hidden", !hasInfo);
   if (!hasInfo) return;
 
@@ -189,8 +191,15 @@ function initInfoModal(game) {
   document.getElementById("infoTitle").textContent = game.title || "";
   document.getElementById("infoTagline").textContent = game.tagline || "";
 
+  // A game may now ship derived features with no authored `info` block at all, so read through a
+  // blank object rather than assuming the block is there.
+  const inf = info || {};
+
+  // The mechanics, server-derived from the math config — same cards the lobby's info sheet shows.
+  document.getElementById("infoFeatures").innerHTML = renderFeatureCards(features);
+
   document.getElementById("infoStats").replaceChildren(
-    ...(info.stats || []).map((s) => {
+    ...(inf.stats || []).map((s) => {
       const card = document.createElement("div");
       card.className = "info-stat";
       const label = document.createElement("span");
@@ -205,7 +214,7 @@ function initInfoModal(game) {
   );
 
   document.getElementById("infoParagraphs").replaceChildren(
-    ...(info.paragraphs || []).map((text) => {
+    ...(inf.paragraphs || []).map((text) => {
       const p = document.createElement("p");
       p.textContent = text;
       return p;
@@ -213,7 +222,7 @@ function initInfoModal(game) {
   );
 
   document.getElementById("infoSpecs").replaceChildren(
-    ...(info.specs || []).map((spec) => {
+    ...(inf.specs || []).map((spec) => {
       const row = document.createElement("div");
       row.className = "info-spec";
       const label = document.createElement("span");

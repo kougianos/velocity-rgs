@@ -50,3 +50,31 @@ function buildPaylineMap(game) {
   for (const p of game.paylines || []) map[p.id] = p.coords;
   return map;
 }
+
+/** Escape before interpolating catalog strings into a template. Trusted source, but these are
+ *  long-form authored strings (feature prose, spec sheets) — cheaper to escape than to audit. */
+function esc(s) {
+  return String(s ?? "").replace(/[&<>"']/g, (c) =>
+    ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+}
+
+/**
+ * The game's mechanics as a stack of cards — shared by the lobby info sheet and the in-game info modal
+ * so both advertise the same thing in the same shape.
+ *
+ * `features` is derived server-side from the math config that drives the engine (see
+ * GameFeatureFactory), so a card exists here exactly when the mechanic is switched on for that game.
+ * Signature mechanics arrive first and are flagged.
+ */
+function renderFeatureCards(features) {
+  return (features || []).map((f) => `
+    <article class="vx-feat${f.headline ? " is-headline" : ""}">
+      <span class="vx-feat-icon" aria-hidden="true">${esc(f.icon)}</span>
+      <div class="vx-feat-main">
+        <h3>${esc(f.name)}${f.headline ? `<span class="vx-feat-flag">Signature</span>` : ""}</h3>
+        <p>${esc(f.summary)}</p>
+        ${(f.facts || []).length
+          ? `<ul>${f.facts.map((x) => `<li>${esc(x)}</li>`).join("")}</ul>` : ""}
+      </div>
+    </article>`).join("");
+}

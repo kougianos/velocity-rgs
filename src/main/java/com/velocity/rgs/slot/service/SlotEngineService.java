@@ -208,9 +208,15 @@ public class SlotEngineService {
             ReelStripSet stripSet = pickReelSet(currentState, request.powerBetActive());
 
             GridGenerationResult drawn = gridEngine.generate(math, stripSet, rng);
-            // Expanding / sticky / walking wilds reshape the board before anything evaluates it. The
-            // transform is deterministic (it draws nothing), so it sits outside the replay contract -
-            // replaying the draws reproduces the same pre-transform grid and therefore the same result.
+            // Expanding / sticky / walking wilds reshape the board before anything evaluates it, and it
+            // is the reshaped board that gets persisted below - so replay has to re-apply this transform
+            // rather than compare against the drawn grid. ReplayService does.
+            //
+            // Drawing nothing does not by itself put the transform outside the replay contract: with
+            // sticky or walking wilds `carriedWilds` reads state off the session, so those rounds are
+            // NOT a function of their own draws and ReplayService refuses them outright
+            // (ROUND_NOT_REPLAYABLE) instead of reporting a mismatch. Capturing that carry per round -
+            // as feature_context already does for respins - is what would make them replayable.
             WildFeatureEngine.WildOutcome wilds = wildFeatureEngine.apply(drawn.matrix(), math, stripSet,
                     carriedWilds(session, math));
             GridGenerationResult grid = new GridGenerationResult(wilds.matrix(), drawn.stopPositions());

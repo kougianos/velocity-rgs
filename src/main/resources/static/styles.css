@@ -238,7 +238,7 @@ body {
 
 /* ===== Cascading reels ===== */
 /* Which tumble of the chain is paying, and at what multiplier. Only shown while a cascading
-   round animates — a conventional spin never mounts it. */
+   round animates - a conventional spin never mounts it. */
 .cascade-badge {
   font-family: var(--mono, monospace);
   font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase;
@@ -247,7 +247,7 @@ body {
   border: 1px solid rgba(245, 197, 24, 0.45);
 }
 /* The shatter: a winning cell flashes and collapses before the reel refills over it. Kept
-   short — the whole chain has to read as one spin, not as several. */
+   short - the whole chain has to read as one spin, not as several. */
 .cell.clearing {
   animation: cell-shatter 220ms ease-in forwards;
 }
@@ -1198,7 +1198,7 @@ body[data-theme="blackjack"] {
   /* ----- Velocity mobile -----
      These are scoped with the page's body class (e.g. body.lobby-page .vx-hero)
      so they out-specify the unscoped base .vx-* rules that are declared LATER in
-     the file — without that, source order would let the base rules win here. */
+     the file - without that, source order would let the base rules win here. */
 
   /* Chrome (lobby + history share .vx-top): nav drops to its own centered row. */
   .vx-top .vx-top-inner { flex-wrap: wrap; gap: 12px; padding: 14px 16px; }
@@ -1239,7 +1239,7 @@ body[data-theme="blackjack"] {
   /* ----- Lobby info sheet: a true bottom sheet on phones -----
      Anchored to the bottom edge, dragged away with the thumb that opened it, and
      footed by a full-width CTA above the home indicator. Same markup as the desktop
-     dialog — only the chassis changes. */
+     dialog - only the chassis changes. */
   body.lobby-page .vx-sheet { padding: 0; align-items: flex-end; }
   body.lobby-page .vx-sheet-panel {
     width: 100%; max-width: none; border-radius: 20px 20px 0 0; border-bottom: 0;
@@ -1267,7 +1267,7 @@ body[data-theme="blackjack"] {
   body.lobby-page .vx-sheet-tabs { padding: 0 16px; }
   body.lobby-page .vx-sheet-scroll { padding: 14px 16px 18px; }
   /* Feature cards appear on both surfaces (lobby sheet, in-game info modal), so both body classes
-     are named — an unscoped .vx-feat here would lose to the base rules declared later in the file. */
+     are named - an unscoped .vx-feat here would lose to the base rules declared later in the file. */
   body.lobby-page .vx-feat, body.vx-game .vx-feat { padding: 13px 14px; gap: 12px; }
   body.lobby-page .vx-feat-icon, body.vx-game .vx-feat-icon { font-size: 22px; }
   body.lobby-page .vx-feat-main h3, body.vx-game .vx-feat-main h3 { font-size: 14.5px; }
@@ -1302,7 +1302,7 @@ body[data-theme="blackjack"] {
 }
 
 /* =========================================================================
- * VELOCITY — reworked lobby (vertical slice).
+ * VELOCITY - reworked lobby (vertical slice).
  *
  * A kinetic, dark "cockpit" identity: carbon ground, a plasma velocity streak
  * as the signature, and mono telemetry for every number. Fully namespaced with
@@ -1342,7 +1342,7 @@ body.replay-page {
   --vx-ignite: #FF6B2C;
   --vx-plasma: #FF2E7E;
   --vx-streak: linear-gradient(100deg, #FF6B2C 0%, #FF2E7E 100%);
-  /* per-game hues — each game tints the one shared chassis */
+  /* per-game hues - each game tints the one shared chassis */
   --vx-inferno: #FF5A2C;
   --vx-aztec: #F5A524;
   --vx-frost: #38BDF8;
@@ -1522,7 +1522,7 @@ body.lobby-page ::selection { background: rgba(255, 46, 126, 0.30); }
   padding: 4px 9px; border-radius: 999px; color: #fff;
   background: rgba(6, 8, 14, 0.55); border: 1px solid rgba(255, 255, 255, 0.2); backdrop-filter: blur(4px);
 }
-/* Win-model pill (e.g. "243 Ways") — server-named via the catalog's winModelLabel. Mirrors the
+/* Win-model pill (e.g. "243 Ways") - server-named via the catalog's winModelLabel. Mirrors the
    volatility pill on the opposite corner so a ways game reads as one at a glance in the rail. */
 .vx-model {
   position: absolute; top: 12px; left: 12px;
@@ -1534,7 +1534,7 @@ body.lobby-page ::selection { background: rgba(255, 46, 126, 0.30); }
 .vx-body { padding: 16px 17px 18px; display: flex; flex-direction: column; flex: 1; }
 .vx-body h3 { margin: 0 0 4px; font-size: 20px; letter-spacing: 0.01em; }
 .vx-body .vx-cardtag { margin: 0 0 15px; font-size: 13.5px; color: var(--vx-dim); flex: 1; }
-/* Signature-mechanic chips — server-flagged headline features, merchandised on the card itself so a
+/* Signature-mechanic chips - server-flagged headline features, merchandised on the card itself so a
    cascading game reads as one from the rail. Collapses to nothing on games that ship no signature. */
 .vx-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 13px; }
 .vx-chips:empty { display: none; }
@@ -1606,7 +1606,7 @@ body.lobby-page ::selection { background: rgba(255, 46, 126, 0.30); }
  * Game info sheet.
  *
  * One component with two shapes: a centered dialog here, a bottom sheet inside the
- * mobile breakpoint above. Same markup, same content — only the chassis changes, so
+ * mobile breakpoint above. Same markup, same content - only the chassis changes, so
  * there is no second layout to keep in step. --vx-hue is set per game on open.
  * ======================================================================= */
 .vx-sheet { position: fixed; inset: 0; z-index: 90; display: flex; align-items: center; justify-content: center; padding: 24px; }
@@ -1756,16 +1756,16 @@ body.vx-locked { overflow: hidden; }
 }
 
 /* =========================================================================
- * VELOCITY — reworked game page (slot / roulette / blackjack).
+ * VELOCITY - reworked game page (slot / roulette / blackjack).
  *
  * Scoped to `body.vx-game` (set in game.html; game.js only writes data-* attrs,
  * so the class survives). Re-skins the existing game-page classes into the same
- * kinetic cockpit as the lobby — no JS or markup logic changes, every dynamic
+ * kinetic cockpit as the lobby - no JS or markup logic changes, every dynamic
  * state class the game modules toggle is honoured. --vx-hue is bound to the
  * per-game --accent so each game keeps its own colour on one shared chassis.
  *
  * The RTP simulator and request/response log are deliberately kept VISIBLE and
- * are styled as first-class engineering instrumentation — the point is to show
+ * are styled as first-class engineering instrumentation - the point is to show
  * the engine, not hide it.
  * ======================================================================= */
 body.vx-game {
@@ -1834,7 +1834,7 @@ body.vx-game .btn-primary {
   background: color-mix(in srgb, var(--vx-hue) 90%, #000); border-color: var(--vx-hue); color: #0b0710;
 }
 body.vx-game .btn-primary:hover { background: var(--vx-hue); }
-/* SPIN / Deal — the signature launch button: hue gradient + a plasma streak sweep on hover */
+/* SPIN / Deal - the signature launch button: hue gradient + a plasma streak sweep on hover */
 body.vx-game .btn-spin {
   font-family: var(--vx-display); font-weight: 800; font-size: 17px; letter-spacing: 0.08em; color: #0b0710;
   background: linear-gradient(105deg, color-mix(in srgb, var(--vx-hue) 82%, #fff) 0%, var(--vx-hue) 55%, color-mix(in srgb, var(--vx-hue) 70%, var(--vx-plasma)) 100%);
@@ -1864,7 +1864,7 @@ body.vx-game .cell { background: var(--vx-slate); border-radius: 9px; }
 body.vx-game .cell small { font-family: var(--vx-mono); }
 body.vx-game .cell.win { border-color: var(--vx-gold); box-shadow: 0 0 16px color-mix(in srgb, var(--vx-gold) 55%, transparent); }
 
-/* win banner — the launch */
+/* win banner - the launch */
 body.vx-game .win-banner { background: rgba(255, 255, 255, 0.02); border: 1px solid var(--vx-hair); position: relative; overflow: hidden; border-radius: 12px; }
 body.vx-game .win-label { font-family: var(--vx-mono); letter-spacing: 0.22em; color: var(--vx-dim); }
 body.vx-game .win-amount { font-family: var(--vx-mono); font-variant-numeric: tabular-nums; color: var(--vx-dim); }
@@ -1922,7 +1922,7 @@ body.vx-game .bj-bet-readout strong { color: var(--vx-gold); }
 body.vx-game .bj-message { font-family: var(--vx-mono); color: var(--vx-dim); }
 
 /* =========================================================================
- * Engineering instrumentation — RTP simulator + engine I/O log.
+ * Engineering instrumentation - RTP simulator + engine I/O log.
  * Made prominent on purpose: this is the architect's console, not a debug leak.
  * ======================================================================= */
 body.vx-game #slotSimulator .panel-title,
@@ -1977,12 +1977,12 @@ body.vx-game .toast.error { border-left-color: var(--danger); }
 body.vx-game .toast.success { border-left-color: var(--vx-emerald); }
 
 /* =========================================================================
- * VELOCITY — reworked round-history page (the cross-game ledger).
+ * VELOCITY - reworked round-history page (the cross-game ledger).
  *
  * Scoped to `body.history-page`. Reuses the lobby's `.vx-top` wordmark chrome
  * (set in history.html) and re-skins the ledger into mono telemetry: tabular
  * figures throughout, gold for money, emerald/danger for win-loss semantics.
- * No history.js changes — every class it emits is honoured. Plasma is the brand
+ * No history.js changes - every class it emits is honoured. Plasma is the brand
  * accent here since the page spans all games.
  * ======================================================================= */
 body.history-page { --vx-hue: var(--vx-plasma); }
@@ -2038,7 +2038,7 @@ body.history-page .toast { background: var(--vx-graphite); border: 1px solid var
 body.history-page .toast.error { border-left-color: var(--danger); }
 
 /* =========================================================================
- * Provable replay (§3.1) — three surfaces, one visual language.
+ * Provable replay (§3.1) - three surfaces, one visual language.
  *
  *   .vx-proof*  lobby band advertising the platform capability
  *   .share-*    the mint-a-link panel on the history page
@@ -2046,7 +2046,7 @@ body.history-page .toast.error { border-left-color: var(--danger); }
  *
  * The public page is the one surface a stranger meets with no session and no
  * context, so it carries the full Velocity identity rather than the plainer
- * admin styling the history page inherits — it is a shop window, not a tool.
+ * admin styling the history page inherits - it is a shop window, not a tool.
  * ======================================================================= */
 
 /* ---- lobby: platform band ---- */
@@ -2287,7 +2287,7 @@ body.history-page .toast.error { border-left-color: var(--danger); }
 .rp-explain-meta strong { color: var(--vx-text); }
 .rp-cta { white-space: nowrap; }
 
-/* problem states — an expired or edited link is the page a stranger is most likely to meet */
+/* problem states - an expired or edited link is the page a stranger is most likely to meet */
 .rp-problem {
   display: grid; place-items: center; gap: 16px; text-align: center;
   padding: clamp(50px, 12vh, 110px) 24px;
@@ -2322,7 +2322,7 @@ body.history-page .toast.error { border-left-color: var(--danger); }
 
 @media (max-width: 560px) {
   .rp-main { padding: 18px 16px 44px; }
-  /* Narrow enough that the CTA label no longer fits on one line — let it wrap rather than overflow. */
+  /* Narrow enough that the CTA label no longer fits on one line - let it wrap rather than overflow. */
   .rp-cta { white-space: normal; text-align: center; }
   .rp-verdict { grid-template-columns: 1fr; padding: 20px 18px; }
   .rp-facts .rp-fact { flex: 1 1 44%; min-width: 0; }

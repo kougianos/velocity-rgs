@@ -49,7 +49,7 @@ Boot at `http://localhost:8080/` in demo mode - no separate frontend build, no N
 | Strict FSM | `availableActions` from the server drives all button state; illegal commands → `ILLEGAL_STATE_TRANSITION` (409) |
 | Money safety | `BigDecimal` + `HALF_UP` rounding on the server |
 | JWT in memory only | The demo client holds the token in memory; never `localStorage` |
-| Deterministic replay | Every round is reconstructable bit-exact from persisted RNG draws |
+| Deterministic replay | A round is reconstructable bit-exact from persisted RNG draws, or the server says why not - see [the caveat](#which-rounds-cannot-be-replayed-yet) |
 
 ---
 
@@ -79,7 +79,7 @@ before a mechanic existed keeps its behaviour and its calibrated RTP untouched.
 | `waysDirection` | `LEFT_TO_RIGHT` or `BOTH_WAYS` (win-both-ways) | `WaysWinEvaluator` |
 | `cascades` | Tumbling reels + progressive per-drop multiplier ladder | `CascadeEngine` + `GridGenerationEngine.refill` |
 | `respins` | Hold & Spin: coin lock, reset-on-catch counter, jackpot tiers | `RespinEngine`, FSM states `RESPIN_AWAITING` / `RESPIN_LOOP` |
-| `wildFeatures` | Expanding / sticky / walking wilds, scoped per strip set | `WildFeatureEngine` (a grid transform, applied pre-evaluation) |
+| `wildFeatures` | Expanding / sticky / walking wilds, scoped per strip set | `WildFeatureEngine` (a grid transform, applied pre-evaluation). Sticky/walking wilds are **not replayable yet** - see below |
 
 A cascading round is persisted as its **whole drop sequence** - `game_round.matrix` and `stop_positions`
 hold one entry per drop - and every refill draws through the round's own `RngDrawSink`, so the tumble
@@ -141,6 +141,26 @@ re-runs the reconstruction when it is opened; nothing on it is a cached verdict.
 Expired and tampered links are answered with their own codes (`REPLAY_LINK_EXPIRED` → 410,
 `REPLAY_LINK_INVALID` → 400) and their own pages, because a public URL is the one surface a stranger
 meets in its broken state and "this ran out" is a different thing to say than "this was edited".
+
+### Which rounds cannot be replayed yet
+
+Two kinds of round are refused with `ROUND_NOT_REPLAYABLE` (409) and a stated reason rather than a
+verdict, because their inputs were never fully captured:
+
+- **Rounds played with sticky or walking wilds** (`math.wildFeatures.sticky` / `.walking`, today
+  Dragon Hoard's free spins). The carried wilds are seeded from `active_feature_payload` on the
+  *session*, so the board that was persisted is not derivable from that round's own draws.
+- **Hold & Spin respins recorded before `feature_context` existed** - the V12 backfill classifies
+  these; the coins held going in were never written.
+
+Expanding wilds *are* replayable - the transform is a pure function of the drawn grid, so
+`ReplayService` simply re-applies it, which is what Gilded Cascade's free spins rely on.
+
+The fix for the first case is the one `feature_context` already performs for respins: record the
+carried wilds on the round. Until then the server declines to claim a proof it cannot guarantee, which
+keeps `INTERNAL_ERROR` from the replay path meaning what it should - the engine genuinely diverged.
+[`WildFeatureReplayIntegrationTest`](src/test/java/com/velocity/rgs/audit/replay/WildFeatureReplayIntegrationTest.java)
+pins both halves.
 
 ---
 

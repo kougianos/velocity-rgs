@@ -366,7 +366,7 @@ async function settleReels(matrix, winLines = []) {
 
 /* How long a shattered cell is visible before the refill lands, and how long the refilled board
    is held before it is evaluated on screen. Kept tight: a six-tumble chain still has to feel like
-   one spin. Both are halved against the CSS durations deliberately — the animations overlap. */
+   one spin. Both are halved against the CSS durations deliberately - the animations overlap. */
 const CASCADE_CLEAR_MS = 240;
 const CASCADE_SETTLE_MS = 300;
 
@@ -395,7 +395,7 @@ async function shatterCells(positions) {
 /**
  * Play a cascading round's drop sequence, in order, instead of snapping to the settled board.
  *
- * The server has already decided every grid, every win and every step multiplier — this walks the
+ * The server has already decided every grid, every win and every step multiplier - this walks the
  * `cascadeSteps` it sent and renders them. Nothing here computes an outcome; the running total is
  * only a display accumulation of the per-step wins the server reported, and the final figure is
  * replaced by the server's `totalWin` at the end so rounding can never drift on screen.
@@ -425,7 +425,7 @@ async function playCascade(steps, totalWin, allWinLines) {
     await shatterCells(cleared);
   }
   renderCascadeBadge(null);
-  // Settle on the server's authoritative figures — the running sum above is presentation only.
+  // Settle on the server's authoritative figures - the running sum above is presentation only.
   renderWin(totalWin, allWinLines);
 }
 
@@ -531,7 +531,7 @@ let respinView = null;
 /**
  * Render the Hold & Spin panel and lock the coin cells on the grid.
  *
- * Every value here is server-computed — the coin positions, their values, the respin counter and
+ * Every value here is server-computed - the coin positions, their values, the respin counter and
  * which jackpot tiers are reached all arrive in `respinView`. The client only decides where to draw
  * them.
  */
@@ -688,7 +688,7 @@ async function maybeOfferRespins() {
   const start = await showModal({
     icon: "🪙",
     title: "Hold & Spin!",
-    message: `${coins} coins locked in. Every new coin resets the respin counter — `
+    message: `${coins} coins locked in. Every new coin resets the respin counter - `
       + `fill the grid for the GRAND jackpot. Start the respins?`,
     confirmLabel: "Start Hold & Spin",
     cancelLabel: "Later",

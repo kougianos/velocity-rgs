@@ -1,11 +1,11 @@
 "use strict";
 
 /* =========================================================================
- * Velocity RGS — lobby (reworked "Velocity" identity, vertical slice).
+ * Velocity RGS - lobby (reworked "Velocity" identity, vertical slice).
  *
  * Fetches the live game catalog (see games.js) and renders it into the kinetic
  * dark cockpit: a hero featuring the flagship game, then category rails. Every
- * detail — title, tagline, hue, headline math — still comes straight from the
+ * detail - title, tagline, hue, headline math - still comes straight from the
  * server config; nothing about a game is hardcoded here. Each game tints one
  * shared card chassis via a --vx-hue custom property mapped from its theme.
  * ======================================================================= */
@@ -13,7 +13,7 @@
 const fmtInt = (n) => Number(n ?? 0).toLocaleString();
 const titleCase = (s) => (s || "").charAt(0).toUpperCase() + (s || "").slice(1).toLowerCase();
 
-/* esc() and renderFeatureCards() live in games.js — the game page's info modal renders the same
+/* esc() and renderFeatureCards() live in games.js - the game page's info modal renders the same
    feature cards, so the renderer is shared rather than duplicated per page. */
 
 /** Map a game's server-defined theme to its accent hue token. */
@@ -69,7 +69,7 @@ function render(games) {
 /**
  * The platform band: what the server does, stated once, above the shelf.
  *
- * Hardcoded on purpose, unlike the per-game feature chips — those are derived from each game's math
+ * Hardcoded on purpose, unlike the per-game feature chips - those are derived from each game's math
  * config because a game can stop shipping a mechanic, whereas this describes the platform itself. It
  * moves when the platform moves, which is a code change either way.
  */
@@ -82,7 +82,7 @@ function renderProofBand() {
       <h2>Every round leaves a receipt</h2>
       <p class="vx-proof-lead">
         Outcomes are decided server-side, and the RNG draws behind them are kept. Any round can be re-run
-        through the same engine later and has to land on the same board — and now that proof has a URL
+        through the same engine later and has to land on the same board - and now that proof has a URL
         you can hand to someone with no account.
       </p>
       <div class="vx-proof-cta">
@@ -95,7 +95,7 @@ function renderProofBand() {
         <span class="vx-proof-i" aria-hidden="true">⟲</span>
         <h3>Deterministic replay</h3>
         <p>The recorded draws go back through the engine that produced them. A cascading round replays
-           <em>every</em> drop — reproducing only the opening board would prove nothing about the tumble.</p>
+           <em>every</em> drop - reproducing only the opening board would prove nothing about the tumble.</p>
       </li>
       <li class="vx-proof-card">
         <span class="vx-proof-i" aria-hidden="true">🔗</span>
@@ -107,7 +107,7 @@ function renderProofBand() {
         <span class="vx-proof-i" aria-hidden="true">✓</span>
         <h3>Verified before it is shared</h3>
         <p>A link is only signed for a round that reconstructs right now. You cannot send a proof that
-           does not hold — and the page re-checks it again when it is opened.</p>
+           does not hold - and the page re-checks it again when it is opened.</p>
       </li>
     </ul>`;
   return sec;
@@ -130,7 +130,7 @@ function renderHero(g) {
       <div class="vx-telem" role="group" aria-label="Game telemetry">
         <div class="cell"><div class="k">RTP</div><div class="v vx-num">${rtp}%</div></div>
         <div class="cell"><div class="k">Max win</div><div class="v vx-num gold">${maxWin}</div></div>
-        <div class="cell"><div class="k">Volatility</div><div class="v vx-num">${(g.volatility || "—").toUpperCase()}</div></div>
+        <div class="cell"><div class="k">Volatility</div><div class="v vx-num">${(g.volatility || "-").toUpperCase()}</div></div>
       </div>
       <a class="vx-cta" href="game.html?game=${encodeURIComponent(g.gameId)}">Play ${g.title} <span class="arw">→</span></a>
     </div>
@@ -162,7 +162,7 @@ function renderRail(title, games, hue) {
 /**
  * One game card. The card is an <article>, not an <a>: it carries a real <button> for the info sheet,
  * and interactive content cannot be nested inside a link. "Click anywhere to play" survives via the
- * stretched-link pattern — .vx-play's ::after covers the whole card — so Play stays a genuine link
+ * stretched-link pattern - .vx-play's ::after covers the whole card - so Play stays a genuine link
  * (keyboard, middle-click, open-in-new-tab all work) while the info button sits above it on z-index.
  */
 function renderCard(g) {
@@ -182,7 +182,7 @@ function renderCard(g) {
     ? `<span class="vx-model">${esc(g.winModelLabel)}</span>` : "";
 
   // The mechanics that *define* this game, flagged as headline by the server. Merchandising the
-  // cascades/respins on the card itself, not only behind the info button — a player scanning the rail
+  // cascades/respins on the card itself, not only behind the info button - a player scanning the rail
   // should be able to see which game tumbles and which one locks coins.
   const chips = headlineFeatures(g)
     .map((f) => `<span class="vx-chip">${esc(f.icon)} ${esc(f.name)}</span>`).join("");
@@ -207,7 +207,7 @@ function renderCard(g) {
   return card;
 }
 
-/** At most two server-flagged signature mechanics — enough to characterise a game, not enough to crowd. */
+/** At most two server-flagged signature mechanics - enough to characterise a game, not enough to crowd. */
 function headlineFeatures(g) {
   return (g.features || []).filter((f) => f.headline).slice(0, 2);
 }
@@ -231,13 +231,13 @@ function slotStats(g, rtp) {
 }
 
 /**
- * The game's win model as a [label, value] pair — server-named via the catalog's winModel /
+ * The game's win model as a [label, value] pair - server-named via the catalog's winModel /
  * winModelLabel / waysCount, so the lobby can badge "243 Ways" before a single spin has happened
  * rather than inferring it from a null lineId on a win it has not seen yet.
  */
 function winModelStat(g) {
   if (g.winModel === "WAYS") return ["Ways", fmtInt(g.waysCount)];
-  return ["Lines", (g.paylines || []).length || "—"];
+  return ["Lines", (g.paylines || []).length || "-"];
 }
 function rouletteStats(g, rtp) {
   const r = g.roulette || {};
@@ -245,21 +245,21 @@ function rouletteStats(g, rtp) {
 }
 function blackjackStats(g, rtp) {
   const b = g.blackjack || {};
-  return stat("RTP", `${rtp}%`) + stat("Decks", b.decks ?? "—") + stat("BJ pays", b.blackjackPayoutLabel || "3:2");
+  return stat("RTP", `${rtp}%`) + stat("Decks", b.decks ?? "-") + stat("BJ pays", b.blackjackPayoutLabel || "3:2");
 }
 function stat(label, value) {
   return `<div class="s"><span class="sl">${label}</span><span class="sv">${value}</span></div>`;
 }
 
 /* =========================================================================
- * Game info sheet — the "what's actually in this game" surface.
+ * Game info sheet - the "what's actually in this game" surface.
  *
  * One component, two presentations: a centered dialog on desktop, a bottom sheet
  * on phones (drag-to-dismiss, thumb-reachable CTA, safe-area aware). Both render
  * the same server-derived content, so there is no second code path to keep in step.
  *
  * The Features tab is built from catalog `features`, which the server derives from
- * the math blocks that switch each mechanic on (see GameFeatureFactory) — the lobby
+ * the math blocks that switch each mechanic on (see GameFeatureFactory) - the lobby
  * cannot advertise a mechanic the engine does not run. The Details tab is the
  * hand-authored `info` block (prose + spec sheet) behind it.
  * ======================================================================= */
@@ -267,7 +267,7 @@ function stat(label, value) {
 const MOBILE = "(max-width: 500px)";
 const sheet = { root: null, panel: null, scroll: null, invoker: null, game: null, hideTimer: null };
 
-/** Build the sheet DOM once and reuse it — every game renders into the same shell. */
+/** Build the sheet DOM once and reuse it - every game renders into the same shell. */
 function ensureSheet() {
   if (sheet.root) return sheet.root;
 
@@ -361,7 +361,7 @@ function openSheet(g, invoker) {
   document.body.classList.add("vx-locked");
   sheet.root.classList.remove("hidden");
   // Force a reflow so the transition has a start value to animate from, rather than deferring the
-  // class to rAF — a backgrounded or non-painting tab never runs that callback, and the sheet would
+  // class to rAF - a backgrounded or non-painting tab never runs that callback, and the sheet would
   // then sit there at opacity 0 having been "opened".
   void sheet.root.offsetHeight;
   sheet.root.classList.add("open");
@@ -402,10 +402,10 @@ function sheetTelemetry(g) {
     cells.push(["Pockets", (g.roulette || {}).pocketCount ?? 37]);
     cells.push(["Top pay", "35:1"]);
   } else {
-    cells.push(["Decks", (g.blackjack || {}).decks ?? "—"]);
+    cells.push(["Decks", (g.blackjack || {}).decks ?? "-"]);
     cells.push(["BJ pays", (g.blackjack || {}).blackjackPayoutLabel || "3:2"]);
   }
-  cells.push(["Volatility", (g.volatility || "—").toUpperCase()]);
+  cells.push(["Volatility", (g.volatility || "-").toUpperCase()]);
   // Namespaced classes, not the `cell`/`k`/`v` the hero uses: `.cell` is the slot reel's global class
   // and carries `aspect-ratio: 1/1`, which turns anything reusing the name into a square.
   return cells.map(([k, v]) =>
@@ -413,7 +413,7 @@ function sheetTelemetry(g) {
     `<div class="vx-tv vx-num">${esc(v)}</div></div>`).join("");
 }
 
-/** The mechanics themselves — one card per feature, signature ones flagged and accented. */
+/** The mechanics themselves - one card per feature, signature ones flagged and accented. */
 function renderFeatures(g) {
   if (!(g.features || []).length) {
     return `<p class="vx-sheet-empty">This game ships no configurable mechanics.</p>`;
@@ -467,8 +467,8 @@ function initSheetDrag() {
     sheet.panel.style.transition = "";
     sheet.root.style.removeProperty("--vx-drag");
     // A short flick should dismiss as readily as a long drag, so velocity counts as well as distance.
-    // The flick path still needs real distance behind it, or a fast 20px twitch on the header — which
-    // is what a tap registers as if the thumb slips — throws the sheet away.
+    // The flick path still needs real distance behind it, or a fast 20px twitch on the header - which
+    // is what a tap registers as if the thumb slips - throws the sheet away.
     const velocity = dy / Math.max(performance.now() - startT, 1);
     if (dy > 110 || (velocity > 0.55 && dy > 45)) closeSheet();
     else sheet.panel.style.transform = "";
@@ -497,7 +497,7 @@ function renderError(title, message) {
   });
 }
 
-/* Hero velocity streaks — plasma light lines racing across the flagship stage.
+/* Hero velocity streaks - plasma light lines racing across the flagship stage.
    Canvas (not hand-authored SVG) for the generative motion; static if reduced-motion. */
 function startStreaks(c) {
   if (!c) return;

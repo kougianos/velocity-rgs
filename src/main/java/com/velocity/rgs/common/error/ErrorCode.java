@@ -10,6 +10,11 @@ public enum ErrorCode {
     VALIDATION_ERROR(HttpStatus.BAD_REQUEST, Level.WARN),
     AUTH_FAILED(HttpStatus.UNAUTHORIZED, Level.INFO),
     FORBIDDEN_ACTION(HttpStatus.FORBIDDEN, Level.INFO),
+    // Public replay links. Deliberately distinct from AUTH_FAILED: these are handed to strangers, so
+    // "this link ran out" (410, and permanent - the link will never work again) has to be tellable from
+    // "this link was edited" (400). A single 401 would render both as "log in", which is wrong twice.
+    REPLAY_LINK_EXPIRED(HttpStatus.GONE, Level.INFO),
+    REPLAY_LINK_INVALID(HttpStatus.BAD_REQUEST, Level.INFO),
     SESSION_NOT_FOUND(HttpStatus.NOT_FOUND, Level.WARN),
     ILLEGAL_STATE_TRANSITION(HttpStatus.CONFLICT, Level.WARN),
     SESSION_VERSION_CONFLICT(HttpStatus.CONFLICT, Level.WARN),

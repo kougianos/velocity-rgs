@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <!-- Pinch-zoom left enabled (no maximum-scale / user-scalable=no) for accessibility. -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Velocity — Verified Round Replay</title>
+  <meta name="description" content="A single game round, rebuilt from the RNG draws recorded when it was played." />
+  <!-- A shared proof link is a public URL: no crawler should index one, and no referrer should leak
+       the token to whatever it links out to. -->
+  <meta name="robots" content="noindex, nofollow" />
+  <meta name="referrer" content="no-referrer" />
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <link rel="preload" href="/fonts/archivo-expanded.woff2" as="font" type="font/woff2" crossorigin />
+  <link rel="preload" href="/fonts/geist-mono.woff2" as="font" type="font/woff2" crossorigin />
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body class="replay-page">
+  <header class="vx-top">
+    <div class="vx-top-inner">
+      <a class="vx-brand" href="/">
+        <span class="vx-mark" aria-hidden="true"></span>
+        <span class="vx-wordmark">VELO<b>CITY</b></span>
+      </a>
+      <!-- No nav: whoever opens this link has no session here, so there is nothing to navigate to. -->
+      <span class="vx-build" title="Public audit link">Public replay</span>
+    </div>
+  </header>
+
+  <main class="rp-main" id="replayRoot">
+    <div class="rp-boot" id="replayBoot">
+      <div class="rp-boot-pulse" aria-hidden="true"></div>
+      <p class="vx-lab" role="status">Verifying round against its recorded draws…</p>
+    </div>
+  </main>
+
+  <footer class="vx-foot">
+    <div class="vx-foot-inner">
+      <span class="item"><span class="dot"></span>Server-authoritative RNG</span>
+      <span class="item"><span class="dot"></span>Every round reconstructable</span>
+      <span class="spacer"></span>
+      <span class="item">Demo platform · play money · 18+</span>
+    </div>
+  </footer>
+
+  <script src="/games.js"></script>
+  <script src="/replay.js"></script>
+</body>
+</html>

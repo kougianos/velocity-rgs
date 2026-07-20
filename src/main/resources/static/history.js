@@ -131,7 +131,11 @@ function renderTable(rounds, games) {
         <td class="num ${net >= 0 ? "pos" : "neg"}">${net >= 0 ? "+" : "−"}${fmt(Math.abs(net))}</td>
         <td>${outcome}</td>
         <td class="col-round" title="${r.roundId}">${r.roundId}</td>
-        <td><button class="btn btn-ghost btn-replay" data-round="${r.roundId}">Replay</button></td>
+        <td class="col-audit">
+          <button class="btn btn-ghost btn-replay" data-round="${r.roundId}">Replay</button>
+          <button class="btn btn-ghost btn-share" data-round="${r.roundId}"
+                  title="Mint a public, signed, expiring link to this round">Share proof</button>
+        </td>
       </tr>
       <tr class="replay-row hidden" data-replay-for="${r.roundId}">
         <td colspan="9"><div class="replay-panel"></div></td>
@@ -153,6 +157,74 @@ function renderTable(rounds, games) {
   for (const btn of els.body.querySelectorAll(".btn-replay")) {
     btn.addEventListener("click", () => runReplay(btn.dataset.round, btn));
   }
+  for (const btn of els.body.querySelectorAll(".btn-share")) {
+    btn.addEventListener("click", () => shareReplay(btn.dataset.round, btn));
+  }
+}
+
+/* ------------------------------------------------------------------- share */
+
+/**
+ * Mint a public proof link for one round (POST /api/v1/admin/replay/{roundId}/share) and put it on the
+ * clipboard.
+ *
+ * The server replays the round before it signs anything, so a link only exists for a round that
+ * reconstructs — you cannot hand someone a URL that fails in front of them. The returned link is
+ * anonymous, scoped to this round alone, and expires; it is the one artifact of this project that works
+ * for somebody with no account.
+ */
+async function shareReplay(roundId, btn) {
+  const row = els.body.querySelector(`tr[data-replay-for="${roundId}"]`);
+  const panel = row.querySelector(".replay-panel");
+  row.classList.remove("hidden");
+  panel.innerHTML = `<p class="history-loading">Verifying the round, then signing a link…</p>`;
+
+  try {
+    const playerId = localStorage.getItem(PLAYER_KEY);
+    const token = await mintToken(playerId);
+    const res = await fetch(`/api/v1/admin/replay/${encodeURIComponent(roundId)}/share`, {
+      method: "POST",
+      headers: { Authorization: "Bearer " + token },
+    });
+    const body = await res.json();
+    if (!res.ok) throw new Error(body.message || `HTTP ${res.status}`);
+
+    // Clipboard access needs a secure context (https or localhost). Where it is unavailable the URL is
+    // still rendered and selectable, so the feature degrades to "copy it yourself" rather than failing.
+    let copied = false;
+    try {
+      await navigator.clipboard.writeText(body.url);
+      copied = true;
+    } catch { /* fall through to the visible URL below */ }
+
+    panel.innerHTML = renderShare(body, copied);
+    toast(copied ? "Proof link copied to clipboard" : "Proof link ready", "ok");
+  } catch (e) {
+    panel.innerHTML = `<p class="history-error">Could not mint a link: ${e.message}</p>`;
+    toast("Share link failed", "error");
+  }
+}
+
+function renderShare(link, copied) {
+  const hours = Math.round((link.ttlSeconds || 0) / 3600);
+  const verified = link.verifiedMatrixMatches && link.verifiedTotalWinMatches;
+  return `
+    <div class="share-panel">
+      <div class="share-head">
+        <span class="badge ${verified ? "badge-win" : "badge-loss"}">
+          ${verified ? "✓ Verified at mint" : "✗ Did not reconstruct"}</span>
+        <span class="share-note">Anonymous · this round only · expires in ${hours}h</span>
+      </div>
+      <div class="share-url">
+        <input type="text" readonly value="${link.url}" aria-label="Public replay link"
+               onclick="this.select()" />
+        <a class="btn btn-ghost" href="${link.url}" target="_blank" rel="noopener noreferrer">Open</a>
+      </div>
+      <p class="share-hint">
+        ${copied ? "Copied to your clipboard. " : ""}Opens for anyone, with no account — the page
+        rebuilds the round from its recorded RNG draws and shows the verdict.
+      </p>
+    </div>`;
 }
 
 /* ------------------------------------------------------------------ replay */

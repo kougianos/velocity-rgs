@@ -272,6 +272,22 @@ mvn -Pcalibrate test   # design aids: print the constants you feed back into the
 engines, plus nightly ([`.github/workflows/rtp.yml`](.github/workflows/rtp.yml)). `-Pcalibrate`
 asserts nothing and is deliberately kept out of CI.
 
+Every guard **enumerates its games from `rgs.math.catalog`** (see `ShippedSlots`) rather than naming
+them, because the buy guards used to carry a hand-written list and it went stale exactly as you would
+expect. Gilded Cascade and Dragon Hoard were never added to it, so their purchasable free spins went
+unmeasured for as long as the games existed - and both were wrong: **540%** and **76%** against a
+declared 96%. Their `freeSpinsWinMultiplier` had been calibrated before wild features existed, and
+wilds then multiplied the free-spins win by ~6.5x and ~3.9x, so a correct number became incorrect
+without anything editing it.
+
+The base-game guard listed both games and passed throughout, which is what made it invisible: base RTP
+plays *organic* free spins, which carry no buy multiplier, so the wilds were already priced into it.
+The multiplier is read on the buy path and nowhere else. Deriving the list is stronger than testing it:
+a test that the list matches the catalog is one more thing to remember to write, whereas a guard that
+reads the catalog cannot drift from it. `ShippedSlotsTest` runs in the default build and fails if that
+enumeration ever comes back empty, since an empty parameter source would take the whole RTP suite green
+without simulating a spin.
+
 Beyond RTP convergence, `-Prtp` also runs `GameStatisticsVerificationTest`, which asserts the
 **hit frequency each game declares on its own spec sheet** (`presentation.info.specs`) against the
 simulator, plus the invariant that no sampled round exceeds `limits.maxWinPerRoundMultiplier`. RTP

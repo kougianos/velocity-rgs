@@ -3,16 +3,18 @@ package com.velocity.rgs.slot.service;
 import com.velocity.rgs.slot.feature.pickcollect.PickCollectEngine;
 import com.velocity.rgs.slot.feature.respin.RespinEngine;
 import com.velocity.rgs.slot.math.config.SlotMathDefinition;
-import com.velocity.rgs.slot.math.config.SlotMathLoader;
 import com.velocity.rgs.slot.math.config.SlotMathRegistry;
+import com.velocity.rgs.slot.math.domain.BonusBuyType;
 import com.velocity.rgs.slot.math.engine.GridGenerationEngine;
 import com.velocity.rgs.slot.math.engine.ReelEvaluator;
 import com.velocity.rgs.slot.math.engine.WildFeatureEngine;
+import com.velocity.rgs.testsupport.ShippedSlots;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.ValueSource;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -68,11 +70,29 @@ class BonusBuyRtpVerificationTest {
                 new ReelEvaluator(), new PickCollectEngine(), new RespinEngine(new GridGenerationEngine()), new WildFeatureEngine());
     }
 
+    /**
+     * Every shipped game offering a {@code FREE_SPINS_BUY}, enumerated from the catalog rather than
+     * named here.
+     *
+     * <p>It used to be a hand-written list of four, and the two wild games were missing from it for as
+     * long as they had existed. Both were badly wrong: dragon-hoard's buy paid <b>540%</b> and
+     * gilded-cascade's paid <b>76%</b> against a declared 96%. Their {@code freeSpinsWinMultiplier} had
+     * been calibrated before §1.4 added wild features, and wilds then multiplied the free-spins win by
+     * ~6.5x and ~3.9x - so a boost that had been right became wrong without anything editing it.
+     *
+     * <p>Nothing caught it because the base-game guard <em>does</em> cover both games and passes: it
+     * plays organic free spins, which carry no buy multiplier, so the wilds are already priced into it.
+     * The multiplier is read on the buy path and nowhere else, so a game absent from this list had its
+     * single richest channel entirely unmeasured.
+     */
+    static List<String> gamesWithAFreeSpinsBuy() {
+        return ShippedSlots.offering(BonusBuyType.FREE_SPINS_BUY);
+    }
+
     @ParameterizedTest(name = "{0} bonus-buy free-spins RTP converges to declared target")
-    @ValueSource(strings = {"aztec-fire", "frost-crown", "inferno-riches", "jade-tiger"})
+    @MethodSource("gamesWithAFreeSpinsBuy")
     void bonusBuyFreeSpinsRtpConvergesToTarget(String gameId) {
-        SlotMathLoader loader = new SlotMathLoader();
-        SlotMathDefinition math = loader.load(gameId, MATH_VERSION).math();
+        SlotMathDefinition math = ShippedSlots.math(gameId);
         RtpSimulationService service = newService(gameId, math);
 
         RtpSimulationRequest request = RtpSimulationRequest.builder()

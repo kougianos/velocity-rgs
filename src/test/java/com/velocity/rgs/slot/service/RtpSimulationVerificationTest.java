@@ -3,16 +3,17 @@ package com.velocity.rgs.slot.service;
 import com.velocity.rgs.slot.feature.pickcollect.PickCollectEngine;
 import com.velocity.rgs.slot.feature.respin.RespinEngine;
 import com.velocity.rgs.slot.math.config.SlotMathDefinition;
-import com.velocity.rgs.slot.math.config.SlotMathLoader;
 import com.velocity.rgs.slot.math.config.SlotMathRegistry;
 import com.velocity.rgs.slot.math.engine.GridGenerationEngine;
 import com.velocity.rgs.slot.math.engine.ReelEvaluator;
 import com.velocity.rgs.slot.math.engine.WildFeatureEngine;
+import com.velocity.rgs.testsupport.ShippedSlots;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.ValueSource;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -105,12 +106,19 @@ class RtpSimulationVerificationTest {
                 new ReelEvaluator(), new PickCollectEngine(), new RespinEngine(new GridGenerationEngine()), new WildFeatureEngine());
     }
 
+    /**
+     * Every shipped slot, enumerated from {@code rgs.math.catalog} rather than named here - so a game
+     * cannot reach production without its base RTP being measured. See {@link ShippedSlots} for what
+     * hand-maintained lists cost on the buy channels.
+     */
+    static List<String> shippedSlots() {
+        return ShippedSlots.all();
+    }
+
     @ParameterizedTest(name = "{0} base-game RTP converges to declared target")
-    @ValueSource(strings = {"aztec-fire", "frost-crown", "inferno-riches", "jade-tiger",
-            "gilded-cascade", "dragon-hoard"})
+    @MethodSource("shippedSlots")
     void baseGameRtpConvergesToDeclaredTarget(String gameId) {
-        SlotMathLoader loader = new SlotMathLoader();
-        SlotMathDefinition math = loader.load(gameId, MATH_VERSION).math();
+        SlotMathDefinition math = ShippedSlots.math(gameId);
         RtpSimulationService service = newService(gameId, math);
 
         RtpSimulationRequest request = RtpSimulationRequest.builder()

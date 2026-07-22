@@ -22,6 +22,8 @@ import com.velocity.rgs.slot.domain.GameRound;
 import com.velocity.rgs.slot.domain.PickCollectSnapshot;
 import com.velocity.rgs.slot.domain.RoundKind;
 import com.velocity.rgs.slot.feature.bonusbuy.BonusBuyPolicyService;
+import com.velocity.rgs.slot.feature.freespins.FreeSpinsSettlementCodec;
+import com.velocity.rgs.slot.feature.freespins.FreeSpinsSettlementCodec.FreeSpinsSettlement;
 import com.velocity.rgs.slot.feature.pickcollect.PickCollectEngine;
 import com.velocity.rgs.slot.feature.pickcollect.PickCollectFeatureView;
 import com.velocity.rgs.slot.feature.pickcollect.PickCollectState;
@@ -30,6 +32,7 @@ import com.velocity.rgs.slot.feature.respin.RespinEngine;
 import com.velocity.rgs.slot.feature.respin.RespinFeatureView;
 import com.velocity.rgs.slot.feature.respin.RespinPayloadCodec;
 import com.velocity.rgs.slot.feature.respin.RespinState;
+import com.velocity.rgs.slot.feature.wild.WildCarryPayloadCodec;
 import com.velocity.rgs.slot.persistence.FeaturePurchaseEventRepository;
 import com.velocity.rgs.slot.persistence.GameRoundRepository;
 import com.velocity.rgs.slot.persistence.PickCollectSnapshotRepository;
@@ -37,6 +40,7 @@ import com.velocity.rgs.slot.persistence.RoundGridCodec;
 import com.velocity.rgs.slot.math.config.BonusBuyOption;
 import com.velocity.rgs.slot.math.config.SlotMathDefinition;
 import com.velocity.rgs.slot.math.config.SlotMathRegistry;
+import com.velocity.rgs.slot.math.config.WildFeatureConfig;
 import com.velocity.rgs.slot.math.domain.PickTileType;
 import com.velocity.rgs.slot.math.domain.ReelStripSet;
 import com.velocity.rgs.slot.math.domain.SymbolType;
@@ -108,6 +112,8 @@ public class SlotEngineService {
     private final PickCollectEngine pickCollectEngine;
     private final RespinEngine respinEngine;
     private final RespinPayloadCodec respinPayloadCodec;
+    private final WildCarryPayloadCodec wildCarryPayloadCodec;
+    private final FreeSpinsSettlementCodec freeSpinsSettlementCodec;
     private final BonusBuyPolicyService bonusBuyPolicyService;
     private final SlotMathRegistry mathRegistry;
     private final WalletGateway walletGateway;
@@ -212,13 +218,18 @@ public class SlotEngineService {
             // is the reshaped board that gets persisted below - so replay has to re-apply this transform
             // rather than compare against the drawn grid. ReplayService does.
             //
-            // Drawing nothing does not by itself put the transform outside the replay contract: with
-            // sticky or walking wilds `carriedWilds` reads state off the session, so those rounds are
-            // NOT a function of their own draws and ReplayService refuses them outright
-            // (ROUND_NOT_REPLAYABLE) instead of reporting a mismatch. Capturing that carry per round -
-            // as feature_context already does for respins - is what would make them replayable.
+            // Drawing nothing does not by itself put the transform inside the replay contract: with
+            // sticky or walking wilds the carry comes off the *session*, so the board is a function of
+            // this round's draws only once that carry is recorded on the round too. It is, below -
+            // `wildCarryContext` writes it to feature_context, the same column and the same bargain
+            // V12 struck for Hold & Spin respins.
+            List<WildFeatureEngine.WildCell> carriedIn = carriedWilds(session, math);
+            // Read alongside the carry, and for the same reason: both live in active_feature_payload,
+            // which applyStateToSession clears the moment a feature ends - which is precisely the spin
+            // whose round needs them recorded.
+            BigDecimal buyMultiplier = boughtFreeSpinsMultiplier(session);
             WildFeatureEngine.WildOutcome wilds = wildFeatureEngine.apply(drawn.matrix(), math, stripSet,
-                    carriedWilds(session, math));
+                    carriedIn);
             GridGenerationResult grid = new GridGenerationResult(wilds.matrix(), drawn.stopPositions());
             // The whole round, not just the opening board: a cascading game tumbles here, drawing its
             // refills from the same `rng` (and therefore the same sink) so the round stays replayable.
@@ -263,7 +274,8 @@ public class SlotEngineService {
             GameRound round = persistRound(session, roundId, effectiveBet,
                     Money.of(totalWin, session.getCurrency()),
                     grid, evaluation, sink, reasonCodes, request.powerBetActive(),
-                    betTxId, winTxId, newState.gameState());
+                    betTxId, winTxId, newState.gameState(),
+                    roundFeatureContext(math, stripSet, carriedIn, currentState, post, buyMultiplier));
 
             List<GameCommand> actions = transitionActions(newState, math, transition.availableActions());
 
@@ -976,7 +988,8 @@ public class SlotEngineService {
     private GameRound persistRound(GameSession session, String roundId, BigDecimal betAmount,
                                    Money totalWin, GridGenerationResult grid, EvaluationResult evaluation,
                                    RngDrawSink sink, List<String> reasonCodes, boolean powerBetActive,
-                                   String betTxId, String winTxId, GameState afterState) {
+                                   String betTxId, String winTxId, GameState afterState,
+                                   String featureContext) {
         GameRound round = new GameRound();
         round.setSessionId(session.getSessionId());
         round.setPlayerId(session.getPlayerId());
@@ -985,6 +998,7 @@ public class SlotEngineService {
         round.setMathVersion(session.getMathVersion());
         round.setStateContext(afterState);
         round.setRoundKind(RoundKind.SPIN);
+        round.setFeatureContext(featureContext);
         round.setBetAmount(betAmount);
         round.setBetAmountMinor(Money.of(betAmount, session.getCurrency()).toMinor());
         round.setTotalWin(totalWin.amount());
@@ -1028,14 +1042,10 @@ public class SlotEngineService {
 
     // ------------------------------------------------------- sticky wild carry-over
 
-    /** Key under which sticky/walking wilds ride in {@code active_feature_payload}. */
-    private static final String STICKY_WILDS_KEY = "stickyWilds";
-
     /**
      * Wilds held over from the previous spin of the running feature. Empty in the base game and on the
      * first spin of a feature, which is exactly right - nothing has stuck yet.
      */
-    @SuppressWarnings("unchecked")
     private List<WildFeatureEngine.WildCell> carriedWilds(GameSession session, SlotMathDefinition math) {
         if (!math.wildFeatures().active()) {
             return List.of();
@@ -1045,19 +1055,7 @@ public class SlotEngineService {
             return List.of();
         }
         try {
-            Object raw = deserializeMap(payload).get(STICKY_WILDS_KEY);
-            if (!(raw instanceof List<?> list)) {
-                return List.of();
-            }
-            List<WildFeatureEngine.WildCell> cells = new ArrayList<>(list.size());
-            for (Object entry : list) {
-                Map<String, Object> cell = (Map<String, Object>) entry;
-                cells.add(new WildFeatureEngine.WildCell(
-                        ((Number) cell.get("row")).intValue(),
-                        ((Number) cell.get("col")).intValue(),
-                        ((Number) cell.get("remainingSpins")).intValue()));
-            }
-            return cells;
+            return wildCarryPayloadCodec.decode(deserializeMap(payload));
         } catch (RuntimeException ex) {
             // A payload written before sticky wilds existed simply has no entry; treat anything
             // unreadable the same way rather than failing a spin over a presentation detail.
@@ -1076,13 +1074,44 @@ public class SlotEngineService {
         }
         Map<String, Object> merged = new LinkedHashMap<>(
                 payload == null || payload.isBlank() ? Map.of() : deserializeMap(payload));
-        merged.put(STICKY_WILDS_KEY, wilds.stream()
-                .map(w -> Map.<String, Object>of(
-                        "row", w.row(),
-                        "col", w.col(),
-                        "remainingSpins", w.remainingSpins()))
-                .toList());
+        merged.putAll(wildCarryPayloadCodec.encode(wilds));
         session.setActiveFeaturePayload(serializeToJson(merged));
+    }
+
+    /**
+     * Everything this round needed that its own draws do not contain, or {@code null} when that is
+     * nothing - which is the ordinary case, a base spin on a game with no carried state.
+     *
+     * <p>Two blocks can appear, and they are independent: the wilds carried into the spin, and the
+     * running totals a free-spins settlement pays out. A free spin on Dragon Hoard writes both.
+     *
+     * <p>Each is written <em>whether or not it holds anything interesting</em>, which is the whole
+     * point. An empty carry and an uncaptured one produce the same board and are not the same claim:
+     * the first says the feature began with a clean grid, the second says nobody wrote down what it
+     * began with. Persisting the empty case explicitly leaves NULL meaning only "this round predates
+     * the capture", which the replay path refuses with an honest reason rather than replaying on a
+     * default.
+     *
+     * <p>Expanding wilds are excluded deliberately: they are a pure function of the drawn grid, so the
+     * round already stands on its own and a context block would say nothing.
+     */
+    private String roundFeatureContext(SlotMathDefinition math, ReelStripSet stripSet,
+                                       List<WildFeatureEngine.WildCell> carriedIn,
+                                       SessionState before, SpinPostProcessing post,
+                                       BigDecimal buyMultiplier) {
+        Map<String, Object> context = new LinkedHashMap<>();
+
+        WildFeatureConfig wilds = math.wildFeatures();
+        if (wilds.appliesOn(stripSet) && (wilds.sticky() || wilds.walking())) {
+            context.putAll(wildCarryPayloadCodec.encode(carriedIn));
+        }
+        if (before instanceof SessionState.FreeSpinsLoop loop) {
+            context.putAll(freeSpinsSettlementCodec.encode(new FreeSpinsSettlement(
+                    loop.accumulatedWin(),
+                    buyMultiplier,
+                    post.newState() instanceof SessionState.BaseGame)));
+        }
+        return context.isEmpty() ? null : serializeToJson(context);
     }
 
     // ------------------------------------------------------- Hold & Spin payload round-trip

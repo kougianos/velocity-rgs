@@ -109,6 +109,13 @@ function renderProofBand() {
         <p>A link is only signed for a round that reconstructs right now. You cannot send a proof that
            does not hold - and the page re-checks it again when it is opened.</p>
       </li>
+      <li class="vx-proof-card">
+        <span class="vx-proof-i" aria-hidden="true">⇜</span>
+        <h3>The features replay too</h3>
+        <p>A <em>walking wild</em> steps one reel left each free spin, so its board depends on the spin
+           before it. That carry is recorded on the round, which is what makes the best round in the
+           game provable at all.</p>
+      </li>
     </ul>`;
   return sec;
 }

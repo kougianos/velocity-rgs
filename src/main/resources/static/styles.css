@@ -2256,6 +2256,55 @@ body.history-page .toast.error { border-left-color: var(--danger); }
   border-color: color-mix(in srgb, var(--vx-gold) 52%, transparent);
   box-shadow: 0 0 16px color-mix(in srgb, var(--vx-gold) 26%, transparent);
 }
+/* A wild inherited from the previous spin rather than drawn this one. Deliberately a different channel
+   from .is-hit - a cell can be both, and "this paid" and "this was carried in" are unrelated claims. */
+.rp-cell.is-carried {
+  border-color: color-mix(in srgb, var(--vx-violet) 62%, transparent);
+  border-style: dashed;
+  background: color-mix(in srgb, var(--vx-violet) 15%, transparent);
+}
+.rp-cell.is-carried::after {
+  content: ""; position: absolute; inset: auto 3px 3px auto;
+  width: 5px; height: 5px; border-radius: 50%; background: var(--vx-violet);
+}
+.rp-cell { position: relative; }
+
+/* the carried-wild explainer above the board */
+.rp-carry {
+  display: grid; grid-template-columns: 34px 1fr; gap: 14px; align-items: start;
+  margin: 0 0 18px; padding: 14px 16px;
+  border: 1px solid color-mix(in srgb, var(--vx-violet) 30%, var(--vx-hair));
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--vx-violet) 7%, transparent);
+}
+.rp-carry.is-empty { border-color: var(--vx-hair); background: rgba(255, 255, 255, 0.02); }
+.rp-carry-i {
+  display: grid; place-items: center; width: 34px; height: 34px; border-radius: 9px; font-size: 16px;
+  color: var(--vx-violet);
+  background: color-mix(in srgb, var(--vx-violet) 14%, transparent);
+  border: 1px solid color-mix(in srgb, var(--vx-violet) 34%, transparent);
+}
+.rp-carry.is-empty .rp-carry-i { color: var(--vx-faint); background: none; border-color: var(--vx-hair); }
+.rp-carry p { margin: 0; font-size: 13.5px; line-height: 1.55; color: var(--vx-dim); }
+.rp-carry strong { color: var(--vx-text); font-weight: 600; }
+
+/* the settling round's payout, term by term */
+.rp-sum { list-style: none; margin: 0; padding: 0; display: grid; gap: 1px; max-width: 520px; }
+.rp-sum-row {
+  display: flex; align-items: baseline; justify-content: space-between; gap: 16px;
+  padding: 11px 14px; background: rgba(255, 255, 255, 0.025);
+  border: 1px solid var(--vx-hair); border-radius: 9px;
+}
+.rp-sum-k { font-size: 13.5px; color: var(--vx-dim); }
+.rp-sum-v { font-size: 14px; font-weight: 600; color: var(--vx-text); }
+.rp-sum-row.is-mult .rp-sum-v { color: var(--vx-violet); }
+.rp-sum-row.is-total {
+  margin-top: 7px;
+  background: color-mix(in srgb, var(--vx-gold) 8%, transparent);
+  border-color: color-mix(in srgb, var(--vx-gold) 34%, transparent);
+}
+.rp-sum-row.is-total .rp-sum-k { color: var(--vx-text); font-weight: 600; }
+.rp-sum-row.is-total .rp-sum-v { color: var(--vx-gold); font-size: 16px; }
 
 /* draws */
 .rp-draws { list-style: none; display: flex; flex-wrap: wrap; gap: 7px; margin: 0; padding: 0; }

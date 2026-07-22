@@ -79,7 +79,7 @@ before a mechanic existed keeps its behaviour and its calibrated RTP untouched.
 | `waysDirection` | `LEFT_TO_RIGHT` or `BOTH_WAYS` (win-both-ways) | `WaysWinEvaluator` |
 | `cascades` | Tumbling reels + progressive per-drop multiplier ladder | `CascadeEngine` + `GridGenerationEngine.refill` |
 | `respins` | Hold & Spin: coin lock, reset-on-catch counter, jackpot tiers | `RespinEngine`, FSM states `RESPIN_AWAITING` / `RESPIN_LOOP` |
-| `wildFeatures` | Expanding / sticky / walking wilds, scoped per strip set | `WildFeatureEngine` (a grid transform, applied pre-evaluation). Sticky/walking wilds are **not replayable yet** - see below |
+| `wildFeatures` | Expanding / sticky / walking wilds, scoped per strip set | `WildFeatureEngine` (a grid transform, applied pre-evaluation). Sticky/walking wilds record their carry per round in `feature_context`, so they replay - see below |
 
 A cascading round is persisted as its **whole drop sequence** - `game_round.matrix` and `stop_positions`
 hold one entry per drop - and every refill draws through the round's own `RngDrawSink`, so the tumble
@@ -88,8 +88,9 @@ replays bit-exact from `rng_draws` like any other round.
 A Hold &amp; Spin respin is a different *kind* of round: it re-draws only the unlocked cells, so its draws
 mean nothing without the coins held going in. `game_round.round_kind` discriminates the two and
 `feature_context` carries that input state, which is what lets a respin replay independently too.
-Rounds written before this existed are classified by the V12 backfill and refuse replay with a reason
-rather than failing.
+The same column carries the wilds a sticky/walking free spin inherited from the spin before it, for the
+same reason. Rounds written before either capture existed refuse replay with a reason rather than
+failing.
 
 ### What the lobby advertises, and why it cannot lie
 
@@ -142,25 +143,43 @@ Expired and tampered links are answered with their own codes (`REPLAY_LINK_EXPIR
 `REPLAY_LINK_INVALID` → 400) and their own pages, because a public URL is the one surface a stranger
 meets in its broken state and "this ran out" is a different thing to say than "this was edited".
 
-### Which rounds cannot be replayed yet
+### Rounds that depend on the spin before them
 
-Two kinds of round are refused with `ROUND_NOT_REPLAYABLE` (409) and a stated reason rather than a
-verdict, because their inputs were never fully captured:
+Some rounds are not fully explained by their own draws, and each is handled the same way: whatever the
+round needs as *input* is written to `game_round.feature_context` when it is played, and read back on
+replay.
 
-- **Rounds played with sticky or walking wilds** (`math.wildFeatures.sticky` / `.walking`, today
-  Dragon Hoard's free spins). The carried wilds are seeded from `active_feature_payload` on the
-  *session*, so the board that was persisted is not derivable from that round's own draws.
-- **Hold & Spin respins recorded before `feature_context` existed** - the V12 backfill classifies
-  these; the coins held going in were never written.
+- **Hold & Spin respins** re-draw only the unlocked cells, so the replay needs the coins held going in.
+- **Sticky and walking wilds** (`math.wildFeatures.sticky` / `.walking`, today Dragon Hoard's free
+  spins) stamp wilds held over from the previous spin - a walking one a reel further left each time.
+  The carry lives on the *session* while the feature runs, so the round records its own copy.
+- **The spin that settles a free-spins feature** pays the whole feature, not its own board: every
+  earlier spin's win accumulated on the session, times the boost a bonus buy attached at purchase. It
+  records both running totals, so the payout is rebuilt as the sum it actually was. Without that, the
+  replay compared one spin's lines against a whole feature's payout and reported a divergence on a
+  round where the board had matched perfectly - the public page shows the sum term by term now, because
+  a board paying €6.88 next to a €655.66 headline should be explained rather than asserted.
+- **Expanding wilds** need nothing: the transform is a pure function of the drawn grid, so
+  `ReplayService` re-applies it. Gilded Cascade's free spins rely on this.
 
-Expanding wilds *are* replayable - the transform is a pure function of the drawn grid, so
-`ReplayService` simply re-applies it, which is what Gilded Cascade's free spins rely on.
+The carry is written **even when it is empty**, and that is the point: an empty carry and an
+unrecorded one produce the same board and are not the same claim. A `NULL` therefore means only one
+thing - the round predates the capture - and those rounds are refused with `ROUND_NOT_REPLAYABLE`
+(409) and a stated reason rather than replayed as though they had started clean, which after the first
+spin of a feature they had not. The server declines to claim a proof it cannot guarantee, which is what
+keeps `INTERNAL_ERROR` from the replay path meaning what it should: the engine genuinely diverged.
 
-The fix for the first case is the one `feature_context` already performs for respins: record the
-carried wilds on the round. Until then the server declines to claim a proof it cannot guarantee, which
-keeps `INTERNAL_ERROR` from the replay path meaning what it should - the engine genuinely diverged.
 [`WildFeatureReplayIntegrationTest`](src/test/java/com/velocity/rgs/audit/replay/WildFeatureReplayIntegrationTest.java)
-pins both halves.
+pins all of it, including that tampering with a recorded carry breaks the reconstruction - without
+that, the suite would pass just as happily if `ReplayService` ignored `feature_context` outright.
+The public replay page marks the carried cells on the board and says how many were inherited, so the
+one thing that did not come out of this round's draws is visible rather than asserted.
+
+The settlement case is a reminder of how a test suite hides a bug: the free-spins cover filtered rounds
+by `stateContext == FREE_SPINS_LOOP`, which is the state a round leaves the session in - and the spin
+that settles a feature leaves it in `BASE_GAME`. The one round whose payout was wrong was the one round
+the suite could not see. It is now selected the way `ReplayService` selects it, by the absence of a bet
+debit.
 
 ---
 

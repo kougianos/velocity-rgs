@@ -155,7 +155,7 @@
       {
         "buyType": "FREE_SPINS_BUY",
         "costMultiplier": 100,
-        "freeSpinsWinMultiplier": 13.9,
+        "freeSpinsWinMultiplier": 2.4634,
         "targetState": "FREE_SPINS_AWAITING",
         "initialFeaturePayload": { "freeSpinsAwarded": 12 }
       },

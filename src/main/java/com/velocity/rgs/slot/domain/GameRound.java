@@ -68,8 +68,13 @@ public class GameRound {
     private RoundKind roundKind;
 
     /**
-     * Input state a non-{@link RoundKind#SPIN} round needs to stand on its own - for a respin, the
-     * coins held before it. Null for an ordinary spin, which needs nothing beyond its draws.
+     * Input state this round needs to stand on its own, beyond its own draws: for a respin the coins
+     * held before it, for a spin of a sticky/walking wild feature the wilds carried into it.
+     *
+     * <p>Null means there was no such state to record - an ordinary spin on an ordinary game - <em>or</em>
+     * that the round predates the capture. Both are refused by the replay path with a reason rather than
+     * guessed at, because an empty carry and an unrecorded one produce the same board and are not the
+     * same claim. Which of the two applies is decided per round by the game's math, not by this column.
      */
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "feature_context", columnDefinition = "jsonb")

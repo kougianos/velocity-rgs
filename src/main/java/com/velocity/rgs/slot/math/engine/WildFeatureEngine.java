@@ -44,7 +44,7 @@ public class WildFeatureEngine {
                              List<WildCell> carried) {
         WildFeatureConfig config = math.wildFeatures();
         if (!config.appliesOn(stripSet)) {
-            return new WildOutcome(matrix, List.of(), List.of());
+            return new WildOutcome(matrix, List.of(), List.of(), List.of());
         }
 
         int rows = math.grid().rows();
@@ -103,7 +103,7 @@ public class WildFeatureEngine {
                 }
             }
         }
-        return new WildOutcome(grid, next, reasons);
+        return new WildOutcome(grid, next, List.copyOf(live), reasons);
     }
 
     private static boolean columnHoldsWild(int[][] grid, int rows, int col, int wildId) {
@@ -139,10 +139,20 @@ public class WildFeatureEngine {
         }
     }
 
-    /** The transformed grid, the wilds to carry forward, and what happened. */
-    public record WildOutcome(int[][] matrix, List<WildCell> carryForward, List<String> reasonCodes) {
+    /**
+     * The transformed grid, the wilds to carry forward, and what happened.
+     *
+     * @param landedCarry where the incoming carry ended up <em>on this board</em> - already stepped left
+     *                    for a walking wild, and with anything that walked off the grid dropped. Distinct
+     *                    from {@code carryForward}, which is next spin's input: this is the set of cells
+     *                    the player did not draw, and the only way a surface downstream can tell a carried
+     *                    wild apart from a drawn one after the transform has flattened both into the grid
+     */
+    public record WildOutcome(int[][] matrix, List<WildCell> carryForward, List<WildCell> landedCarry,
+                              List<String> reasonCodes) {
         public WildOutcome {
             carryForward = carryForward == null ? List.of() : List.copyOf(carryForward);
+            landedCarry = landedCarry == null ? List.of() : List.copyOf(landedCarry);
             reasonCodes = reasonCodes == null ? List.of() : List.copyOf(reasonCodes);
         }
     }

@@ -126,6 +126,7 @@ function render(r) {
     </section>
 
     ${renderPlayback(r, cascading)}
+    ${renderSettlement(r)}
     ${renderDraws(r)}
     ${renderExplainer(r, remaining)}
   `;
@@ -161,6 +162,9 @@ function renderVerdict(r, verified, cascading) {
           ${check(r.matrixMatches, cascading ? `${r.stepCount} boards match` : "Board matches")}
           ${check(r.totalWinMatches, `Payout matches (${fmtAmount(r.originalTotalWin, r.currency)})`)}
           <span class="rp-check is-note vx-num">${drawCount} draws replayed</span>
+          ${r.carriedWildMode
+            ? `<span class="rp-check is-note vx-num">${(r.carriedWildCells || []).length} wilds carried in</span>`
+            : ""}
         </div>
       </div>
       <div class="rp-verdict-id">
@@ -188,12 +192,48 @@ function renderPlayback(r, cascading) {
       ${cascading ? `<p class="rp-block-sub">Each drop clears its winning cells and refills them from the
         same draw stream, paying at a rising multiplier. A replay that reproduced only the opening board
         would prove nothing about the drops after it.</p>` : ""}
+      ${renderCarryNote(r)}
       <div class="rp-steps${cascading ? " is-sequence" : ""}">${steps}</div>
     </section>`;
 }
 
+/**
+ * The one thing on this board that did not come out of this round's draws.
+ *
+ * A walking wild is inherited from the spin before it, so the board is only reproducible if that carry
+ * was written down at the time - which is exactly the claim worth making here, and the reason these
+ * rounds could not be shared at all until the round started recording it. Stated even when the carry was
+ * empty: "this was the first spin and it began clean" is a recorded fact too, not an absence of one.
+ */
+function renderCarryNote(r) {
+  const mode = r.carriedWildMode;
+  if (!mode) return "";
+  const cells = r.carriedWildCells || [];
+  const walking = mode === "WALKING";
+  const noun = `${walking ? "walking" : "sticky"} wild${cells.length === 1 ? "" : "s"}`;
+
+  const body = cells.length
+    ? `<strong>${cells.length} ${noun}</strong> on this board were not drawn this round - they were held
+       over from the spin before it${walking ? `, each one stepped a reel to the left as it walks` : ""}.
+       Those positions were recorded on the round itself when it was played, so the board below is still
+       rebuilt from this round's own evidence rather than from a session that has long since moved on.`
+    : `This was the first spin of the feature: nothing was carried in, and the round records that it
+       began on a clean board. Later spins inherit ${walking ? "walking" : "sticky"} wilds from it, and
+       carry the same note.`;
+
+  return `
+    <div class="rp-carry${cells.length ? "" : " is-empty"}">
+      <span class="rp-carry-i" aria-hidden="true">${walking ? "⇜" : "⧗"}</span>
+      <p>${body}</p>
+    </div>`;
+}
+
 function renderStep(step, i, r, cascading) {
   const cleared = new Set((step.clearedPositions || []).map(([row, col]) => `${row}:${col}`));
+  // The wild transform runs once, on the opening board - so the carry marks that board and no other.
+  const carried = new Set(i === 0
+    ? (r.carriedWildCells || []).map(([row, col]) => `${row}:${col}`)
+    : []);
   const mult = Number(step.multiplier || 1);
   const win = Number(step.stepWin || 0);
 
@@ -216,7 +256,7 @@ function renderStep(step, i, r, cascading) {
           ? "Rebuilt board is identical to the persisted one"
           : "Rebuilt board differs from the persisted one"}">${step.matches ? "✓" : "✗"}</span>
       </header>
-      ${renderGrid(step.grid, cleared)}
+      ${renderGrid(step.grid, cleared, carried)}
       ${wins ? `<ul class="rp-step-wins">${wins}</ul>` : `<p class="rp-step-nowin">No win on this board</p>`}
       <footer class="rp-step-draws vx-num">
         <span class="vx-lab">${i === 0 ? "Reel stops" : "Refill draws"}</span>
@@ -230,16 +270,59 @@ function renderStep(step, i, r, cascading) {
  *
  * `grid` is [row][reel], matching how the engine persists it - so a row here is a row on screen and no
  * transposition is needed or wanted.
+ *
+ * `carried` marks the cells a wild was inherited into rather than drawn. Worth distinguishing on the
+ * board and not only in prose: after the transform the two are the same symbol id, and the carried ones
+ * are the entire reason this round needed anything recorded beyond its draws.
  */
-function renderGrid(matrix, cleared) {
+function renderGrid(matrix, cleared, carried) {
   if (!Array.isArray(matrix)) return "";
+  const held = carried || new Set();
   const rows = matrix.map((row, r) => `<tr>${row.map((id, c) => {
     const meta = SYMBOLS[id] || { glyph: String(id), name: `Symbol ${id}` };
     const hit = cleared.has(`${r}:${c}`);
-    return `<td class="rp-cell${hit ? " is-hit" : ""}" title="${esc(meta.name)}">
+    const carry = held.has(`${r}:${c}`);
+    const label = carry ? `${meta.name} - carried in, not drawn` : meta.name;
+    return `<td class="rp-cell${hit ? " is-hit" : ""}${carry ? " is-carried" : ""}" title="${esc(label)}">
               <span class="rp-cell-g">${esc(meta.glyph)}</span></td>`;
   }).join("")}</tr>`).join("");
   return `<table class="rp-grid"><tbody>${rows}</tbody></table>`;
+}
+
+/**
+ * The one round whose payout is not what its own board produced.
+ *
+ * The last spin of a free-spins feature banks the whole feature: every earlier spin's win, times the
+ * boost a bonus buy attached at purchase. Without this the page shows a board paying a few euro next to
+ * a headline figure a hundred times larger and simply asserts they agree, which is worse than saying
+ * nothing - the visitor can see the board does not add up. So the sum is shown, term by term, and each
+ * term is a number the round recorded when it was played.
+ */
+function renderSettlement(r) {
+  const before = r.featureWinBeforeThisSpin;
+  if (before == null) return "";
+  const mult = Number(r.featureBuyMultiplier || 1);
+  const own = Number(r.reconstructedTotalWin || 0) / (mult || 1) - Number(before);
+  const cur = r.currency;
+
+  return `
+    <section class="rp-block">
+      <div class="rp-block-head"><h2>How this round paid out</h2></div>
+      <p class="rp-block-sub">This was the last spin of the feature, so it banked all of it. The board
+        above is only the final term - the rest was won by earlier spins and carried on the session,
+        which is why this round records the running total it settled.</p>
+      <ol class="rp-sum">
+        ${sumRow("Won by earlier free spins", fmtAmount(before, cur))}
+        ${sumRow("Won by this board", fmtAmount(Math.max(own, 0), cur))}
+        ${mult > 1 ? sumRow("Bonus-buy multiplier", `×${mult}`, "is-mult") : ""}
+        ${sumRow("Paid", fmtAmount(r.reconstructedTotalWin, cur), "is-total")}
+      </ol>
+    </section>`;
+}
+
+function sumRow(label, value, cls = "") {
+  return `<li class="rp-sum-row ${cls}"><span class="rp-sum-k">${label}</span>
+          <span class="rp-sum-v vx-num">${value}</span></li>`;
 }
 
 /**

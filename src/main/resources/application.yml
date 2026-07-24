@@ -105,6 +105,34 @@ rgs:
   # demo (default) | production. See the header block above.
   mode: ${RGS_MODE:demo}
 
+  # ----- responsible gaming (4.2) -----------------------------------------
+  # Jurisdiction-neutral by design: with no licence to build against, guessing
+  # at MGA or UKGC specifics would encode a half-remembered rulebook. The seam
+  # is the point - a real ruleset drops in here without touching the money path.
+  #
+  # These are DEMO defaults, and tight on purpose: a loss limit reachable in
+  # about ten spins at 5.00 a spin, and a reality check every two minutes. A
+  # ruleset whose limits take an hour to reach cannot be shown to anyone.
+  rg:
+    enabled: ${RGS_RG_ENABLED:true}
+    # A gap this long between stakes counts as a new sitting and restarts the
+    # session clock, so stopping for the night does not consume tomorrow's limit.
+    session-idle-reset-minutes: 30
+    defaults:
+      session-limit-minutes: 60
+      loss-limit: 50.00
+      wager-limit: 500.00
+      reality-check-minutes: 2
+    # Ceilings on what a player may set. A limit can always be made stricter;
+    # these only cap how loose it can be made, so the panel cannot be used to
+    # opt out of the ruleset entirely.
+    bounds:
+      max-session-limit-minutes: 1440
+      max-loss-limit: 10000.00
+      max-wager-limit: 100000.00
+      max-reality-check-minutes: 120
+      max-cool-off-hours: 720
+
   security:
     jwt-secret: ${RGS_JWT_SECRET:change-me-change-me-change-me-change-me-32b}
     jwt-issuer: velocity-rgs

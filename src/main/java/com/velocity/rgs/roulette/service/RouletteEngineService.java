@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.velocity.rgs.common.error.ErrorCode;
 import com.velocity.rgs.common.error.RgsException;
 import com.velocity.rgs.common.money.Money;
+import com.velocity.rgs.rg.RgPolicyService;
 import com.velocity.rgs.roulette.api.RouletteBetRequest;
 import com.velocity.rgs.roulette.api.RouletteInitRequest;
 import com.velocity.rgs.roulette.api.RouletteInitResponse;
@@ -71,6 +72,7 @@ public class RouletteEngineService {
     private final SessionStore sessionStore;
     private final PlayerActionLock actionLock;
     private final RouletteRoundRepository roundRepository;
+    private final RgPolicyService rgPolicyService;
     private final ObjectMapper objectMapper;
 
     private static final List<GameCommand> SPIN_ONLY = List.of(GameCommand.SPIN);
@@ -125,6 +127,11 @@ public class RouletteEngineService {
                 throw new RgsException(ErrorCode.VALIDATION_ERROR,
                         "Total stake " + totalBet + " exceeds table limit " + math.limits().maxTotalBet());
             }
+
+            // Responsible Gaming, against the whole table rather than per chip: a player covering
+            // twenty numbers has staked twenty times as much as one backing a single, and a wager limit
+            // that counted either as one bet would be measuring the wrong thing.
+            rgPolicyService.validateStake(playerId, currency, totalBet);
 
             String roundId = "rou-" + UUID.randomUUID();
             RngDrawSink sink = RngDrawSink.inMemory();

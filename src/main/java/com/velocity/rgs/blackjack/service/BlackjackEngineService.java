@@ -29,6 +29,7 @@ import com.velocity.rgs.card.Shoe;
 import com.velocity.rgs.common.error.ErrorCode;
 import com.velocity.rgs.common.error.RgsException;
 import com.velocity.rgs.common.money.Money;
+import com.velocity.rgs.rg.RgPolicyService;
 import com.velocity.rgs.rng.RandomNumberGenerator;
 import com.velocity.rgs.rng.RngDrawSink;
 import com.velocity.rgs.rng.SecureRandomNumberGenerator;
@@ -84,6 +85,7 @@ public class BlackjackEngineService {
     private final SessionStore sessionStore;
     private final PlayerActionLock actionLock;
     private final BlackjackRoundRepository roundRepository;
+    private final RgPolicyService rgPolicyService;
     private final ObjectMapper objectMapper;
 
     private static final List<BlackjackAction> DEAL_ONLY = List.of(BlackjackAction.DEAL);
@@ -165,6 +167,12 @@ public class BlackjackEngineService {
                 throw new RgsException(ErrorCode.VALIDATION_ERROR,
                         "Bet " + bet + " exceeds table limit " + math.limits().maxBet());
             }
+
+            // Responsible Gaming, inside the transaction that is about to debit - the same seam the slot
+            // spin path uses. Dealing is where blackjack places its stake; hit, stand and the rest are
+            // continuations of a hand already paid for and are checked in `action` only where they add
+            // money to the table.
+            rgPolicyService.validateStake(playerId, currency, bet);
 
             String roundId = "blk-" + UUID.randomUUID();
             RngDrawSink sink = RngDrawSink.inMemory();
@@ -312,6 +320,10 @@ public class BlackjackEngineService {
             throw new RgsException(ErrorCode.VALIDATION_ERROR, "Double after split is not allowed");
         }
         BigDecimal extra = active.getBet();
+        // Doubling puts new money on the table, so it is a stake and gets the same check a deal does.
+        // Refusing it strands nothing: the hand is still playable with hit and stand, which is exactly
+        // what a limit should do - stop the player adding to a losing session, not trap them in a hand.
+        rgPolicyService.validateStake(playerId, currency, extra);
         String txId = nextBetTxId(round, ctx, "double");
         executeDebit(playerId, session, round.getRoundId(), txId, Money.of(extra, currency));
         round.setTotalBet(round.getTotalBet().add(extra));
@@ -334,6 +346,8 @@ public class BlackjackEngineService {
                     "Cannot split beyond " + math.maxHands() + " hands");
         }
         BigDecimal extra = orig.getBet();
+        // A split is a second stake on a second hand, so it is checked like the first one.
+        rgPolicyService.validateStake(playerId, currency, extra);
         String txId = nextBetTxId(round, ctx, "split");
         executeDebit(playerId, session, round.getRoundId(), txId, Money.of(extra, currency));
         round.setTotalBet(round.getTotalBet().add(extra));

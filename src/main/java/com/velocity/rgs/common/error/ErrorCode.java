@@ -29,6 +29,15 @@ public enum ErrorCode {
     CURRENCY_MISMATCH(HttpStatus.CONFLICT, Level.WARN),
     BONUS_BUY_DISABLED(HttpStatus.CONFLICT, Level.WARN),
     MAX_WIN_REACHED(HttpStatus.CONFLICT, Level.WARN),
+    // Responsible Gaming (§4.2). Two codes, because they are two different things and the player has to
+    // be able to tell them apart: a limit that fired names itself and says when it resets, and the way
+    // back to play is to wait. Self-exclusion has no way back, and rendering it as a transient error
+    // with a retry would be worse than useless. Hence 409-and-recoverable versus 403-and-final.
+    //
+    // Logged at INFO, not WARN: a limit doing its job is the system working, not a fault. Leaving these
+    // at WARN would fill the log with successful policy enforcement and devalue every other warning.
+    RG_LIMIT_EXCEEDED(HttpStatus.CONFLICT, Level.INFO),
+    RG_SELF_EXCLUDED(HttpStatus.FORBIDDEN, Level.INFO),
     INTERNAL_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, Level.ERROR);
 
     private final HttpStatus httpStatus;

@@ -607,6 +607,9 @@ async function bootSession(forceNewPlayer = false) {
 
     state.token = await mintDevToken({ playerId: state.playerId, sessionId: state.sessionId });
     window.__authToken = state.token;
+    // Responsible Gaming watch: the reality check is measured in elapsed time, so it has to be
+    // able to fire on a player who has stopped clicking.
+    if (typeof startRgWatch === "function") startRgWatch();
 
     const init = await api("/api/v1/slot/init", {
       method: "POST",

@@ -9,3 +9,14 @@ rgs:
     mode: internal
   security:
     jwt-secret: test-secret-test-secret-test-secret-32b
+  # Responsible Gaming off by default for the suite. The shipped defaults are
+  # deliberately tight enough to fire inside a 60-second demo - a 50.00 loss
+  # limit is roughly ten spins - which means they would also fire partway
+  # through any integration test that plays a few dozen rounds, turning every
+  # unrelated test into a flaky one that fails only when the dice run cold.
+  #
+  # Tests that are about RG turn it on for themselves with @TestPropertySource,
+  # so the feature is still covered - it is just not silently applied to tests
+  # that are measuring something else.
+  rg:
+    enabled: false

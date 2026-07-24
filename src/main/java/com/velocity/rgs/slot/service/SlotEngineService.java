@@ -22,6 +22,7 @@ import com.velocity.rgs.slot.domain.GameRound;
 import com.velocity.rgs.slot.domain.PickCollectSnapshot;
 import com.velocity.rgs.slot.domain.RoundKind;
 import com.velocity.rgs.slot.feature.bonusbuy.BonusBuyPolicyService;
+import com.velocity.rgs.rg.RgPolicyService;
 import com.velocity.rgs.slot.feature.freespins.FreeSpinsSettlementCodec;
 import com.velocity.rgs.slot.feature.freespins.FreeSpinsSettlementCodec.FreeSpinsSettlement;
 import com.velocity.rgs.slot.feature.pickcollect.PickCollectEngine;
@@ -115,6 +116,7 @@ public class SlotEngineService {
     private final WildCarryPayloadCodec wildCarryPayloadCodec;
     private final FreeSpinsSettlementCodec freeSpinsSettlementCodec;
     private final BonusBuyPolicyService bonusBuyPolicyService;
+    private final RgPolicyService rgPolicyService;
     private final SlotMathRegistry mathRegistry;
     private final WalletGateway walletGateway;
     private final SessionStore sessionStore;
@@ -148,7 +150,13 @@ public class SlotEngineService {
 
         SlotMathDefinition math = mathRegistry.require(session.getGameId(), session.getMathVersion());
         PickCollectFeatureView view = pickCollectViewIfActive(session);
-        List<GameCommand> actions = availableActions(session, math);
+        // A player who is blocked opens the game with no SPIN offered, rather than being allowed in and
+        // refused on the first click. No stake is known yet, so the probe is the smallest one the game
+        // will accept: if even the minimum bet would be refused there is no play available at any
+        // stake, which is exactly when the action should not be offered. Probing with the session's
+        // current bet instead would read 0 on a fresh session and clear every limit vacuously.
+        List<GameCommand> actions = withholdIfRgBlocks(playerId, rehydrate(session),
+                math.betConfig().minBet(), availableActions(session, math));
 
         return SlotInitResponse.builder()
                 .sessionId(session.getSessionId())
@@ -203,6 +211,15 @@ public class SlotEngineService {
             }
             BigDecimal effectiveBet = effectiveBetForSpin(currentState, request.betSize(),
                     request.powerBetActive(), math, session.getCurrency());
+
+            // Responsible Gaming, inside the same transaction that is about to move the money - the
+            // shape BonusBuyPolicyService.validate already has inside buyFeature(). Gated on the base
+            // game because only a base spin places a new stake: a free spin was paid for by the round
+            // that triggered it, and stopping the player mid-feature would take the money and withhold
+            // what it bought. A limit stops the next stake, never the round in flight.
+            if (currentState instanceof SessionState.BaseGame) {
+                rgPolicyService.validateStake(playerId, session.getCurrency(), effectiveBet);
+            }
 
             TransitionContext ctx = new TransitionContext(math, session.getCurrency());
             TransitionResult transition = stateMachine.transition(currentState,
@@ -277,7 +294,8 @@ public class SlotEngineService {
                     betTxId, winTxId, newState.gameState(),
                     roundFeatureContext(math, stripSet, carriedIn, currentState, post, buyMultiplier));
 
-            List<GameCommand> actions = transitionActions(newState, math, transition.availableActions());
+            List<GameCommand> actions = withholdIfRgBlocks(playerId, newState, effectiveBet,
+                    transitionActions(newState, math, transition.availableActions()));
 
             return SpinResponse.builder()
                     .sessionId(saved.getSessionId())
@@ -467,6 +485,11 @@ public class SlotEngineService {
             // and the amount reported back to the player are one number.
             BigDecimal cost = SessionStateMachine.buyCost(request.betSize(), option,
                     session.getCurrency());
+
+            // A bonus buy is a stake like any other, and the largest one the game offers - checked
+            // against the full cost, not the bet size it is derived from, so a 100x buy counts as 100x
+            // against a wager limit rather than as one spin.
+            rgPolicyService.validateStake(playerId, session.getCurrency(), cost);
 
             SessionState currentState = rehydrate(session);
             TransitionContext ctx = new TransitionContext(math, session.getCurrency());
@@ -983,6 +1006,30 @@ public class SlotEngineService {
             case SessionState.RespinAwaiting ignored -> List.of(GameCommand.START_RESPIN);
             case SessionState.RespinLoop ignored -> List.of(GameCommand.SPIN);
         };
+    }
+
+    /**
+     * Drops the actions a Responsible Gaming limit would now refuse, so the client's spin button dies
+     * because the server stopped offering the action - not because the client decided to hide it.
+     *
+     * <p>Only ever removes {@code SPIN} and {@code BUY_FEATURE} from the base game. Mid-feature actions
+     * are left alone for the same reason {@code validateStake} is not called on them: the player has
+     * already paid, and a limit that strands a bought feature has taken money for nothing.
+     *
+     * <p>Advisory, and safe if the client ignores it: the identical check runs inside the transaction on
+     * the next request, which is what actually stops play.
+     */
+    private List<GameCommand> withholdIfRgBlocks(String playerId, SessionState newState,
+                                                 BigDecimal nextStake, List<GameCommand> actions) {
+        if (!(newState instanceof SessionState.BaseGame) || actions.isEmpty()) {
+            return actions;
+        }
+        if (rgPolicyService.canStake(playerId, nextStake)) {
+            return actions;
+        }
+        return actions.stream()
+                .filter(a -> a != GameCommand.SPIN && a != GameCommand.BUY_FEATURE)
+                .toList();
     }
 
     private GameRound persistRound(GameSession session, String roundId, BigDecimal betAmount,

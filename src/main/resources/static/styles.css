@@ -2378,3 +2378,175 @@ body.history-page .toast.error { border-left-color: var(--danger); }
   .rp-cell { width: 34px; height: 34px; }
   .rp-cell-g { font-size: 17px; }
 }
+
+/* =========================================================================
+ * Responsible Gaming (4.2) - the panel at /rg.html.
+ *
+ * Three visual registers, and keeping them apart is the whole design brief:
+ * limits active (calm), play paused (amber, temporary, states when it ends),
+ * self-excluded (red, final, offers nothing but the demo reset). Collapsing
+ * them into one styled banner would make the error taxonomy invisible, and a
+ * taxonomy nobody can see is indistinguishable from not having one.
+ * ======================================================================= */
+
+.rg-main {
+  width: min(920px, calc(100% - 32px)); margin: 0 auto;
+  padding: clamp(18px, 3vw, 34px) 0 64px; display: grid; gap: clamp(16px, 2.4vw, 24px);
+}
+.rg-loading { color: var(--vx-dim); font-size: 14px; padding: 40px 0; text-align: center; }
+
+/* ---- verdict strip ---- */
+.rg-block {
+  display: grid; grid-template-columns: 54px 1fr; gap: 18px; align-items: start;
+  padding: clamp(18px, 2.6vw, 26px); border-radius: 16px;
+  border: 1px solid var(--vx-hair); background: var(--vx-graphite);
+}
+.rg-block-mark {
+  display: grid; place-items: center; width: 54px; height: 54px; border-radius: 14px;
+  font-size: 24px; background: rgba(255, 255, 255, 0.05); border: 1px solid var(--vx-hair);
+}
+.rg-block h1 {
+  font-family: var(--vx-display); font-weight: 800; text-transform: uppercase;
+  font-size: clamp(20px, 2.4vw, 28px); line-height: 1.08; margin: 6px 0 10px;
+}
+.rg-block p { margin: 0 0 10px; font-size: 14px; line-height: 1.6; color: var(--vx-dim); max-width: 62ch; }
+.rg-block.is-ok { border-color: color-mix(in srgb, var(--vx-emerald) 32%, transparent); }
+.rg-block.is-ok .rg-block-mark {
+  color: var(--vx-emerald); background: color-mix(in srgb, var(--vx-emerald) 12%, transparent);
+  border-color: color-mix(in srgb, var(--vx-emerald) 34%, transparent);
+}
+.rg-block.is-blocked {
+  border-color: color-mix(in srgb, var(--vx-gold) 38%, transparent);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--vx-gold) 7%, transparent), transparent), var(--vx-graphite);
+}
+.rg-block.is-blocked .rg-block-mark {
+  color: var(--vx-gold); background: color-mix(in srgb, var(--vx-gold) 14%, transparent);
+  border-color: color-mix(in srgb, var(--vx-gold) 36%, transparent);
+}
+.rg-block.is-excluded {
+  border-color: color-mix(in srgb, var(--vx-plasma) 42%, transparent);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--vx-plasma) 9%, transparent), transparent), var(--vx-graphite);
+}
+.rg-block.is-excluded .rg-block-mark {
+  color: var(--vx-plasma); background: color-mix(in srgb, var(--vx-plasma) 14%, transparent);
+  border-color: color-mix(in srgb, var(--vx-plasma) 40%, transparent);
+}
+.rg-demo-note {
+  font-size: 12.5px; padding: 10px 12px; border-radius: 9px;
+  border: 1px dashed var(--vx-hair2); color: var(--vx-faint) !important;
+}
+
+/* ---- sections ---- */
+.rg-sec {
+  padding: clamp(18px, 2.6vw, 26px); border-radius: 16px;
+  border: 1px solid var(--vx-hair); background: var(--vx-graphite);
+}
+.rg-sec h2 {
+  font-family: var(--vx-mono); font-size: 12px; font-weight: 600; letter-spacing: 0.14em;
+  text-transform: uppercase; color: var(--vx-text); margin: 0 0 6px;
+}
+.rg-sec-sub { margin: 0 0 18px; font-size: 13.5px; line-height: 1.55; color: var(--vx-dim); max-width: 68ch; }
+.rg-empty { margin: 0; font-size: 13.5px; color: var(--vx-faint); }
+
+/* ---- consumption bars ---- */
+.rg-bars { display: grid; gap: 14px; }
+.rg-bar-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; margin-bottom: 7px; }
+.rg-bar-k { font-size: 13.5px; color: var(--vx-dim); }
+.rg-bar-v { font-size: 13.5px; font-weight: 600; color: var(--vx-text); }
+.rg-bar-v i { font-style: normal; color: var(--vx-faint); font-weight: 400; }
+.rg-bar-track {
+  height: 8px; border-radius: 999px; overflow: hidden;
+  background: rgba(255, 255, 255, 0.06); border: 1px solid var(--vx-hair);
+}
+.rg-bar-fill {
+  height: 100%; border-radius: 999px; background: var(--vx-emerald);
+  transition: width 0.35s ease;
+}
+.rg-bar.is-high .rg-bar-fill { background: var(--vx-gold); }
+.rg-bar.is-full .rg-bar-fill { background: var(--vx-plasma); }
+
+/* ---- limit form ---- */
+.rg-form { display: grid; gap: 14px; max-width: 480px; }
+.rg-field { display: grid; gap: 6px; }
+.rg-field-k { font-size: 13px; color: var(--vx-dim); }
+.rg-field-in { display: flex; align-items: stretch; gap: 0; }
+.rg-field-in input {
+  flex: 1; min-width: 0; padding: 11px 13px; font-family: var(--vx-mono); font-size: 14px;
+  color: var(--vx-text); background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--vx-hair); border-right: 0; border-radius: 10px 0 0 10px;
+}
+.rg-field-in input:focus { outline: none; border-color: color-mix(in srgb, var(--vx-ignite) 55%, transparent); }
+.rg-field-u {
+  display: grid; place-items: center; padding: 0 13px; font-size: 12px; color: var(--vx-faint);
+  background: rgba(255, 255, 255, 0.02); border: 1px solid var(--vx-hair); border-radius: 0 10px 10px 0;
+}
+
+/* ---- breaks ---- */
+.rg-break-grid { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }
+.rg-break {
+  padding: 16px 18px; border-radius: 13px; border: 1px solid var(--vx-hair);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.03), transparent);
+}
+.rg-break h3 {
+  margin: 0 0 6px; font-family: var(--vx-mono); font-size: 12px; font-weight: 600;
+  letter-spacing: 0.12em; text-transform: uppercase; color: var(--vx-text);
+}
+.rg-break p { margin: 0 0 14px; font-size: 13px; line-height: 1.55; color: var(--vx-dim); }
+.rg-break-row { display: flex; gap: 10px; flex-wrap: wrap; }
+.rg-break-row select {
+  padding: 10px 12px; border-radius: 10px; font-size: 13px; color: var(--vx-text);
+  background: rgba(255, 255, 255, 0.04); border: 1px solid var(--vx-hair);
+}
+/* The two exits are not styled alike: amber for a break that ends, red for one that does not. */
+.vx-cta.rg-warn { background: var(--vx-gold); color: #17181D; }
+.vx-cta.rg-danger { background: var(--vx-plasma); color: #fff; }
+
+.rg-why p { margin: 0 0 12px; font-size: 13.5px; line-height: 1.65; color: var(--vx-dim); max-width: 74ch; }
+.rg-why code {
+  font-family: var(--vx-mono); font-size: 12px; padding: 1px 6px; border-radius: 5px;
+  background: rgba(255, 255, 255, 0.06); color: var(--vx-text);
+}
+.rg-why em { font-style: normal; font-weight: 600; color: var(--vx-text); }
+
+/* ---- in-game limit banner + reality check (game.html) ---- */
+.rg-banner {
+  display: flex; align-items: flex-start; gap: 12px; margin: 12px 0;
+  padding: 13px 15px; border-radius: 12px; font-size: 13.5px; line-height: 1.5;
+  border: 1px solid color-mix(in srgb, var(--vx-gold) 38%, transparent);
+  background: color-mix(in srgb, var(--vx-gold) 9%, transparent); color: var(--vx-text);
+}
+.rg-banner.is-final {
+  border-color: color-mix(in srgb, var(--vx-plasma) 42%, transparent);
+  background: color-mix(in srgb, var(--vx-plasma) 10%, transparent);
+}
+.rg-banner-i { font-size: 17px; line-height: 1.3; }
+.rg-banner a { color: var(--vx-text); text-decoration: underline; text-underline-offset: 3px; }
+.rg-banner .rg-banner-t { display: block; font-weight: 600; margin-bottom: 3px; }
+
+.rg-modal {
+  position: fixed; inset: 0; z-index: 80; display: grid; place-items: center;
+  background: rgba(6, 7, 10, 0.72); backdrop-filter: blur(4px); padding: 20px;
+}
+.rg-modal.hidden { display: none; }
+.rg-modal-card {
+  width: min(440px, 100%); padding: 26px; border-radius: 16px; text-align: center;
+  border: 1px solid var(--vx-hair2); background: var(--vx-graphite);
+}
+.rg-modal-card h2 {
+  font-family: var(--vx-display); font-weight: 800; text-transform: uppercase;
+  font-size: 22px; margin: 12px 0 10px;
+}
+.rg-modal-card p { margin: 0 0 8px; font-size: 14px; line-height: 1.6; color: var(--vx-dim); }
+.rg-modal-stats { display: flex; gap: 10px; justify-content: center; margin: 18px 0; flex-wrap: wrap; }
+.rg-modal-stat {
+  padding: 10px 16px; border-radius: 11px; border: 1px solid var(--vx-hair);
+  background: rgba(255, 255, 255, 0.03);
+}
+.rg-modal-stat span { display: block; font-size: 10.5px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--vx-faint); }
+.rg-modal-stat strong { display: block; font-family: var(--vx-mono); font-size: 17px; margin-top: 4px; color: var(--vx-text); }
+.rg-modal-actions { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+
+@media (max-width: 560px) {
+  .rg-block { grid-template-columns: 1fr; }
+  .rg-block-mark { width: 44px; height: 44px; font-size: 20px; }
+}

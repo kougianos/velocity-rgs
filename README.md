@@ -183,6 +183,60 @@ debit.
 
 ---
 
+## Responsible Gaming
+
+Session duration, loss and wager limits, a reality check, a cool-off and self-exclusion - stored per
+**player** in `rg_limit`, not per session, because a limit a new tab resets is not a limit.
+
+`RgPolicyService.validateStake(...)` runs **inside each entry point's existing transaction**, which is
+the shape `BonusBuyPolicyService.validate(...)` already had inside `@Transactional buyFeature()`. A
+policy check that runs outside the transaction moving the money can be raced past; the pattern was
+already proven here on a different rule, so RG is a repeat of it rather than a new invention. It is
+wired into the slot spin and bonus buy, the blackjack deal, double and split, and the roulette spin -
+every point where new money reaches the table, and no others.
+
+Three decisions are worth naming, because each one is a place the obvious implementation is wrong:
+
+- **Consumption is derived, not counted.** Wagered and net loss are summed from `wallet_transaction` at
+  check time. A counter would be faster and would eventually disagree with the ledger; deriving means
+  the limit is enforced against the same rows an auditor would read. The `(player_id, created_at)`
+  index this needs already existed.
+- **A limit never strands a paid feature.** Free spins, respins, hits and picks are continuations of a
+  round already paid for, so they are not gated. Blocking them would take the money and withhold what
+  it bought, which is a worse outcome than the one the limit exists to prevent. A limit stops the
+  *next* stake.
+- **Blocked play is withdrawn, not hidden.** When a limit is reached the server stops returning `SPIN`
+  in `availableActions`, so the client's button greys out because the action is gone. The probe is the
+  game's *minimum* bet: a player whose 5.00 spin no longer fits but whose 0.20 one does is not blocked,
+  and hiding the button from them would be the client lying about what the server would accept.
+
+`RG_LIMIT_EXCEEDED` (409) and `RG_SELF_EXCLUDED` (403) are two codes because they are two different
+things, and the UI renders them as such: a limit names itself, states its value and says when it
+resets; self-exclusion is a full-stop with no path back. Both carry machine-readable facts in a new
+`context` field on `ApiError` - which limit, how much is used, when it lifts - so the client states
+them rather than paraphrasing. Both log at `INFO`: a limit doing its job is the system working, and
+logging it as a warning would devalue every real one.
+
+The player-facing panel is at [`/rg.html`](src/main/resources/static/rg.html): every limit with live
+consumption bars, cool-off and self-exclusion behind a typed confirmation, and a reality-check modal
+that interrupts play on the configured interval. Half the value of this feature is that it is visible,
+and RG behind an API nobody can see is worth nothing to anyone who would have to read Java to find it.
+
+Demo defaults are deliberately tight - a 50.00 loss limit is roughly ten spins, and the reality check
+fires every two minutes - because a ruleset whose limits take an hour to reach cannot be shown to
+anyone. That same tightness is why RG is **off in the test profile**: it would otherwise fire partway
+through any test that plays a few dozen rounds and turn unrelated tests flaky.
+[`RgPolicyIntegrationTest`](src/test/java/com/velocity/rgs/rg/RgPolicyIntegrationTest.java) turns it on
+for itself.
+
+Self-exclusion is final, and there is no un-exclude on `RgPolicyService`. The demo reset that makes the
+feature showable more than once lives on a separate `@ConditionalOnProperty(rgs.mode=demo)` controller
+and is still scoped to the caller's own token - mapped under `/api/v1/rg/dev` rather than
+`/api/v1/dev`, because the latter is an anonymous path and an unauthenticated endpoint that lifts
+self-exclusion is not worth having in any mode.
+
+---
+
 ## Repository Layout
 
 The whole project is **one Spring Boot module rooted at the repo root**. Shared/platform code

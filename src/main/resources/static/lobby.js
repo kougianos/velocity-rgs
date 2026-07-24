@@ -60,6 +60,7 @@ function render(games) {
   root.innerHTML = "";
   root.appendChild(renderHero(featured));
   root.appendChild(renderProofBand());
+  root.appendChild(renderRgBand());
   if (slots.length) root.appendChild(renderRail("Slots", slots, "var(--vx-ignite)"));
   if (tables.length) root.appendChild(renderRail("Table games", tables, "var(--vx-emerald)"));
 
@@ -115,6 +116,57 @@ function renderProofBand() {
         <p>A <em>walking wild</em> steps one reel left each free spin, so its board depends on the spin
            before it. That carry is recorded on the round, which is what makes the best round in the
            game provable at all.</p>
+      </li>
+    </ul>`;
+  return sec;
+}
+
+/**
+ * The Responsible Gaming band (§4.2).
+ *
+ * Its own band rather than a fourth card on the proof one, because it makes a different claim.
+ * Provable fairness is about whether an outcome can be checked; this is about whether the platform
+ * will stop taking a bet. Merging them would blur both.
+ *
+ * Hardcoded like the proof band, and for the same reason: it describes the platform, not a game.
+ */
+function renderRgBand() {
+  const sec = document.createElement("section");
+  sec.className = "vx-proof vx-rg-band";
+  sec.innerHTML = `
+    <div class="vx-proof-copy">
+      <div class="vx-proof-eye"><span class="tick"></span><span class="vx-lab">Platform · Responsible Gaming</span></div>
+      <h2>Limits that actually stop the bet</h2>
+      <p class="vx-proof-lead">
+        Session time, loss and wager limits, a reality check, a cool-off and self-exclusion. Each one is
+        checked inside the same database transaction that debits the stake, so there is no window where
+        a bet slips past a limit that had already been reached.
+      </p>
+      <div class="vx-proof-cta">
+        <a class="vx-cta" href="/rg.html">Set your limits <span class="arw">→</span></a>
+        <span class="vx-proof-path vx-num">set a limit → keep playing → watch it bite</span>
+      </div>
+    </div>
+    <ul class="vx-proof-grid">
+      <li class="vx-proof-card">
+        <span class="vx-proof-i" aria-hidden="true">⏸</span>
+        <h3>The button dies server-side</h3>
+        <p>When a limit is reached the server stops returning <em>SPIN</em> in the round's available
+           actions. The button greys out because the action was withdrawn, not because the client
+           hid it.</p>
+      </li>
+      <li class="vx-proof-card">
+        <span class="vx-proof-i" aria-hidden="true">📊</span>
+        <h3>Measured from the ledger</h3>
+        <p>Consumption is derived from the wallet transactions themselves, not a counter kept beside
+           them. A limit is enforced against the same rows an auditor would read.</p>
+      </li>
+      <li class="vx-proof-card">
+        <span class="vx-proof-i" aria-hidden="true">🎁</span>
+        <h3>It never strands a paid feature</h3>
+        <p>A limit stops your <em>next</em> stake, never the round in flight. Free spins you have
+           already bought always play out - taking the money and withholding the feature would be the
+           worse outcome.</p>
       </li>
     </ul>`;
   return sec;

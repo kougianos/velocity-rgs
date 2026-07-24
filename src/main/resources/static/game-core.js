@@ -89,6 +89,14 @@ function logResponse(label, data) {
 function handleError(label, e) {
   const detail = e instanceof ApiError && e.payload ? e.payload : { message: e.message };
   logResponse(label + " (ERROR)", detail);
+
+  // A Responsible Gaming refusal is a state the player is in, not a failure that just happened, so it
+  // gets a persistent banner instead of a toast that vanishes in three seconds. Intercepted here
+  // because every game funnels its errors through this one function - slots, roulette and blackjack
+  // all inherit it without a copy each.
+  if (typeof renderRgRefusal === "function" && renderRgRefusal(detail)) {
+    return;
+  }
   toast(`${label}: ${detail.message || e.message}`, "error");
 }
 

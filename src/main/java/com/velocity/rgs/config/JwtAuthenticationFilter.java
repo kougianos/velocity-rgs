@@ -116,6 +116,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 ErrorCode.AUTH_FAILED.httpStatus().value(),
                 traceId,
                 Instant.now(),
+                null,
                 null
         );
         response.setStatus(ErrorCode.AUTH_FAILED.httpStatus().value());

@@ -37,6 +37,11 @@
   </header>
 
   <main class="layout">
+    <!-- Responsible Gaming banner (4.2). Populated by rg-client.js when the server refuses a stake;
+         a persistent surface rather than a toast, because a limit is a state the player is in, not an
+         event that just happened. -->
+    <div id="rgBanner" aria-live="polite"></div>
+
     <!-- ===== Slot game column (one game section is revealed by game.js) ===== -->
     <section class="panel game-panel hidden" id="slotGame">
       <h2 class="panel-title">Reels</h2>
@@ -308,6 +313,7 @@
 
   <script src="/games.js"></script>
   <script src="/game-core.js"></script>
+  <script src="/rg-client.js"></script>
   <script src="/slot.js"></script>
   <script src="/roulette.js"></script>
   <script src="/blackjack.js"></script>

@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <!-- Pinch-zoom left enabled (no maximum-scale / user-scalable=no) for accessibility. -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Velocity - Responsible Gaming</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <link rel="preload" href="/fonts/archivo-expanded.woff2" as="font" type="font/woff2" crossorigin />
+  <link rel="preload" href="/fonts/geist-mono.woff2" as="font" type="font/woff2" crossorigin />
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body class="rg-page">
+  <header class="vx-top">
+    <div class="vx-top-inner">
+      <a class="vx-brand" href="/">
+        <span class="vx-mark" aria-hidden="true"></span>
+        <span class="vx-wordmark">VELO<b>CITY</b></span>
+      </a>
+      <nav class="vx-nav" aria-label="Primary">
+        <a href="/">Lobby</a>
+        <a href="/history.html">History</a>
+        <a href="/rg.html" class="on" aria-current="page">Responsible Gaming</a>
+      </nav>
+      <span class="vx-build" title="Environment">Demo build</span>
+    </div>
+  </header>
+
+  <main class="rg-main" id="rgRoot">
+    <p class="rg-loading" role="status">Loading your limits…</p>
+  </main>
+
+  <div id="toast" class="toast hidden" role="status" aria-live="polite"></div>
+
+  <script src="/rg.js"></script>
+</body>
+</html>

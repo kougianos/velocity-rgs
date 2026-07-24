@@ -17,6 +17,7 @@ import org.springframework.web.method.annotation.MethodArgumentTypeMismatchExcep
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 @Slf4j
@@ -26,7 +27,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(RgsException.class)
     public ResponseEntity<ApiError> handleRgs(RgsException ex) {
-        return build(ex.getErrorCode(), ex.getMessage(), ex.getDetails(), ex);
+        return build(ex.getErrorCode(), ex.getMessage(), ex.getDetails(), ex.getContext(), ex);
     }
 
     @ExceptionHandler(OptimisticLockingFailureException.class)
@@ -68,13 +69,22 @@ public class GlobalExceptionHandler {
                                            String message,
                                            List<ApiError.FieldViolation> details,
                                            Throwable cause) {
+        return build(code, message, details, null, cause);
+    }
+
+    private ResponseEntity<ApiError> build(ErrorCode code,
+                                           String message,
+                                           List<ApiError.FieldViolation> details,
+                                           Map<String, Object> context,
+                                           Throwable cause) {
         ApiError body = new ApiError(
                 code.name(),
                 message,
                 code.httpStatus().value(),
                 MDC.get("traceId"),
                 Instant.now(),
-                details
+                details,
+                context
         );
         logAtLevel(code.logLevel(), code, message, cause);
         return ResponseEntity.status(code.httpStatus())

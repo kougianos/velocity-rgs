@@ -1129,6 +1129,67 @@ body[data-theme="blackjack"] {
   .info-btn { font-size: 12px; padding: 6px 10px; }
   .topbar-right { gap: 8px; }
 
+  /* ----- Tap targets -----
+     Everything a thumb has to hit gets 44px of height. These are deliberately grouped rather than
+     scattered through the sections below, because the rule is one rule and the game page reaches it
+     through three different games' controls.
+
+     Two techniques, and which one applies depends on whether the control's size is load-bearing:
+       - grow the box (min-height) where the extra height costs nothing;
+       - grow only the HIT AREA with a transparent ::after overlay where the visual size is doing a
+         job - the log's `clear`, the strategy tooltip icon. Inflating those to 44px would push their
+         rows apart and make small, quiet controls look like primary actions.
+     Only min-height / display are set here, so the per-component padding and font-size tweaks in the
+     sections below stay in charge of appearance. */
+  .btn { min-height: 44px; }
+  .chip { min-height: 44px; display: inline-flex; align-items: center; justify-content: center; }
+  /* flex:0 0 auto as well as a width - the chevron is a flex child of the topbar, and on the games
+     with longer titles (roulette, blackjack) it was being shrunk back down to 35px. */
+  .back-link { width: 44px; height: 44px; flex: 0 0 auto; }
+  .topnav-link { min-height: 44px; display: inline-flex; align-items: center; }
+  /* The game page's topbar and the Velocity chrome on every other page are two different navs with
+     the same job, so they get the same treatment - otherwise the RG page ends up with 44px controls
+     and 32px nav links sitting directly above them. */
+  .vx-nav a { min-height: 44px; display: inline-flex; align-items: center; }
+  .vx-brand { min-height: 44px; }
+  .info-close { width: 44px; height: 44px; }
+  /* The Power Bet switch: the whole label is the target, so the row grows rather than the 42x24 track,
+     which has to keep its proportions to still read as a switch. */
+  .toggle { min-height: 44px; }
+  /* 16px is what stops mobile Safari zooming the viewport on focus and never zooming back. */
+  input[type="number"], select { min-height: 44px; font-size: 16px; }
+
+  /* Hit-area-only growth. The ::after is transparent and unsized in flow, so neither control moves. */
+  .btn.tiny { min-height: 0; position: relative; }
+  .btn.tiny::after {
+    content: ""; position: absolute; left: 0; right: 0; top: 50%;
+    height: 44px; transform: translateY(-50%);
+  }
+  .info::after {
+    content: ""; position: absolute; top: 50%; left: 50%;
+    width: 44px; height: 44px; transform: translate(-50%, -50%);
+  }
+
+  /* The bet slider was a 6px-tall drag target - the input box WAS the track. Split them: the input
+     becomes a 44px transparent hit strip and the 6px bar moves onto ::-webkit-slider-runnable-track,
+     so it looks identical and can actually be grabbed. The thumb's negative margin re-centres it on
+     the track now that the two are no longer the same box. */
+  input[type="range"].bet-slider {
+    height: 44px; margin: 0; padding: 0;
+    background: transparent; border: 0; border-radius: 0;
+  }
+  .bet-slider::-webkit-slider-runnable-track {
+    height: 6px; border-radius: 999px;
+    background: var(--bg-elev); border: 1px solid var(--border);
+  }
+  .bet-slider::-webkit-slider-thumb { margin-top: -7px; }
+  .bet-slider::-moz-range-track {
+    height: 6px; border-radius: 999px;
+    background: var(--bg-elev); border: 1px solid var(--border);
+  }
+  .bet-slider:focus::-webkit-slider-runnable-track { border-color: var(--accent); }
+  .bet-slider:focus::-moz-range-track { border-color: var(--accent); }
+
   /* ----- Page shells ----- */
   .layout { padding: 14px 12px; gap: 14px; }
   .panel { padding: 14px; }
@@ -1168,7 +1229,11 @@ body[data-theme="blackjack"] {
   .roulette-stage { padding: 14px; gap: 16px; }
   .result-number { width: 78px; height: 78px; font-size: 38px; }
   .chip { min-width: 0; padding: 7px 11px; font-size: 12px; }
-  .rt-cell { min-height: 30px; font-size: 10px; }
+  /* The one control that cannot reach 44px: the main grid is 14 columns, so on a 375px screen each
+     number is ~22px wide no matter what height it is given. Height is raised to 38px, which is as far
+     as it goes before the table stops fitting on a screen, and the honest answer to the width is that
+     a full European layout does not fit a phone - pinch-zoom is left enabled for exactly this. */
+  .rt-cell { min-height: 38px; font-size: 10px; }
   .rt-zero { font-size: 13px; }
   .rt-col, .rt-outside-cell { font-size: 10px; }
   .roulette-controls { flex-direction: column; align-items: stretch; gap: 12px; }
@@ -1299,6 +1364,72 @@ body[data-theme="blackjack"] {
   body.history-page .history-table th:nth-child(5), body.history-page .history-table td:nth-child(5) { width: 84px; }
   body.history-page .history-table th:nth-child(7), body.history-page .history-table td:nth-child(7) { width: 62px; }
   body.history-page .history-table th:nth-child(2), body.history-page .history-table td:nth-child(2) { overflow: hidden; text-overflow: ellipsis; }
+
+  /* ----- Responsible Gaming panel (rg.html) -----
+     Same scoping rule as the lobby block above: every .rg-* base rule is declared far later in the
+     file, so these have to carry body.rg-page to out-specify them rather than rely on source order.
+     The shape of the page barely changes on a phone - what changes is that nothing is a desktop
+     control any more: one column throughout, 44px minimum on everything tappable, and the two
+     exits (cool-off, self-exclusion) full width so neither can be hit by accident. */
+  body.rg-page .rg-main { width: 100%; padding: 16px 16px 40px; gap: 12px; }
+
+  body.rg-page .rg-block { grid-template-columns: 1fr; gap: 12px; padding: 18px 16px; }
+  body.rg-page .rg-block-mark { width: 42px; height: 42px; border-radius: 12px; font-size: 20px; }
+  body.rg-page .rg-block h1 { font-size: 22px; margin: 5px 0 9px; }
+  body.rg-page .rg-block p { font-size: 13.5px; }
+  body.rg-page .rg-demo-note { font-size: 12px; padding: 9px 11px; }
+
+  body.rg-page .rg-sec { padding: 18px 16px; border-radius: 14px; }
+  body.rg-page .rg-sec-sub { font-size: 13px; margin-bottom: 15px; }
+
+  /* Label and value share one line down to the narrowest phone: the label is allowed to shrink and
+     ellipsize, the reading never is - a truncated "€2.00 / €500.00" would be worse than useless. */
+  body.rg-page .rg-bars { gap: 12px; }
+  body.rg-page .rg-bar-head { gap: 8px; }
+  body.rg-page .rg-bar-k { font-size: 12.5px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  body.rg-page .rg-bar-v { font-size: 12.5px; flex: 0 0 auto; white-space: nowrap; }
+
+  /* font-size is restated rather than inherited from the shared `input[type=number]` rule above:
+     the two selectors tie on specificity and the base `.rg-field-in input` is declared later in the
+     file, so it wins and drags this back to 14px - at which point mobile Safari zooms the viewport on
+     focus and never zooms back, leaving the page overflowing sideways. */
+  body.rg-page .rg-form { max-width: none; gap: 12px; }
+  body.rg-page .rg-field-in input { font-size: 16px; padding: 12px 13px; }
+  body.rg-page .rg-field-u { font-size: 11.5px; padding: 0 11px; }
+
+  body.rg-page .rg-break-grid { grid-template-columns: 1fr; gap: 12px; }
+  body.rg-page .rg-break { padding: 14px 15px; }
+  body.rg-page .rg-break p { font-size: 12.5px; margin-bottom: 12px; }
+  /* Stacked, not wrapped: side by side these two collapse to a stubby select next to a clipped
+     button label, and the length of the break is the one thing worth reading before starting it. */
+  body.rg-page .rg-break-row { flex-direction: column; align-items: stretch; gap: 8px; }
+  body.rg-page .rg-break-row select { width: 100%; min-height: 44px; font-size: 16px; }
+
+  body.rg-page .vx-cta {
+    justify-content: center; width: 100%; min-height: 46px;
+    padding: 13px 18px; font-size: 13.5px; letter-spacing: 0.04em;
+    box-shadow: 0 8px 22px rgba(255, 46, 126, 0.24), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  }
+  body.rg-page .vx-cta.rg-warn { box-shadow: 0 8px 22px rgba(245, 197, 24, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.35); }
+
+  body.rg-page .rg-why p { font-size: 13px; }
+
+  /* ----- RG surfaces that live on the game page (rg-client.js) ----- */
+  body.vx-game .rg-banner { gap: 10px; padding: 11px 13px; font-size: 12.5px; }
+  body.vx-game .rg-banner-i { font-size: 15px; }
+  body.vx-game .rg-modal { padding: 14px; }
+  body.vx-game .rg-modal-card { padding: 20px 16px; border-radius: 14px; }
+  body.vx-game .rg-modal-card h2 { font-size: 19px; }
+  body.vx-game .rg-modal-card p { font-size: 13.5px; }
+  body.vx-game .rg-modal-stats { gap: 8px; margin: 14px 0; }
+  body.vx-game .rg-modal-stat { flex: 1 1 0; min-width: 0; padding: 9px 10px; }
+  body.vx-game .rg-modal-stat span { font-size: 9.5px; letter-spacing: 0.08em; }
+  body.vx-game .rg-modal-stat strong { font-size: 15px; }
+  /* Stacked in DOM order rather than reversed, so the visual order and the tab order stay the same
+     one - a reality check is the last dialog that should hand a keyboard or screen-reader user a
+     different sequence from the one on screen. */
+  body.vx-game .rg-modal-actions { flex-direction: column; gap: 8px; }
+  body.vx-game .rg-modal-actions .vx-cta { width: 100%; justify-content: center; min-height: 46px; font-size: 13.5px; padding: 13px 18px; }
 }
 
 /* =========================================================================
@@ -1325,10 +1456,22 @@ body[data-theme="blackjack"] {
   font-weight: 400 600; font-style: normal; font-display: swap;
 }
 
+/* Every page that opts into the Velocity chassis MUST be listed here - the block below is where the
+   --vx-* tokens are defined, and a page missing from it inherits none of them. That failure is quiet
+   and total: `background: var(--vx-graphite)` and `border: 1px solid var(--vx-hair)` become invalid at
+   computed-value time and fall back to transparent / no border, `font-family: var(--vx-display)` drops
+   to the legacy Segoe stack, and .vx-cta loses its gradient while keeping its near-black label - a
+   black button on a black page. Adding the body class alone is not enough; add it here too. */
 body.lobby-page,
 body.vx-game,
 body.history-page,
-body.replay-page {
+body.replay-page,
+body.rg-page {
+  /* Tells the engine to render native controls (number spinners, <select> popups, scrollbars, the
+     caret) from the dark palette. Without it the cool-off dropdown opens a white list over a dark
+     page, which no amount of styling on the closed control can fix. */
+  color-scheme: dark;
+
   --vx-carbon: #0A0B12;
   --vx-graphite: #12141C;
   --vx-slate: #191D2A;
@@ -1362,7 +1505,8 @@ body.replay-page {
     var(--vx-carbon);
   min-height: 100vh;
 }
-body.lobby-page ::selection { background: rgba(255, 46, 126, 0.30); }
+body.lobby-page ::selection,
+body.rg-page ::selection { background: rgba(255, 46, 126, 0.30); }
 
 /* shared bits */
 .vx-lab {
@@ -2466,7 +2610,10 @@ body.history-page .toast.error { border-left-color: var(--danger); }
 .rg-bar.is-full .rg-bar-fill { background: var(--vx-plasma); }
 
 /* ---- limit form ---- */
+/* justify-self:start on the submit: grid stretches its items, and a "Save limits" bar as wide as the
+   whole form column reads like a section divider rather than a button. */
 .rg-form { display: grid; gap: 14px; max-width: 480px; }
+.rg-form .vx-cta { justify-self: start; }
 .rg-field { display: grid; gap: 6px; }
 .rg-field-k { font-size: 13px; color: var(--vx-dim); }
 .rg-field-in { display: flex; align-items: stretch; gap: 0; }
@@ -2475,31 +2622,76 @@ body.history-page .toast.error { border-left-color: var(--danger); }
   color: var(--vx-text); background: rgba(255, 255, 255, 0.04);
   border: 1px solid var(--vx-hair); border-right: 0; border-radius: 10px 0 0 10px;
 }
-.rg-field-in input:focus { outline: none; border-color: color-mix(in srgb, var(--vx-ignite) 55%, transparent); }
+.rg-field-in input:focus { outline: none; }
 .rg-field-u {
   display: grid; place-items: center; padding: 0 13px; font-size: 12px; color: var(--vx-faint);
-  background: rgba(255, 255, 255, 0.02); border: 1px solid var(--vx-hair); border-radius: 0 10px 10px 0;
+  /* Keeps its left border: the input opposite drops its right one, so this is the single hairline
+     that divides the two halves rather than a double edge. */
+  background: rgba(255, 255, 255, 0.02); border: 1px solid var(--vx-hair);
+  border-radius: 0 10px 10px 0; white-space: nowrap;
 }
+/* The input and its unit suffix are one control split across two boxes, so the focus ring is drawn
+   on the wrapper. Lighting only the input's border would leave the unit half sitting at rest, which
+   reads as a rendering fault rather than as focus. */
+.rg-field-in:focus-within input,
+.rg-field-in:focus-within .rg-field-u { border-color: color-mix(in srgb, var(--vx-ignite) 62%, transparent); }
 
 /* ---- breaks ---- */
 .rg-break-grid { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }
 .rg-break {
+  display: flex; flex-direction: column;
   padding: 16px 18px; border-radius: 13px; border: 1px solid var(--vx-hair);
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.03), transparent);
 }
+/* The two cards carry different amounts of copy, so their actions are pushed to a shared bottom
+   edge instead of floating wherever the paragraph above happens to end. */
+.rg-break > .rg-break-row,
+.rg-break > .vx-cta { margin-top: auto; }
+/* align-self:start because .rg-break is a column flex container: left alone, the self-exclusion
+   button stretches the full card width while the cool-off one (nested in .rg-break-row) sizes to its
+   label, and the pair reads as two different kinds of control. */
+.rg-break > .vx-cta { align-self: start; }
 .rg-break h3 {
   margin: 0 0 6px; font-family: var(--vx-mono); font-size: 12px; font-weight: 600;
   letter-spacing: 0.12em; text-transform: uppercase; color: var(--vx-text);
 }
 .rg-break p { margin: 0 0 14px; font-size: 13px; line-height: 1.55; color: var(--vx-dim); }
-.rg-break-row { display: flex; gap: 10px; flex-wrap: wrap; }
+.rg-break-row { display: flex; gap: 10px; flex-wrap: wrap; align-items: stretch; }
 .rg-break-row select {
+  /* width:auto undoes the legacy global `input[type=number], select { width: 100% }` near the top of
+     this file, which otherwise stretches the dropdown across the card and wraps the button under it.
+     min-height rather than align-items:stretch, because the row is allowed to wrap - once the select
+     and the button land on separate flex lines each sizes itself, and the select comes out a couple
+     of pixels short of a comfortable target at tablet widths. */
+  width: auto; min-width: 128px; min-height: 42px;
   padding: 10px 12px; border-radius: 10px; font-size: 13px; color: var(--vx-text);
-  background: rgba(255, 255, 255, 0.04); border: 1px solid var(--vx-hair);
+  background: rgba(255, 255, 255, 0.04); border: 1px solid var(--vx-hair); cursor: pointer;
 }
-/* The two exits are not styled alike: amber for a break that ends, red for one that does not. */
-.vx-cta.rg-warn { background: var(--vx-gold); color: #17181D; }
-.vx-cta.rg-danger { background: var(--vx-plasma); color: #fff; }
+.rg-break-row select:hover { border-color: var(--vx-hair2); }
+.rg-break-row select:focus-visible { outline: 2px solid var(--vx-ignite); outline-offset: 2px; }
+/* The lobby's CTA is a hero button and is sized for a hero. In here they sit inside cards next to
+   13px body copy, so they come down a step.
+   Scoped by container rather than as `body.rg-page .vx-cta`: that selector is already used by the
+   mobile block, which is declared EARLIER in the file, and a same-specificity rule down here would
+   quietly beat it. Container scoping keeps these below it and lets mobile win on specificity. */
+.rg-block .vx-cta,
+.rg-form .vx-cta,
+.rg-break .vx-cta {
+  font-size: 13.5px; padding: 13px 22px; letter-spacing: 0.045em;
+}
+
+/* The two exits are not styled alike: amber for a break that ends, red for one that does not.
+   Each restates the glow as well as the fill - .vx-cta's is plasma-pink, and left alone it would
+   halo the amber button in the colour of the permanent one, blurring the very distinction these
+   two variants exist to draw. */
+.vx-cta.rg-warn {
+  background: var(--vx-gold); color: #17181D;
+  box-shadow: 0 10px 28px rgba(245, 197, 24, 0.24), inset 0 1px 0 rgba(255, 255, 255, 0.38);
+}
+.vx-cta.rg-danger {
+  background: var(--vx-plasma); color: #fff;
+  box-shadow: 0 10px 28px rgba(255, 46, 126, 0.26), inset 0 1px 0 rgba(255, 255, 255, 0.26);
+}
 
 .rg-why p { margin: 0 0 12px; font-size: 13.5px; line-height: 1.65; color: var(--vx-dim); max-width: 74ch; }
 .rg-why code {
@@ -2546,7 +2738,11 @@ body.history-page .toast.error { border-left-color: var(--danger); }
 .rg-modal-stat strong { display: block; font-family: var(--vx-mono); font-size: 17px; margin-top: 4px; color: var(--vx-text); }
 .rg-modal-actions { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
 
-@media (max-width: 560px) {
-  .rg-block { grid-template-columns: 1fr; }
-  .rg-block-mark { width: 44px; height: 44px; font-size: 20px; }
+/* rg.js reports success with the kind "ok", not the "success" the legacy toast rule expects, so both
+   spellings are bound here rather than renaming one and leaving the other silently unstyled. */
+body.rg-page .toast {
+  background: var(--vx-graphite); border: 1px solid var(--vx-hair);
+  border-left: 4px solid var(--vx-plasma); color: var(--vx-text);
 }
+body.rg-page .toast.ok, body.rg-page .toast.success { border-left-color: var(--vx-emerald); }
+body.rg-page .toast.error { border-left-color: var(--danger); }

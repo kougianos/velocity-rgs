@@ -1,4 +1,4 @@
-# Velocity RGS
+# Velocity RGS 
 
 An audit-grade iGaming platform: a deterministic Remote Gaming Server (RGS) built with
 Java 21 + Spring Boot 3.x + Postgres + Redis. Every outcome, state transition, and balance

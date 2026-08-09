@@ -183,6 +183,36 @@ debit.
 
 ---
 
+## Progressive Jackpots
+
+Four pooled tiers - Mini, Minor, Major, Mega - shared across every slot rather than run per game. A
+per-game jackpot on a portfolio this size would be four pools each fed by a sixth of the traffic, which
+is four prizes that never reach a number worth winning.
+
+`jackpot_pool` is keyed on **(tier, currency)**, and the currency half is load-bearing: a pool is an
+amount of money, so the EUR Mega and the USD Mega are two different prizes rather than one converted at
+read time. Converting on read would mean the figure on the lobby moved when an exchange rate did, which
+is not a thing a jackpot may do. Each row carries its `seed_amount` - the floor it returns to when won -
+alongside the live `amount`, so the table alone says what the prize is worth and what it can never drop
+below. A `CHECK (amount >= seed_amount)` makes the floor the database's business rather than a rule the
+application is trusted to remember.
+
+**Postgres is the pool of record, and Redis will never be.** The ticker gets a Redis read cache later,
+in front of a value that is already correct - not as the place the value lives. The reason is the whole
+design in one line: a pool is money owed to a player who has not won it yet, and a cache is a thing that
+is allowed to evict.
+
+`GET /api/v1/jackpots` is anonymous, like the catalog and for the same reason - the lobby draws the
+strip before anyone signs in, the figures are advertised publicly by design, and the response carries no
+player or session id. Amounts leave at the currency's own scale rather than the column's, so a
+`NUMERIC(19,4)` pool does not reach the browser with four decimal places.
+
+The strip sits above the game shelf and every figure on it is a row in Postgres. It shows flat values
+today; the count-up interpolation, the flash on a win and the "last won by" line arrive with the ticker
+once contributions are making the pools move.
+
+---
+
 ## Responsible Gaming
 
 Session duration, loss and wager limits, a reality check, a cool-off and self-exclusion - stored per
@@ -308,6 +338,7 @@ velocity-rgs/
 
 ```
 GET  /api/v1/games                                   # unified catalog (slot + roulette + blackjack)
+GET  /api/v1/jackpots?currency=EUR                   # anonymous: progressive pool values
 
 POST /api/v1/slot/{init,spin}
 POST /api/v1/slot/feature/{start,buy,pick}

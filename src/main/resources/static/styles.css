@@ -2194,6 +2194,58 @@ body.history-page .toast.error { border-left-color: var(--danger); }
  * ======================================================================= */
 
 /* ---- lobby: platform band ---- */
+/* ---- progressive jackpot strip (§2) ----
+   Four tiles reading as one ladder: the tier hue and the figure both climb, so Mini and Mega are
+   distinguishable at a glance rather than only by reading the numbers. */
+.vx-jp {
+  /* Leads the page, so it needs air on both sides rather than only above: the hero that follows has no
+     top margin of its own and the two rendered flush against each other, reading as one slab. */
+  margin: clamp(16px, 2.4vw, 26px) 0 clamp(18px, 2.6vw, 30px);
+  padding: clamp(16px, 2.2vw, 22px);
+  border: 1px solid var(--vx-hair); border-radius: 16px;
+  background:
+    radial-gradient(120% 180% at 50% 0%, rgba(245, 197, 24, 0.07), transparent 64%),
+    var(--vx-graphite);
+}
+.vx-jp-head {
+  display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; margin-bottom: 14px;
+}
+.vx-jp-note { font-size: 12px; color: var(--vx-faint); }
+.vx-jp-grid {
+  list-style: none; margin: 0; padding: 0;
+  display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px;
+}
+.vx-jp-tile {
+  --jp: var(--vx-dim);
+  display: flex; flex-direction: column; gap: 4px;
+  padding: 14px 16px; border-radius: 12px;
+  border: 1px solid color-mix(in srgb, var(--jp) 26%, transparent);
+  background: color-mix(in srgb, var(--jp) 7%, rgba(255, 255, 255, 0.02));
+}
+.vx-jp-tile[data-tier="MINI"]  { --jp: var(--vx-frost); }
+.vx-jp-tile[data-tier="MINOR"] { --jp: var(--vx-emerald); }
+.vx-jp-tile[data-tier="MAJOR"] { --jp: var(--vx-ignite); }
+.vx-jp-tile[data-tier="MEGA"]  { --jp: var(--vx-gold); }
+
+.vx-jp-tier {
+  font-size: 10.5px; letter-spacing: 0.14em; text-transform: uppercase;
+  color: var(--jp); font-weight: 600;
+}
+.vx-jp-amt {
+  font-size: clamp(19px, 2.4vw, 25px); font-weight: 700; color: var(--vx-text); line-height: 1.15;
+}
+.vx-jp-grown { font-size: 11.5px; color: color-mix(in srgb, var(--jp) 78%, var(--vx-text)); }
+/* A pool still at its seed states the seed instead, which is the honest version of "nothing yet". */
+.vx-jp-grown.is-idle { color: var(--vx-faint); }
+
+@media (max-width: 860px) {
+  .vx-jp-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 420px) {
+  .vx-jp { padding: 14px; }
+  .vx-jp-tile { padding: 12px 13px; }
+}
+
 /* Why the game page ejected the player (?rg=self-excluded). Sits above the hero, and is styled as a
    notice rather than a band - it is the answer to a question the player is already asking, not another
    thing the platform would like to tell them about. */

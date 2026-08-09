@@ -186,6 +186,37 @@ class SlotGameControllerIntegrationTest {
                 .anyMatch(t -> t.getTransactionId().endsWith(":bonus-buy"));
     }
 
+    /**
+     * Re-opening the game after the feature triggers, before the board exists.
+     *
+     * <p>In {@code PICK_COLLECT_AWAITING} there is no board yet - it is generated at
+     * {@code /feature/start} - so the session's active feature payload is the trigger marker rather
+     * than a board. {@code init} used to hand that marker to the board deserializer, which refused it
+     * and turned a reload into a 500: a player who organically triggered the feature and then pressed
+     * refresh could not get back into their own session, and the feature they had just won was
+     * unreachable.
+     *
+     * <p>The existing end-to-end test below never caught it because it goes straight from the trigger
+     * to {@code /feature/start} - it never reads the session while the board is still pending.
+     */
+    @Test
+    void initSucceedsWhilePickCollectIsAwaitingItsBoard() throws Exception {
+        String sessionId = initSession().get("sessionId").asText();
+        PickCollectTestSupport.forcePickCollectAwaiting(sessionStore, sessionId);
+
+        MvcResult res = postRaw("/api/v1/slot/init", null,
+                mapper.createObjectNode().put("gameId", GAME_ID).put("currency", CURRENCY).toString());
+
+        assertThat(res.getResponse().getStatus()).isEqualTo(200);
+        JsonNode reopened = mapper.readTree(res.getResponse().getContentAsString());
+        assertThat(reopened.get("currentState").asText()).isEqualTo("PICK_COLLECT_AWAITING");
+        // No board to show yet. The client is told what to do about it instead, which is the same shape
+        // the free-spins awaiting state has always had.
+        JsonNode view = reopened.path("activeFeatureView");
+        assertThat(view.isMissingNode() || view.isNull()).isTrue();
+        assertThat(reopened.get("availableActions").toString()).contains("START_PICK_COLLECT");
+    }
+
     @Test
     void pickCollectEndToEnd_triggerThenStartThenAllPicksCreditFeatureWin() throws Exception {
         JsonNode init = initSession();

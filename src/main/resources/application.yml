@@ -154,6 +154,10 @@ rgs:
       - /swagger-ui/**
       - /api/v1/dev/**
       - /api/v1/games
+      # Progressive jackpot pools (§2). Anonymous for the same reason as the catalog above, and equally
+      # not a demo concession: the lobby draws the strip before anyone signs in, the figures are
+      # advertised publicly by design, and the response carries no player or session id.
+      - /api/v1/jackpots
       # Public round-replay links (§3.1). Anonymous by design and NOT a demo-mode concession: the
       # endpoint takes a signed token that names the one round it may read, and answers with a payload
       # carrying no player or session id. Keep this entry when trimming the list for production.

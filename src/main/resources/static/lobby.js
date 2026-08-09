@@ -33,21 +33,43 @@ function hueFor(theme) {
 
 const isSlot = (g) => g.gameType === "SLOT" || !g.gameType;
 
+const CURRENCY = "EUR";
+
+/**
+ * The progressive pools (§2). Anonymous endpoint, so this needs no token and runs before any sign-in.
+ *
+ * Failure returns an empty list rather than throwing: the jackpot strip is an ornament on the lobby,
+ * and a catalog that loaded fine should not be replaced by an error page because a decorative strip
+ * did not. Empty simply means no strip.
+ */
+async function fetchJackpots() {
+  try {
+    const res = await fetch(`/api/v1/jackpots?currency=${encodeURIComponent(CURRENCY)}`);
+    if (!res.ok) return [];
+    const pools = await res.json();
+    return Array.isArray(pools) ? pools : [];
+  } catch {
+    return [];
+  }
+}
+
 async function loadGames() {
   const root = document.getElementById("lobbyRoot");
   try {
-    const games = await fetchCatalog();
+    // Fetched together rather than in sequence: neither depends on the other, and the strip appearing a
+    // round-trip after the shelf would be a visible reflow on every load.
+    const [games, jackpots] = await Promise.all([fetchCatalog(), fetchJackpots()]);
     if (!Array.isArray(games) || games.length === 0) {
       renderError("No games are on the shelf yet", "The server returned an empty catalog. Check the game registry and reload.");
       return;
     }
-    render(games);
+    render(games, jackpots);
   } catch (e) {
     renderError("Couldn’t load the games", "The catalog didn’t respond. Check your connection and try again.");
   }
 }
 
-function render(games) {
+function render(games, jackpots = []) {
   const root = document.getElementById("lobbyRoot");
   const slots = games.filter(isSlot);
   const roulette = games.filter((g) => g.gameType === "ROULETTE");
@@ -60,6 +82,16 @@ function render(games) {
   root.innerHTML = "";
   const severed = renderSeveredNotice();
   if (severed) root.appendChild(severed);
+  // The jackpot strip leads, above the hero. The hero alone is close to 600px tall, so anything after
+  // it starts below the fold on a laptop - which for a jackpot is the same as not shipping it. The
+  // pools are the one number on this page that is live, shared and climbing, and a player has to see
+  // them without being asked to scroll for them.
+  //
+  // Except to the one player who has just closed their account. The strip advertises the biggest prize
+  // on the platform, and leading with it directly under a self-exclusion notice would be the page
+  // arguing with a decision the player made thirty seconds ago.
+  const strip = arrivedSelfExcluded() ? null : renderJackpotStrip(jackpots);
+  if (strip) root.appendChild(strip);
   root.appendChild(renderHero(featured));
   root.appendChild(renderProofBand());
   root.appendChild(renderRgBand());
@@ -67,6 +99,60 @@ function render(games) {
   if (tables.length) root.appendChild(renderRail("Table games", tables, "var(--vx-emerald)"));
 
   startStreaks(document.getElementById("vxStreaks"));
+}
+
+/* ------------------------------------------------------------------ jackpots */
+
+const CURRENCY_SYMBOL = { EUR: "€", USD: "$", GBP: "£" };
+
+/** Money at two decimals with a grouped integer part, which is how a jackpot figure is read. */
+function fmtMoney(value, currency) {
+  const symbol = CURRENCY_SYMBOL[currency] || "";
+  return symbol + Number(value ?? 0).toLocaleString(undefined,
+    { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+/**
+ * The progressive jackpot strip (§2).
+ *
+ * Every figure is the pool row in Postgres, read through /api/v1/jackpots - nothing here is a decorative
+ * number, which is the only reason it is worth putting on the page at all.
+ *
+ * Flat values for now. The count-up interpolation, the flash on a win and the "last won by" line arrive
+ * with the ticker task, once there are contributions making the pools actually move.
+ *
+ * Returns null when the server runs no pools in this currency, so a deployment without jackpots simply
+ * has no strip rather than an empty frame captioned "Progressive Jackpots".
+ */
+function renderJackpotStrip(pools) {
+  if (!Array.isArray(pools) || pools.length === 0) return null;
+
+  const sec = document.createElement("section");
+  sec.className = "vx-jp";
+  sec.setAttribute("aria-label", "Progressive jackpots");
+
+  const tiles = pools.map((p) => {
+    // Shown only once a pool has actually been played for. On a fresh install every tier sits exactly at
+    // its seed, and "+0.00 since seed" on all four reads as a broken strip rather than an honest one.
+    const grown = Number(p.grownBy ?? 0);
+    const since = grown > 0
+      ? `<span class="vx-jp-grown">+${fmtMoney(grown, p.currency)} since seed</span>`
+      : `<span class="vx-jp-grown is-idle">seeds at ${fmtMoney(p.seed, p.currency)}</span>`;
+    return `
+      <li class="vx-jp-tile" data-tier="${esc(p.tier)}">
+        <span class="vx-jp-tier">${esc(p.label)}</span>
+        <span class="vx-jp-amt vx-num">${fmtMoney(p.amount, p.currency)}</span>
+        ${since}
+      </li>`;
+  }).join("");
+
+  sec.innerHTML = `
+    <div class="vx-jp-head">
+      <span class="vx-lab">Progressive · shared across every slot</span>
+      <span class="vx-jp-note">Pooled in Postgres, contributed to on every spin</span>
+    </div>
+    <ul class="vx-jp-grid">${tiles}</ul>`;
+  return sec;
 }
 
 /**
@@ -77,8 +163,24 @@ function render(games) {
  *
  * Returns null in the ordinary case, which is nearly always - this is a band the lobby does not have.
  */
+/**
+ * Whether this page load is the one the game page just threw the player to (§4.2).
+ *
+ * Read through one function because two things depend on it - the notice at the top, and whether the
+ * jackpot strip is drawn at all. Two independent reads of the same query parameter are two things that
+ * can drift apart.
+ *
+ * Scope worth being honest about: this knows only about the arrival that carries the parameter. The
+ * lobby is anonymous by design, so a self-excluded player who comes back to it tomorrow is not
+ * recognised and does see the strip. Suppressing it for them would mean identifying every visitor
+ * before the page could render, which is a much larger change than this one.
+ */
+function arrivedSelfExcluded() {
+  return new URLSearchParams(location.search).get("rg") === "self-excluded";
+}
+
 function renderSeveredNotice() {
-  if (new URLSearchParams(location.search).get("rg") !== "self-excluded") return null;
+  if (!arrivedSelfExcluded()) return null;
 
   const sec = document.createElement("section");
   sec.className = "vx-severed";

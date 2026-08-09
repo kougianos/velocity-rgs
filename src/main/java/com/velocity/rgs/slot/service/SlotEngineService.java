@@ -1247,9 +1247,22 @@ public class SlotEngineService {
         pickCollectRepository.save(snapshot);
     }
 
+    /**
+     * The board, when there is one to show.
+     *
+     * <p>{@code PICK_COLLECT_LOOP} only, and the exclusion of {@code PICK_COLLECT_AWAITING} is the
+     * whole point rather than an oversight. The board does not exist while the feature is awaiting: it
+     * is drawn at {@code /feature/start}, and until then {@code active_feature_payload} holds the
+     * trigger marker ({@code boardSize}, {@code trigger}) or a bonus buy's initial payload. Handing
+     * either of those to the board reader below made every read of an awaiting session a 500 - so a
+     * player who triggered the feature and then reloaded could not get back into the session, and the
+     * feature they had just won was unreachable.
+     *
+     * <p>An awaiting feature is announced by {@code currentState} and {@code availableActions}, exactly
+     * as free-spins awaiting always has been. There is nothing to render, so there is no view.
+     */
     private PickCollectFeatureView pickCollectViewIfActive(GameSession session) {
-        if (session.getCurrentState() != GameState.PICK_COLLECT_LOOP
-                && session.getCurrentState() != GameState.PICK_COLLECT_AWAITING) {
+        if (session.getCurrentState() != GameState.PICK_COLLECT_LOOP) {
             return null;
         }
         SlotMathDefinition math = mathRegistry.require(session.getGameId(), session.getMathVersion());
@@ -1285,10 +1298,17 @@ public class SlotEngineService {
                 state.markCompleted();
             }
             return state;
-        } catch (RuntimeException ex) {
-            throw new RgsException(ErrorCode.INTERNAL_ERROR,
-                    "Cannot deserialize active feature payload: " + ex.getMessage(), ex);
         } catch (Exception ex) {
+            // The payload is logged, not just the exception. This failure only happens when the stored
+            // JSON is not the board this reader expects, so the payload is the entire diagnosis - and
+            // without it the error says only that something did not parse, which is what made the first
+            // occurrence of this bug take a reproduction to explain. It carries board tiles and
+            // counters, no player data.
+            log.error("Cannot deserialize active feature payload for session={} state={} payload={}",
+                    session.getSessionId(), session.getCurrentState(), payloadJson, ex);
+            // The message stays generic on the way out. Jackson names the offending field and the
+            // target class, which is exactly the detail wanted in a log and not something to hand to a
+            // player - the log line above already has it, keyed by session.
             throw new RgsException(ErrorCode.INTERNAL_ERROR,
                     "Cannot deserialize active feature payload", ex);
         }

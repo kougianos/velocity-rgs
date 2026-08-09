@@ -35,6 +35,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final SecurityProperties properties;
     private final ObjectMapper objectMapper;
+    private final TokenDenylist tokenDenylist;
 
     private volatile SecretKey cachedKey;
 
@@ -49,7 +50,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         String header = request.getHeader(HttpHeaders.AUTHORIZATION);
         if (header == null || !header.startsWith(BEARER)) {
-            writeAuthError(response, "Missing bearer token");
+            writeError(response, ErrorCode.AUTH_FAILED, "Missing bearer token");
             return;
         }
 
@@ -61,6 +62,18 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     .build()
                     .parseSignedClaims(token)
                     .getPayload();
+
+                // Signature, issuer and expiry all passed, and the token is still refused. That is the
+                // entire point of a denylist: self-exclusion has to close an account now, not whenever
+                // the token in the player's open tab happens to run out.
+                String denial = tokenDenylist.denialReason(claims.getId());
+                if (denial != null) {
+                    log.info("Severed token refused playerId={} jti={} reason={}",
+                            claims.getSubject(), claims.getId(), denial);
+                    writeError(response, ErrorCode.RG_SELF_EXCLUDED,
+                            "This account is self-excluded and cannot be used to play");
+                    return;
+                }
 
                 String playerId = claims.getSubject();
                 String sessionId = claims.get("sid", String.class);
@@ -83,7 +96,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             chain.doFilter(request, response);
         } catch (JwtException | IllegalArgumentException ex) {
             log.info("JWT authentication failed: {}", ex.getMessage());
-            writeAuthError(response, "Invalid or expired token");
+            writeError(response, ErrorCode.AUTH_FAILED, "Invalid or expired token");
         }
     }
 
@@ -105,21 +118,29 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         return properties.getPublicPaths().stream().anyMatch(p -> MATCHER.match(p, path));
     }
 
-    private void writeAuthError(HttpServletResponse response, String message) throws IOException {
+    /**
+     * Refusals from the filter carry the same {@link ApiError} shape as refusals from a controller, so a
+     * client parses one thing. The code varies: a token that cannot be trusted is
+     * {@code AUTH_FAILED}, and a token that is perfectly valid but belongs to a closed account is
+     * {@code RG_SELF_EXCLUDED} - which the game client already knows how to render, and which a
+     * blanket 401 would have made indistinguishable from an expired session.
+     */
+    private void writeError(HttpServletResponse response, ErrorCode code, String message)
+            throws IOException {
         String traceId = MDC.get("traceId");
         if (traceId == null) {
             traceId = UUID.randomUUID().toString();
         }
         ApiError body = new ApiError(
-                ErrorCode.AUTH_FAILED.name(),
+                code.name(),
                 message,
-                ErrorCode.AUTH_FAILED.httpStatus().value(),
+                code.httpStatus().value(),
                 traceId,
                 Instant.now(),
                 null,
                 null
         );
-        response.setStatus(ErrorCode.AUTH_FAILED.httpStatus().value());
+        response.setStatus(code.httpStatus().value());
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
         response.getWriter().write(objectMapper.writeValueAsString(body));
     }

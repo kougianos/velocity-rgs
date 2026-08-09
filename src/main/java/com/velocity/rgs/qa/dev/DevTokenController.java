@@ -1,6 +1,7 @@
 package com.velocity.rgs.qa.dev;
 
 import com.velocity.rgs.config.SecurityProperties;
+import com.velocity.rgs.config.TokenDenylist;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 import jakarta.validation.Valid;
@@ -24,6 +25,7 @@ import java.time.temporal.ChronoUnit;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 /**
  * Demo-only JWT minting helper (M7 Task 7.2, Appendix A.20). Registered only when
@@ -38,6 +40,7 @@ import java.util.Map;
 public class DevTokenController {
 
     private final SecurityProperties securityProperties;
+    private final TokenDenylist tokenDenylist;
 
     @PostMapping("/token")
     public ResponseEntity<TokenResponse> mint(@Valid @RequestBody TokenRequest request) {
@@ -46,10 +49,15 @@ public class DevTokenController {
         Instant expiry = now.plus(ttlMinutes, ChronoUnit.MINUTES);
         List<String> roles = request.roles() == null ? List.of("PLAYER") : List.copyOf(request.roles());
 
+        // A token with no id cannot be revoked, only outlived. The jti is what self-exclusion names when
+        // it severs a session that is already open (§4.2).
+        String jti = UUID.randomUUID().toString();
+
         SecretKey key = Keys.hmacShaKeyFor(securityProperties.getJwtSecret().getBytes(StandardCharsets.UTF_8));
         String token = Jwts.builder()
                 .issuer(securityProperties.getJwtIssuer())
                 .subject(request.playerId())
+                .id(jti)
                 .claims(Map.of(
                         "sid", request.sessionId(),
                         "cur", request.currency(),
@@ -59,8 +67,10 @@ public class DevTokenController {
                 .signWith(key)
                 .compact();
 
-        log.info("Issued dev JWT playerId={} sessionId={} ttlMinutes={} roles={}",
-                request.playerId(), request.sessionId(), ttlMinutes, roles);
+        tokenDenylist.register(request.playerId(), jti, expiry);
+
+        log.info("Issued dev JWT playerId={} sessionId={} jti={} ttlMinutes={} roles={}",
+                request.playerId(), request.sessionId(), jti, ttlMinutes, roles);
         return ResponseEntity.ok(TokenResponse.builder()
                 .token(token)
                 .expiresAt(expiry)

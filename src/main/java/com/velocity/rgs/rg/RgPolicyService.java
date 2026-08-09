@@ -3,6 +3,7 @@ package com.velocity.rgs.rg;
 import com.velocity.rgs.common.error.ErrorCode;
 import com.velocity.rgs.common.error.RgsException;
 import com.velocity.rgs.common.money.Money;
+import com.velocity.rgs.config.TokenDenylist;
 import com.velocity.rgs.rg.domain.RgLimit;
 import com.velocity.rgs.rg.domain.RgLimitType;
 import com.velocity.rgs.rg.domain.RgStatus;
@@ -46,6 +47,7 @@ public class RgPolicyService {
     private final RgPolicyProperties properties;
     private final RgLimitRepository limitRepository;
     private final WalletTransactionRepository transactionRepository;
+    private final TokenDenylist tokenDenylist;
 
     // ---------------------------------------------------------------- enforcement
 
@@ -261,7 +263,14 @@ public class RgPolicyService {
         return status(playerId, currency);
     }
 
-    /** Self-exclusion. One way, by design - there is no un-exclude on this service. */
+    /**
+     * Self-exclusion. One way, by design - there is no un-exclude on this service.
+     *
+     * <p>Writing the row closes the account; severing the player's live tokens is what closes the
+     * <em>session they are in</em>. Without the second half, a player who self-excludes from the panel
+     * carries on spinning in the tab next to it until their token expires, because that token is signed,
+     * unexpired and entirely valid. The account would be shut and the play would continue.
+     */
     @Transactional
     public RgStatus selfExclude(String playerId, String currency) {
         Instant now = Instant.now();
@@ -272,6 +281,10 @@ public class RgPolicyService {
             limitRepository.save(limit);
             log.info("RG self-exclusion recorded player={}", playerId);
         }
+        // Outside the branch above on purpose. Minting is anonymous in demo mode, so an already-excluded
+        // player can hold tokens issued after the first call, and those need severing too. Re-severing
+        // one already denied costs a Redis write and changes nothing.
+        tokenDenylist.severAllForPlayer(playerId, TokenDenylist.SELF_EXCLUDED);
         return status(playerId, currency);
     }
 
@@ -297,6 +310,9 @@ public class RgPolicyService {
     @Transactional
     public void resetForDemo(String playerId) {
         limitRepository.deleteById(playerId);
+        // The severed tokens have to come back with the row, or the reset restores an account whose
+        // every open tab is still dead - which looks exactly like the reset not working.
+        tokenDenylist.clear(playerId);
         log.info("RG state reset for demo player={}", playerId);
     }
 

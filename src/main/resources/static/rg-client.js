@@ -3,7 +3,7 @@
 /* =========================================================================
  * Velocity RGS - Responsible Gaming on the game page (§4.2).
  *
- * Two jobs, both about making a server-side rule visible where the player is:
+ * Three jobs, all about making a server-side rule visible where the player is:
  *
  *   1. Render a refused stake. RG_LIMIT_EXCEEDED and RG_SELF_EXCLUDED are two
  *      different things and get two different surfaces - a limit names itself
@@ -15,15 +15,23 @@
  *   2. Raise the reality check on the configured interval, stating time played
  *      and net position.
  *
+ *   3. Leave, when the account is closed from somewhere else. Self-exclusion
+ *      severs the tab's token server-side, so every call it makes from that
+ *      moment is refused - including the reality-check poll, which is how a tab
+ *      nobody is touching finds out. Staying on a game page that can no longer
+ *      do anything would be a worse lie than an abrupt exit.
+ *
  * Nothing here decides anything. The server has already refused the stake, and
  * has already withdrawn SPIN from availableActions - this file only explains
  * what happened.
  * ======================================================================= */
 
 const RG_POLL_MS = 20000;
+const RG_DROP_SECONDS = 6;
 
 let rgPollTimer = null;
 let rgModalOpen = false;
+let rgDropping = false;
 
 /* ------------------------------------------------------------------ banner */
 
@@ -73,6 +81,9 @@ function renderRgRefusal(payload) {
           <a href="/rg.html">Open Responsible Gaming</a>.
         </div>
       </div>`;
+    // The banner is not enough on its own here. A limit pauses play and the page stays useful; a closed
+    // account makes every control on it inert, so the page itself has to go.
+    rgDropToLobby();
     return true;
   }
 
@@ -113,9 +124,59 @@ function clearRgBanner() {
 async function rgStatus() {
   try {
     return await api("/api/v1/rg/status", { track: false });
-  } catch {
+  } catch (e) {
+    // The one error this poll must not swallow. A severed token is how a tab that is merely open, with
+    // nobody clicking anything, learns the account was closed from another tab - and swallowing it
+    // would leave that tab sitting on a live-looking game for the rest of the token's hour.
+    const code = e && e.payload && e.payload.code;
+    if (code === "RG_SELF_EXCLUDED") rgDropToLobby();
     return null;
   }
+}
+
+/* ------------------------------------------------------------------ severed session */
+
+/**
+ * Ends the page. Called when the server refuses this tab's token outright, which happens the instant
+ * self-exclusion is confirmed anywhere else.
+ *
+ * The countdown is deliberate: an unexplained redirect reads as a crash, and the point being
+ * demonstrated is that the server reached into a session it was not asked about. Saying so, and then
+ * leaving anyway, is what makes it legible. The button is there from the first frame for anyone who
+ * would rather not wait.
+ */
+function rgDropToLobby() {
+  if (rgDropping) return;
+  rgDropping = true;
+  clearInterval(rgPollTimer);
+  rgPollTimer = null;
+
+  const lobby = "/index.html?rg=self-excluded";
+  const wrap = document.createElement("div");
+  wrap.className = "rg-modal";
+  wrap.innerHTML = `
+    <div class="rg-modal-card" role="alertdialog" aria-modal="true" aria-labelledby="rgSevTitle">
+      <div style="font-size:30px" aria-hidden="true">⛔</div>
+      <h2 id="rgSevTitle">This account is self-excluded</h2>
+      <p>Play has been closed on this account, and this session has been ended from the server. Your
+         sign-in is no longer valid, so nothing on this page can be played.</p>
+      <div class="rg-modal-actions">
+        <a class="vx-cta" href="${lobby}">Return to the lobby</a>
+      </div>
+      <p class="rg-sev-count">Returning to the lobby in <strong id="rgSevSecs">${RG_DROP_SECONDS}</strong>s</p>
+    </div>`;
+  document.body.appendChild(wrap);
+
+  let left = RG_DROP_SECONDS;
+  const tick = setInterval(() => {
+    left -= 1;
+    const el = document.getElementById("rgSevSecs");
+    if (el) el.textContent = String(Math.max(0, left));
+    if (left <= 0) {
+      clearInterval(tick);
+      location.href = lobby;
+    }
+  }, 1000);
 }
 
 /**

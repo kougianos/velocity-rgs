@@ -2194,6 +2194,33 @@ body.history-page .toast.error { border-left-color: var(--danger); }
  * ======================================================================= */
 
 /* ---- lobby: platform band ---- */
+/* Why the game page ejected the player (?rg=self-excluded). Sits above the hero, and is styled as a
+   notice rather than a band - it is the answer to a question the player is already asking, not another
+   thing the platform would like to tell them about. */
+.vx-severed {
+  display: flex; align-items: flex-start; gap: 16px;
+  margin: clamp(14px, 2vw, 22px) 0 0; padding: clamp(18px, 2.6vw, 26px);
+  border: 1px solid color-mix(in srgb, var(--danger) 40%, transparent); border-radius: 16px;
+  background:
+    radial-gradient(120% 160% at 0% 0%, color-mix(in srgb, var(--danger) 12%, transparent), transparent 62%),
+    var(--vx-graphite);
+}
+.vx-severed-i { font-size: 26px; line-height: 1.15; }
+.vx-severed h2 {
+  font-family: var(--vx-display); font-weight: 800; text-transform: uppercase;
+  font-size: clamp(17px, 2.2vw, 21px); margin: 0 0 8px; color: var(--vx-text);
+}
+.vx-severed p { margin: 0 0 8px; font-size: 14px; line-height: 1.62; color: var(--vx-dim); max-width: 74ch; }
+.vx-severed p:last-child { margin-bottom: 0; }
+.vx-severed .vx-severed-sub { font-size: 13px; color: var(--vx-faint); }
+.vx-severed a { color: var(--vx-text); text-decoration: underline; text-underline-offset: 3px; }
+
+@media (max-width: 640px) {
+  .vx-severed { gap: 12px; padding: 16px; }
+  .vx-severed-i { font-size: 21px; }
+  .vx-severed p { font-size: 13.5px; }
+}
+
 .vx-proof {
   display: grid; grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.05fr);
   gap: clamp(24px, 4vw, 54px); align-items: center;
@@ -2737,6 +2764,14 @@ body.history-page .toast.error { border-left-color: var(--danger); }
 .rg-modal-stat span { display: block; font-size: 10.5px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--vx-faint); }
 .rg-modal-stat strong { display: block; font-family: var(--vx-mono); font-size: 17px; margin-top: 4px; color: var(--vx-text); }
 .rg-modal-actions { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+
+/* The severed-session countdown, under the actions rather than in the copy: it is a status line, and
+   putting it above the button would make leaving look like the only option when it is merely the
+   default. */
+.rg-sev-count {
+  margin: 14px 0 0; font-size: 12px; letter-spacing: 0.04em; color: var(--vx-faint);
+}
+.rg-sev-count strong { font-family: var(--vx-mono); color: var(--vx-dim); }
 
 /* rg.js reports success with the kind "ok", not the "success" the legacy toast rule expects, so both
    spellings are bound here rather than renaming one and leaving the other silently unstyled. */

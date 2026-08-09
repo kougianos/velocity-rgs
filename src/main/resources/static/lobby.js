@@ -58,6 +58,8 @@ function render(games) {
   const featured = slots.slice().sort((a, b) => (b.maxWinMultiplier || 0) - (a.maxWinMultiplier || 0))[0] || games[0];
 
   root.innerHTML = "";
+  const severed = renderSeveredNotice();
+  if (severed) root.appendChild(severed);
   root.appendChild(renderHero(featured));
   root.appendChild(renderProofBand());
   root.appendChild(renderRgBand());
@@ -65,6 +67,33 @@ function render(games) {
   if (tables.length) root.appendChild(renderRail("Table games", tables, "var(--vx-emerald)"));
 
   startStreaks(document.getElementById("vxStreaks"));
+}
+
+/**
+ * Why the game page threw the player out (§4.2).
+ *
+ * A tab that vanishes and reappears as the lobby is indistinguishable from a crash unless the lobby
+ * says what happened. The redirect carries ?rg=self-excluded and this explains it, once, at the top.
+ *
+ * Returns null in the ordinary case, which is nearly always - this is a band the lobby does not have.
+ */
+function renderSeveredNotice() {
+  if (new URLSearchParams(location.search).get("rg") !== "self-excluded") return null;
+
+  const sec = document.createElement("section");
+  sec.className = "vx-severed";
+  sec.setAttribute("role", "alert");
+  sec.innerHTML = `
+    <span class="vx-severed-i" aria-hidden="true">⛔</span>
+    <div>
+      <h2>Your session was ended</h2>
+      <p>This account is self-excluded, so the server closed the session you had open. It did not wait
+         for your sign-in to expire: the token was revoked the moment self-exclusion was confirmed,
+         which is why the game page stopped working in a tab you were not touching.</p>
+      <p class="vx-severed-sub">Playing again means starting a new demo account, or restoring this one
+         from the <a href="/rg.html">Responsible Gaming</a> panel.</p>
+    </div>`;
+  return sec;
 }
 
 /**

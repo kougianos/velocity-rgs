@@ -229,6 +229,35 @@ through any test that plays a few dozen rounds and turn unrelated tests flaky.
 [`RgPolicyIntegrationTest`](src/test/java/com/velocity/rgs/rg/RgPolicyIntegrationTest.java) turns it on
 for itself.
 
+### Closing an account closes the session it is in
+
+Writing the row shuts the account; it does nothing about the tab already open next to the panel. That
+tab holds a JWT that is correctly signed, issued by the right issuer and good for another hour, so
+nothing about verification will turn it away - the account would be closed and the play would continue
+until the token ran out on its own.
+
+So every token is minted with a `jti`, indexed per player in Redis, and
+[`TokenDenylist`](src/main/java/com/velocity/rgs/config/TokenDenylist.java) denies the player's live ids
+the moment self-exclusion is confirmed. `JwtAuthenticationFilter` checks the denylist after the
+signature passes, and refuses with `RG_SELF_EXCLUDED` rather than a blanket 401 - a client that cannot
+tell a severed session from an expired one does the worst possible thing with it, which is quietly mint
+a new token and carry on. Redis holds this and nothing else does: every entry is dead the moment the
+token it names would have expired anyway, so each carries a TTL that does exactly that rather than
+becoming a table someone has to prune.
+
+Two consequences worth stating plainly, because both look like holes and neither is:
+
+- **The denylist fails open if Redis is down.** It is not what stops a self-excluded player betting.
+  `validateStake` reads `rg_limit` inside the same transaction that moves the money, and refuses there.
+  Losing the denylist costs promptness, never the block.
+- **Minting is anonymous in demo mode, so a severed player can get a fresh token.** It passes the
+  filter, because there is nothing to deny it by, and is then refused at the stake by the database
+  check. That is the layering working: the denylist ends sessions, Postgres decides who may play.
+
+On the game page the effect is the visible half. The reality-check poll is refused, so a tab nobody is
+touching finds out on its own, explains itself and returns to the lobby - which is the difference
+between a denylist and waiting for expiry, and it takes ten seconds to show someone.
+
 Self-exclusion is final, and there is no un-exclude on `RgPolicyService`. The demo reset that makes the
 feature showable more than once lives on a separate `@ConditionalOnProperty(rgs.mode=demo)` controller
 and is still scoped to the caller's own token - mapped under `/api/v1/rg/dev` rather than

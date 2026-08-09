@@ -81,7 +81,7 @@ async function ensureToken() {
   return token;
 }
 
-async function api(path, method = "GET", body) {
+async function api(path, method = "GET", body, retrying = false) {
   const t = await ensureToken();
   const res = await fetch(API + path, {
     method,
@@ -90,6 +90,18 @@ async function api(path, method = "GET", body) {
   });
   const payload = await res.json().catch(() => ({}));
   if (!res.ok) {
+    // This page severs its own token. Confirming self-exclusion denies every token the player holds,
+    // and the panel is holding one, so the very next call from here is refused.
+    //
+    // Re-minting is not a way back in and does not lift anything. Self-exclusion lives in Postgres; the
+    // denylist only ends sessions. The fresh token gets past the filter and then reads back
+    // selfExcluded: true from the same row, so the panel renders the closed account rather than an
+    // error page - and the demo reset stays reachable, which is the only reason a player-facing surface
+    // needs to survive its own token being killed.
+    if (payload.code === "RG_SELF_EXCLUDED" && !retrying) {
+      token = null;
+      return api(path, method, body, true);
+    }
     const err = new Error(payload.message || `HTTP ${res.status}`);
     err.code = payload.code;
     throw err;

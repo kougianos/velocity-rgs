@@ -38,8 +38,9 @@ public class SecurityConfig {
 
     @Bean
     public JwtAuthenticationFilter jwtAuthenticationFilter(SecurityProperties properties,
-                                                           ObjectMapper objectMapper) {
-        return new JwtAuthenticationFilter(properties, objectMapper);
+                                                           ObjectMapper objectMapper,
+                                                           TokenDenylist tokenDenylist) {
+        return new JwtAuthenticationFilter(properties, objectMapper, tokenDenylist);
     }
 
     @Bean

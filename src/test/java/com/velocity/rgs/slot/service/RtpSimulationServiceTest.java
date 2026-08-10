@@ -51,7 +51,8 @@ class RtpSimulationServiceTest {
         return new SlotMathDefinition(
                 m.gameId(), m.mathVersion(), m.targetRtp(), m.grid(), m.winModel(), m.waysDirection(), m.wildFeatures(), m.symbols(),
                 m.paylines(), m.payTable(), m.reelStrips(), m.scatterTriggers(), m.freeSpins(),
-                m.powerBet(), List.of(), m.pickCollect(), m.cascades(), m.respins(), m.limits(), m.betConfig());
+                m.powerBet(), List.of(), m.pickCollect(), m.cascades(), m.respins(), m.limits(), m.betConfig(),
+                m.progressiveJackpot());
     }
 
     private RtpSimulationRequest request(String gameId, long buys) {

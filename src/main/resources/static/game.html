@@ -46,6 +46,11 @@
     <section class="panel game-panel hidden" id="slotGame">
       <h2 class="panel-title">Reels</h2>
 
+      <!-- Progressive jackpots (2). Seeded from /api/v1/jackpots on load and advanced by each
+           spin's own response, so the figure that moves is the one the player just fed. Mounted
+           only for a game whose catalog entry carries a PROGRESSIVE_JACKPOTS card. -->
+      <div id="jackpotBar" class="jp-bar hidden" aria-live="polite"></div>
+
       <div id="reels" class="reels" aria-label="Slot grid"></div>
 
       <!-- Hold & Spin: the locked coins, the respin counter and the jackpot ladder. Rendered only
@@ -212,6 +217,25 @@
         <button id="resetSession" class="btn btn-ghost full" title="Start a brand new demo player">New Player</button>
       </section>
 
+      <!-- Exactly-once demonstration (2). Demo mode only; hidden until the jackpot bar mounts, so a
+           game that does not contribute never shows it. -->
+      <section class="panel hidden" id="jackpotDemo">
+        <h2 class="panel-title">Jackpot demo</h2>
+        <p class="jp-demo-hint">Arm a win, spin, then re-send that exact spin under its own
+           Idempotency-Key. The server replays it instead of paying twice.</p>
+        <div class="jp-demo-row">
+          <select id="jpTier" aria-label="Jackpot tier to force">
+            <option value="MINI">Mini</option>
+            <option value="MINOR">Minor</option>
+            <option value="MAJOR">Major</option>
+            <option value="MEGA">Mega</option>
+          </select>
+          <button id="jpForceWin" class="btn btn-ghost" type="button">Arm next spin</button>
+        </div>
+        <button id="jpReplay" class="btn btn-ghost full" type="button">Replay last spin (same key)</button>
+        <pre id="jpReplayOut" class="log jp-demo-out">Nothing replayed yet.</pre>
+      </section>
+
       <!-- Simulator (slot-only) -->
       <section class="panel" id="slotSimulator">
         <h2 class="panel-title">RTP Simulator</h2>
@@ -314,6 +338,7 @@
   <script src="/games.js"></script>
   <script src="/game-core.js"></script>
   <script src="/rg-client.js"></script>
+  <script src="/jackpot-client.js"></script>
   <script src="/slot.js"></script>
   <script src="/roulette.js"></script>
   <script src="/blackjack.js"></script>

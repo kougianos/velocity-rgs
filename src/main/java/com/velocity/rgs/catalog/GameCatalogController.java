@@ -1,6 +1,7 @@
 package com.velocity.rgs.catalog;
 
 import com.velocity.rgs.blackjack.config.BlackjackCatalogRegistry;
+import com.velocity.rgs.jackpot.JackpotProperties;
 import com.velocity.rgs.blackjack.config.BlackjackGameDefinition;
 import com.velocity.rgs.blackjack.config.BlackjackMathDefinition;
 import com.velocity.rgs.blackjack.config.BlackjackPresentation;
@@ -42,6 +43,9 @@ import java.util.List;
 public class GameCatalogController {
 
     private final GameCatalogRegistry slotCatalog;
+    /* The platform half of the jackpot ruleset. A game's math block says whether it feeds the
+       pools and at what rate; the tiers and their seeds are shared, so they come from here. */
+    private final JackpotProperties jackpotProperties;
     private final RouletteCatalogRegistry rouletteCatalog;
     private final BlackjackCatalogRegistry blackjackCatalog;
 
@@ -56,7 +60,7 @@ public class GameCatalogController {
 
     // ------------------------------------------------------------------ slot
 
-    private static GameSummary toSlotSummary(GameDefinition game) {
+    private GameSummary toSlotSummary(GameDefinition game) {
         SlotMathDefinition math = game.math();
         GamePresentation p = game.presentation();
         return GameSummary.builder()
@@ -93,7 +97,7 @@ public class GameCatalogController {
                 // The mechanics this game actually has, derived from the same math blocks that switch
                 // them on - see GameFeatureFactory. Turning a mechanic off in the JSON removes its
                 // card from the lobby in the same change that removes it from the engine.
-                .features(GameFeatureFactory.forSlot(math))
+                .features(GameFeatureFactory.forSlot(math, jackpotProperties))
                 // Reel layout
                 .rows(math.grid().rows())
                 .cols(math.grid().cols())

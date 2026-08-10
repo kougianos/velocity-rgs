@@ -42,7 +42,8 @@ public record SlotMathDefinition(
         CascadeConfig cascades,
         RespinConfig respins,
         Limits limits,
-        BetConfig betConfig
+        BetConfig betConfig,
+        ProgressiveJackpotConfig progressiveJackpot
 ) {
 
     public SlotMathDefinition {
@@ -82,6 +83,12 @@ public record SlotMathDefinition(
         }
         if (respins == null) {
             respins = RespinConfig.disabled();
+        }
+        // Absent means the game does not feed the shared pools and advertises no jackpot. Every game
+        // authored before progressives existed therefore keeps both its economics and its lobby card
+        // list exactly as they were.
+        if (progressiveJackpot == null) {
+            progressiveJackpot = ProgressiveJackpotConfig.disabled();
         }
         if (wildFeatures == null) {
             wildFeatures = WildFeatureConfig.none();

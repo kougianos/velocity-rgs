@@ -23,7 +23,8 @@ class WildFeatureEngineTest {
         return new SlotMathDefinition(m.gameId(), m.mathVersion(), m.targetRtp(), m.grid(),
                 m.winModel(), m.waysDirection(), wilds, m.symbols(), m.paylines(), m.payTable(),
                 m.reelStrips(), m.scatterTriggers(), m.freeSpins(), m.powerBet(), m.bonusBuyOptions(),
-                m.pickCollect(), m.cascades(), m.respins(), m.limits(), m.betConfig());
+                m.pickCollect(), m.cascades(), m.respins(), m.limits(), m.betConfig(),
+                m.progressiveJackpot());
     }
 
     private static final int WILD = 9;

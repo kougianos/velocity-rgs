@@ -918,6 +918,7 @@
       ],
       "maxFeatureWinMultiplier": 5000
     },
+    "progressiveJackpot": { "enabled": true },
     "limits": {
       "maxWinPerRoundMultiplier": 12000
     },

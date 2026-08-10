@@ -22,6 +22,10 @@ import com.velocity.rgs.slot.domain.GameRound;
 import com.velocity.rgs.slot.domain.PickCollectSnapshot;
 import com.velocity.rgs.slot.domain.RoundKind;
 import com.velocity.rgs.slot.feature.bonusbuy.BonusBuyPolicyService;
+import com.velocity.rgs.jackpot.JackpotService;
+import com.velocity.rgs.jackpot.domain.JackpotAward;
+import com.velocity.rgs.jackpot.domain.JackpotContribution;
+import com.velocity.rgs.jackpot.domain.JackpotTier;
 import com.velocity.rgs.rg.RgPolicyService;
 import com.velocity.rgs.slot.feature.freespins.FreeSpinsSettlementCodec;
 import com.velocity.rgs.slot.feature.freespins.FreeSpinsSettlementCodec.FreeSpinsSettlement;
@@ -88,6 +92,7 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Optional;
 import java.util.Map;
 import java.util.UUID;
 
@@ -117,6 +122,7 @@ public class SlotEngineService {
     private final FreeSpinsSettlementCodec freeSpinsSettlementCodec;
     private final BonusBuyPolicyService bonusBuyPolicyService;
     private final RgPolicyService rgPolicyService;
+    private final JackpotService jackpotService;
     private final SlotMathRegistry mathRegistry;
     private final WalletGateway walletGateway;
     private final SessionStore sessionStore;
@@ -261,6 +267,41 @@ public class SlotEngineService {
                 betDebited = debit.amount().amount();
             }
 
+            // Fed inside the same transaction that just took the stake, which is the entire claim of
+            // §2: a spin that throws anywhere below this line rolls the contribution back with the
+            // debit, so a pool can never hold money no player was charged for, nor miss money one was.
+            //
+            // Driven by betDebited rather than the effective bet, so a free spin - which costs nothing -
+            // feeds nothing. A player cannot grow the jackpot with money they did not stake.
+            JackpotContribution jackpot;
+            jackpot = jackpotService.contribute(
+                    math.progressiveJackpot(), session.getCurrency(), betDebited);
+
+            // The award, in the same transaction as the contribution that just fed the pool and the
+            // credit that pays it out. Rolled only on a spin that actually contributed, so a free spin
+            // cannot win a pool it did not feed, and rolled from the spin's own RNG so the draw is in
+            // the round's log and a replay reaches the same answer.
+            JackpotAward jackpotWin = null;
+            if (jackpot.isPresent()) {
+                Optional<JackpotTier> hit =
+                        jackpotService.rollAward(math.progressiveJackpot(), playerId, rng);
+                if (hit.isPresent()) {
+                    Optional<JackpotAward> awarded = jackpotService.award(hit.get(),
+                            session.getCurrency(), roundId, playerId, session.getSessionId(),
+                            session.getGameId());
+                    if (awarded.isPresent()) {
+                        jackpotWin = awarded.get();
+                        executeCredit(playerId, session, roundId, jackpotWin.txId(),
+                                Money.of(jackpotWin.amount(), session.getCurrency()),
+                                WalletTransactionType.JACKPOT_WIN);
+                        // The contribution above snapshotted the pools before this award reset one of
+                        // them. Refresh, or the response would celebrate a jackpot beside a pool that
+                        // had visibly not paid out.
+                        jackpot = jackpotService.withCurrentPools(jackpot);
+                    }
+                }
+            }
+
             BigDecimal totalWin = evaluation.totalWin();
             String winTxId = null;
             List<String> reasonCodes = new ArrayList<>(evaluation.reasonCodes());
@@ -304,6 +345,8 @@ public class SlotEngineService {
                     .mathVersion(saved.getMathVersion())
                     .betDebited(betDebited)
                     .totalWin(totalWin)
+                    .jackpot(jackpot.isPresent() ? jackpot : null)
+                    .jackpotWin(jackpotWin)
                     .matrix(grid.matrix())
                     .stopPositions(grid.stopPositions())
                     .winLines(evaluation.winLines())

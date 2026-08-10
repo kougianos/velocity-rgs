@@ -105,6 +105,34 @@ rgs:
   # demo (default) | production. See the header block above.
   mode: ${RGS_MODE:demo}
 
+  # ----- progressive jackpots (2) ------------------------------------------
+  # The platform half of the ruleset: what a tier IS. Whether a given game feeds
+  # the pools, and at what rate, lives in that game's math block instead - so a
+  # game advertises a jackpot exactly when it contributes to one.
+  #
+  # The contribution is NOT deducted from the player or from the game's return.
+  # It is modelled as house-funded, because carving it out of the theoretical
+  # return would mean recalibrating all six games to a lower base RTP - a maths
+  # exercise that would break every RTP guard to demonstrate nothing extra. The
+  # architecture is identical either way; only the funding pocket differs.
+  jackpot:
+    enabled: ${RGS_JACKPOT_ENABLED:true}
+    # 1% of stake for a game that names no rate of its own.
+    default-contribution-rate: 0.0100
+    currencies:
+      - EUR
+    # Shares must sum to exactly 1, enforced at startup. Deliberately top-light:
+    # the Mega grows slowest because it is meant to be rare and large, and one
+    # fed at the Mini's rate would be neither.
+    # award-one-in-n is the odds of a tier landing on a contributing spin. Demo-tight so the
+    # mechanic can be shown, and there is a dev endpoint to force one on command rather than
+    # spinning until the dice cooperate in front of an audience.
+    tiers:
+      MINI:  { seed: 10.00,    share: 0.40, award-one-in-n: 100 }
+      MINOR: { seed: 100.00,   share: 0.30, award-one-in-n: 500 }
+      MAJOR: { seed: 1000.00,  share: 0.20, award-one-in-n: 2500 }
+      MEGA:  { seed: 10000.00, share: 0.10, award-one-in-n: 10000 }
+
   # ----- responsible gaming (4.2) -----------------------------------------
   # Jurisdiction-neutral by design: with no licence to build against, guessing
   # at MGA or UKGC specifics would encode a half-remembered rulebook. The seam

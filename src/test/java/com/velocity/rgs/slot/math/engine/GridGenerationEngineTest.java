@@ -9,6 +9,7 @@ import com.velocity.rgs.slot.math.config.Grid;
 import com.velocity.rgs.slot.math.config.Limits;
 import com.velocity.rgs.slot.math.config.PickCollectCompletion;
 import com.velocity.rgs.slot.math.config.PickCollectConfig;
+import com.velocity.rgs.slot.math.config.ProgressiveJackpotConfig;
 import com.velocity.rgs.slot.math.config.PickTileWeight;
 import com.velocity.rgs.slot.math.config.PowerBetConfig;
 import com.velocity.rgs.slot.math.config.ScatterTriggers;
@@ -194,7 +195,8 @@ class GridGenerationEngineTest {
                         5000, 0),
                 CascadeConfig.disabled(), RespinConfig.disabled(),
                 new Limits(10_000),
-                new BetConfig(List.of(new BigDecimal("0.20"), new BigDecimal("1.00")), new BigDecimal("1.00"))
+                new BetConfig(List.of(new BigDecimal("0.20"), new BigDecimal("1.00")), new BigDecimal("1.00")),
+                ProgressiveJackpotConfig.disabled()
         );
     }
 }

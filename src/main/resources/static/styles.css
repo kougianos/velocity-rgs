@@ -2779,6 +2779,75 @@ body.history-page .toast.error { border-left-color: var(--danger); }
 }
 .rg-why em { font-style: normal; font-weight: 600; color: var(--vx-text); }
 
+/* ---- in-game progressive jackpot bar (game.html, §2) ----
+   Sits above the reels so the figure a spin just fed is in the same eyeline as the spin. Compact on
+   purpose: the lobby strip is the advertisement, this is a live readout. */
+.jp-bar {
+  margin: 0 0 12px; padding: 10px 12px; border-radius: 12px;
+  border: 1px solid color-mix(in srgb, var(--vx-gold) 26%, var(--vx-hair));
+  background: color-mix(in srgb, var(--vx-gold) 5%, rgba(255, 255, 255, 0.02));
+  transition: border-color 220ms ease, background 220ms ease;
+}
+.jp-bar.hidden { display: none; }
+.jp-head { display: flex; align-items: baseline; gap: 10px; margin-bottom: 8px; flex-wrap: wrap; }
+.jp-lab {
+  font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase;
+  color: var(--vx-gold); font-weight: 600;
+}
+.jp-fed { font-family: var(--vx-mono); font-size: 11px; color: var(--vx-emerald); }
+.jp-cells { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.jp-cell {
+  --jp: var(--vx-dim);
+  display: flex; flex-direction: column; gap: 2px;
+  padding: 7px 9px; border-radius: 9px;
+  border: 1px solid color-mix(in srgb, var(--jp) 22%, transparent);
+  background: color-mix(in srgb, var(--jp) 6%, transparent);
+}
+.jp-cell[data-tier="MINI"]  { --jp: var(--vx-frost); }
+.jp-cell[data-tier="MINOR"] { --jp: var(--vx-emerald); }
+.jp-cell[data-tier="MAJOR"] { --jp: var(--vx-ignite); }
+.jp-cell[data-tier="MEGA"]  { --jp: var(--vx-gold); }
+.jp-tier {
+  font-size: 9px; letter-spacing: 0.12em; text-transform: uppercase;
+  color: var(--jp); font-weight: 600;
+}
+.jp-amt { font-family: var(--vx-mono); font-size: 14px; font-weight: 700; color: var(--vx-text); }
+
+/* One pulse per contributing spin, restarted from JS by forcing a reflow. */
+.jp-bar.is-fed { animation: jp-fed-pulse 700ms ease-out; }
+@keyframes jp-fed-pulse {
+  0%   { border-color: color-mix(in srgb, var(--vx-gold) 70%, transparent);
+         background: color-mix(in srgb, var(--vx-gold) 14%, transparent); }
+  100% { border-color: color-mix(in srgb, var(--vx-gold) 26%, var(--vx-hair));
+         background: color-mix(in srgb, var(--vx-gold) 5%, rgba(255, 255, 255, 0.02)); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .jp-bar.is-fed { animation: none; }
+}
+@media (max-width: 560px) {
+  .jp-cells { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+/* ---- jackpot win + exactly-once demo panel (game.html, §2) ---- */
+.jp-win-amt {
+  font-family: var(--vx-mono); font-size: 30px; font-weight: 700;
+  color: var(--vx-gold); margin: 4px 0 10px;
+}
+.jp-win-ids { display: flex; flex-direction: column; gap: 6px; margin: 14px 0; text-align: left; }
+.jp-win-ids div { display: flex; gap: 8px; align-items: baseline; justify-content: space-between; }
+.jp-win-ids span {
+  font-size: 9.5px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--vx-faint);
+}
+.jp-win-ids code {
+  font-family: var(--vx-mono); font-size: 10.5px; color: var(--vx-dim);
+  overflow-wrap: anywhere; text-align: right;
+}
+.jp-demo-hint { font-size: 12px; line-height: 1.55; color: var(--vx-dim); margin: 0 0 10px; }
+.jp-demo-row { display: flex; gap: 8px; margin-bottom: 8px; }
+.jp-demo-row select { flex: 1 1 auto; min-width: 0; }
+.jp-demo-row button { flex: 0 0 auto; }
+.jp-demo-out { margin-top: 10px; max-height: 220px; font-size: 11px; }
+
 /* ---- in-game limit banner + reality check (game.html) ---- */
 .rg-banner {
   display: flex; align-items: flex-start; gap: 12px; margin: 12px 0;

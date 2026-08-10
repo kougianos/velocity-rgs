@@ -52,7 +52,8 @@ public class ReconciliationJob {
     private static final Set<WalletTransactionType> DEBIT_TYPES =
             Set.of(WalletTransactionType.BET, WalletTransactionType.BONUS_BUY);
     private static final Set<WalletTransactionType> CREDIT_TYPES =
-            Set.of(WalletTransactionType.WIN, WalletTransactionType.FEATURE_WIN);
+            Set.of(WalletTransactionType.WIN, WalletTransactionType.FEATURE_WIN,
+                    WalletTransactionType.JACKPOT_WIN);
 
     private final ReconciliationQueryRepository queryRepository;
     private final AuditReconciliationFindingRepository findingRepository;

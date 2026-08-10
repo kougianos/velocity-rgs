@@ -629,6 +629,7 @@ async function bootSession(forceNewPlayer = false) {
     renderActions();
     renderPickBoard(init.activeFeatureView);
     renderRespin(init.respinView);
+    if (typeof mountJackpotBar === "function") await mountJackpotBar(META);
     logResponse("init", init);
     toast(`Demo player ${state.playerId} ready`, "success");
   } catch (e) {
@@ -643,17 +644,23 @@ async function doSpin() {
     setBusy(true);
     startSpin();
     // Spin for at least a beat even if the server replies instantly, then stop the reels.
+    // Body and key kept verbatim so the jackpot demo panel can re-send this exact request under the
+    // same Idempotency-Key and show that the server replays rather than re-executes.
+    const spinBody = {
+      gameId: GAME_ID,
+      sessionId: state.sessionId,
+      sessionVersion: state.sessionVersion,
+      betSize: betForRequest(),
+      powerBetActive: els.powerBet.checked,
+    };
+    const spinKey = crypto.randomUUID();
+    window.__lastSpin = { body: spinBody, key: spinKey };
     const [resp] = await Promise.all([
       api("/api/v1/slot/spin", {
         method: "POST",
         idempotency: true,
-        body: {
-          gameId: GAME_ID,
-          sessionId: state.sessionId,
-          sessionVersion: state.sessionVersion,
-          betSize: betForRequest(),
-          powerBetActive: els.powerBet.checked,
-        },
+        idempotencyKey: spinKey,
+        body: spinBody,
       }),
       delay(SPIN_MS),
     ]);
@@ -662,6 +669,8 @@ async function doSpin() {
     await refreshBalance();
     renderActions();
     renderPickBoard(null);
+    if (typeof updateJackpotBar === "function") updateJackpotBar(resp.jackpot);
+    if (typeof announceJackpotWin === "function") announceJackpotWin(resp.jackpotWin);
     logResponse("spin", resp);
     announceFeatures(resp.featuresTriggered);
     await maybeOfferFreeSpins();

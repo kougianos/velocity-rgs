@@ -1,5 +1,6 @@
 package com.velocity.rgs.catalog;
 
+import com.velocity.rgs.jackpot.JackpotProperties;
 import com.velocity.rgs.slot.math.config.SlotMathDefinition;
 import com.velocity.rgs.slot.math.config.SlotMathLoader;
 import com.velocity.rgs.slot.math.domain.WinModel;
@@ -34,8 +35,15 @@ class GameFeatureFactoryTest {
         return new SlotMathLoader().load(gameId, "v1").math();
     }
 
+    /** The shipped platform ruleset, so the card quotes the seeds the pools are actually seeded to. */
+    private static JackpotProperties jackpots() {
+        JackpotProperties props = new JackpotProperties();
+        props.validate();
+        return props;
+    }
+
     private static Map<String, GameFeature> byKey(SlotMathDefinition math) {
-        return GameFeatureFactory.forSlot(math).stream()
+        return GameFeatureFactory.forSlot(math, jackpots()).stream()
                 .collect(Collectors.toMap(GameFeature::key, Function.identity()));
     }
 
@@ -63,13 +71,16 @@ class GameFeatureFactoryTest {
         assertThat(features.containsKey("BONUS_BUY"))
                 .as("%s advertises bonus buy iff it configures a buy option", gameId)
                 .isEqualTo(!math.bonusBuyOptions().isEmpty());
+        assertThat(features.containsKey("PROGRESSIVE_JACKPOTS"))
+                .as("%s advertises the shared pools iff math.progressiveJackpot is enabled", gameId)
+                .isEqualTo(math.progressiveJackpot().enabled());
     }
 
     @ParameterizedTest
     @ValueSource(strings = {"aztec-fire", "frost-crown", "inferno-riches", "jade-tiger",
             "gilded-cascade", "dragon-hoard"})
     void everyCardIsRenderableAndFullyInterpolated(String gameId) {
-        List<GameFeature> features = GameFeatureFactory.forSlot(math(gameId));
+        List<GameFeature> features = GameFeatureFactory.forSlot(math(gameId), jackpots());
         assertThat(features).isNotEmpty();
         for (GameFeature f : features) {
             assertThat(f.key()).isNotBlank();
@@ -88,7 +99,7 @@ class GameFeatureFactoryTest {
     @ValueSource(strings = {"aztec-fire", "frost-crown", "inferno-riches", "jade-tiger",
             "gilded-cascade", "dragon-hoard"})
     void signatureMechanicsAreListedFirst(String gameId) {
-        List<GameFeature> features = GameFeatureFactory.forSlot(math(gameId));
+        List<GameFeature> features = GameFeatureFactory.forSlot(math(gameId), jackpots());
         int lastHeadline = -1;
         for (int i = 0; i < features.size(); i++) {
             if (features.get(i).headline()) lastHeadline = i;

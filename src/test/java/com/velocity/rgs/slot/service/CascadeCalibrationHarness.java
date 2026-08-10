@@ -109,7 +109,8 @@ class CascadeCalibrationHarness {
                 math.scatterTriggers(), math.freeSpins(), math.powerBet(), math.bonusBuyOptions(),
                 new PickCollectConfig(pick.boardSize(), pick.completion(), pick.tileDistribution(),
                         pick.maxFeatureWinMultiplier(), 0),
-                math.cascades(), RespinConfig.disabled(), math.limits(), math.betConfig());
+                math.cascades(), RespinConfig.disabled(), math.limits(), math.betConfig(),
+                math.progressiveJackpot());
 
         RtpSimulationService service = new RtpSimulationService(
                 new SlotMathRegistry(Map.of(gameId + "@" + MATH_VERSION, featureless)),

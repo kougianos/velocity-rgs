@@ -116,7 +116,11 @@ public class WalletLedgerWriter {
 
         Money after = switch (original.getType()) {
             case BET, BONUS_BUY -> before.add(amount);
-            case WIN, FEATURE_WIN -> {
+            // A jackpot reverses like any other credit. The pool it came from is not restored by this:
+            // the award and its pool reset committed together, so undoing the payout without undoing
+            // the reset would leave the money nowhere. Reversing a jackpot is an operator intervention
+            // that has to put the pool back too, and this reverses only the wallet half.
+            case WIN, FEATURE_WIN, JACKPOT_WIN -> {
                 Money candidate = before.subtract(amount);
                 if (candidate.isNegative()) {
                     throw new RgsException(ErrorCode.INSUFFICIENT_FUNDS,

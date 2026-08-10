@@ -140,6 +140,7 @@
       ],
       "maxFeatureWinMultiplier": 5000
     },
+    "progressiveJackpot": { "enabled": true },
     "limits": { "maxWinPerRoundMultiplier": 10000 },
     "betConfig": {
       "values": [0.20, 0.40, 0.60, 1.00, 2.00, 5.00, 10.00, 20.00, 50.00, 100.00],

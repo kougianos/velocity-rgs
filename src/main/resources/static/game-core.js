@@ -28,11 +28,14 @@ class ApiError extends Error {
 /** Last "primary" request, captured so the log panel can show what produced a response. */
 let lastApiRequest = null;
 
-async function api(path, { method = "GET", body, idempotency = false, track = true, token } = {}) {
+async function api(path, { method = "GET", body, idempotency = false, track = true, token,
+                           idempotencyKey } = {}) {
   const headers = { "Content-Type": "application/json" };
   const authToken = token !== undefined ? token : window.__authToken;
   if (authToken) headers["Authorization"] = "Bearer " + authToken;
-  if (idempotency) headers["Idempotency-Key"] = crypto.randomUUID();
+  // A caller may supply the key when it means to retry a specific request rather than make a new
+  // one. That is the whole of the idempotency demo: same key, same answer, no second payout.
+  if (idempotency) headers["Idempotency-Key"] = idempotencyKey || crypto.randomUUID();
 
   if (track) lastApiRequest = { method, path, body: body ?? null };
 

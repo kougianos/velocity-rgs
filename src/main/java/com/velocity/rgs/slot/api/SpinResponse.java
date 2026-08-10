@@ -1,6 +1,8 @@
 package com.velocity.rgs.slot.api;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
+import com.velocity.rgs.jackpot.domain.JackpotAward;
+import com.velocity.rgs.jackpot.domain.JackpotContribution;
 import com.velocity.rgs.slot.feature.respin.RespinFeatureView;
 import com.velocity.rgs.slot.math.engine.WinLine;
 import com.velocity.rgs.session.domain.GameCommand;
@@ -22,6 +24,14 @@ public record SpinResponse(
         String mathVersion,
         BigDecimal betDebited,
         BigDecimal totalWin,
+        /* What this spin fed the shared progressive pools, and where they stand after it (§2). Absent
+           on a game that does not contribute, and on a free spin, which costs nothing and feeds
+           nothing - in both cases there is no claim to make and the field is simply not there. */
+        JackpotContribution jackpot,
+        /* The pool this spin just won, if it won one (§2). Absent on every spin that did not,
+           which is nearly all of them - a field that was always present and usually null would
+           make the client test for a win on a shape rather than on its existence. */
+        JackpotAward jackpotWin,
         int[][] matrix,
         int[] stopPositions,
         List<WinLine> winLines,

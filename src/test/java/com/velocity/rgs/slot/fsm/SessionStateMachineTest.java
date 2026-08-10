@@ -213,7 +213,8 @@ class SessionStateMachineTest {
                 math.pickCollect(),
                 CascadeConfig.disabled(), RespinConfig.disabled(),
                 math.limits(),
-                math.betConfig());
+                math.betConfig(),
+                math.progressiveJackpot());
         TransitionContext localCtx = new TransitionContext(stripped, "EUR");
 
         TransitionResult res = machine.transition(
@@ -243,7 +244,8 @@ class SessionStateMachineTest {
                 math.pickCollect(),
                 CascadeConfig.disabled(), RespinConfig.disabled(),
                 math.limits(),
-                math.betConfig());
+                math.betConfig(),
+                math.progressiveJackpot());
         TransitionContext localCtx = new TransitionContext(stripped, "EUR");
 
         assertThatThrownBy(() -> machine.transition(

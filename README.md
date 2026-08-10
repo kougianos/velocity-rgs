@@ -207,9 +207,92 @@ strip before anyone signs in, the figures are advertised publicly by design, and
 player or session id. Amounts leave at the currency's own scale rather than the column's, so a
 `NUMERIC(19,4)` pool does not reach the browser with four decimal places.
 
-The strip sits above the game shelf and every figure on it is a row in Postgres. It shows flat values
-today; the count-up interpolation, the flash on a win and the "last won by" line arrive with the ticker
-once contributions are making the pools move.
+### The ruleset is split, and the split is the design
+
+What a tier **is** - its seed, its share of each contribution, the currencies it runs in - is platform
+config under `rgs.jackpot.*`. The pools are shared across every game, so no single game may own numbers
+that every other game also pays into. Shares must sum to exactly 1, checked at startup: a split that
+does not is either quietly losing money players paid or minting money nobody did.
+
+Whether a given game **feeds** the pools, and at what rate, is a `progressiveJackpot` block in that
+game's math config. That is what makes the lobby's Progressive Jackpots card a biconditional - the same
+property cascades and Hold & Spin already have. A game advertises the pools exactly when it contributes
+to them, because one block drives both. `JackpotPoolInitializer` reconciles the rows to config at every
+startup, and never lowers a live pool: raising a seed tops the pool up to its new floor, lowering one
+changes the floor for next time and leaves the money where it is.
+
+### Contribution is atomic with the bet debit
+
+`JackpotService.contribute(...)` runs **inside the spin's existing `@Transactional` boundary**, the same
+shape `RgPolicyService.validateStake(...)` has and for the same reason: a rule that runs outside the
+transaction moving the money can be raced past. A spin that throws after the debit rolls the
+contribution back with it, so a pool can never hold money no player was charged for, nor miss money one
+was. `JackpotContributionIntegrationTest` proves the rollback directly rather than by engineering a spin
+failure, because the property under test is the boundary, not where in the spin a failure lands.
+
+The write is `UPDATE ... SET amount = amount + ?`, not a read-modify-write through the entity. These
+four rows are the most contended in the schema - every spin of every game in a currency touches them -
+and an optimistic-locking round trip would turn ordinary concurrency into failed spins, costing a player
+their bet because somebody else spun at the same moment. `UPDATE VERSIONED` still bumps the version, so
+the award path can use optimistic locking where a read-modify-write genuinely is required.
+
+Contribution follows `betDebited`, not the effective bet, so a free spin feeds nothing: a player cannot
+grow the jackpot with money they were never charged.
+
+**One honest simplification.** The contribution is not deducted from the player or from the game's
+return - it is modelled as house-funded. A real operator carves it out of the theoretical return, which
+here would mean recalibrating all six games to a lower base RTP: a maths exercise that would break every
+RTP guard while demonstrating nothing extra about the architecture. The seam is identical either way;
+only the funding pocket differs, and the README would rather say so than quietly imply otherwise.
+
+### On screen
+
+The lobby strip leads the page, above the hero, because the hero alone is nearly 600px tall and a
+jackpot below the fold is the same as one not shipped. It is suppressed for a player arriving from a
+self-exclusion, where advertising the platform's biggest prize under a "your session was ended" notice
+would be the page arguing with a decision the player just made.
+
+The game page carries a live bar above the reels, seeded from `/api/v1/jackpots` and then advanced by
+each spin's own response - which carries both what that spin contributed and where the pools stand
+afterwards. Driven by the response rather than a poll on purpose: a poll can only show the numbers were
+different a moment later, which is a much weaker thing to have watched than a figure that moves on the
+click.
+
+Still to come with the ticker: count-up interpolation between updates and the "last won by" line.
+
+### Paying one out, exactly once
+
+A jackpot awarded twice is the one mistake in this system that cannot be shrugged off, so exactly-once
+is enforced in **three independent places** and each is asserted separately in
+`JackpotAwardIntegrationTest` - a test that only checked the total would pass with two of the three
+broken:
+
+1. **The Idempotency-Key layer.** A retried spin replays its stored response and never re-runs the spin
+   body, so the award code is not reached at all. This is the case a real client actually produces.
+2. **A compare-and-swap on the pool version.** Two spins racing for the same tier cannot both win it:
+   the loser's update matches no row, and it pays nothing rather than paying out a figure that no
+   longer exists. This is why the contribution path bumps the version rather than bypassing it.
+3. **`uq_jackpot_win_round`.** If the first two ever failed, the insert fails and takes the transaction
+   down instead of paying twice. The first two are application logic and could be refactored wrong;
+   this one cannot be, and it is the one an auditor would trust.
+
+The award, the pool reset, the audit row and the wallet credit all commit in the spin's transaction.
+
+**Sub-cent remainders are carried, not rounded away.** A pool holds four decimal places and a wallet
+pays two, so the winner is paid the pool rounded *down* and the remainder is added on top of the seed
+for the next cycle. Rounding it off instead would delete a fraction of a cent of player money on every
+award, forever - the kind of leak that is invisible until someone sums the ledger.
+
+`JACKPOT_WIN` is its own wallet transaction type so reconciliation can match a payout to its
+`jackpot_win` row rather than seeing an unexplained credit the size of a whole pool.
+
+### Showing it works
+
+The Mega is 1 in 10,000 spins, which is right for a jackpot and useless for a demonstration. The game
+page carries a demo panel (demo mode only) that arms the next spin to win a chosen tier, then re-sends
+that exact spin under its own `Idempotency-Key` and prints the replayed response beside the balance
+before and after. Only the dice are rigged: the CAS, the audit row, the credit and the reset a viewer
+watches are the production path.
 
 ---
 

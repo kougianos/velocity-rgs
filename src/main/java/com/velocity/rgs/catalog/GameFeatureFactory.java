@@ -1,6 +1,8 @@
 package com.velocity.rgs.catalog;
 
 import com.velocity.rgs.blackjack.config.BlackjackMathDefinition;
+import com.velocity.rgs.jackpot.JackpotProperties;
+import com.velocity.rgs.jackpot.domain.JackpotTier;
 import com.velocity.rgs.roulette.config.RouletteMathDefinition;
 import com.velocity.rgs.slot.math.config.BonusBuyOption;
 import com.velocity.rgs.slot.math.config.CascadeConfig;
@@ -43,7 +45,7 @@ final class GameFeatureFactory {
 
     // ------------------------------------------------------------------ slot
 
-    static List<GameFeature> forSlot(SlotMathDefinition math) {
+    static List<GameFeature> forSlot(SlotMathDefinition math, JackpotProperties jackpots) {
         List<GameFeature> features = new ArrayList<>();
         features.add(winModel(math));
         if (math.cascades().enabled()) {
@@ -54,6 +56,9 @@ final class GameFeatureFactory {
             if (!math.respins().jackpots().isEmpty()) {
                 features.add(jackpots(math));
             }
+        }
+        if (jackpots != null && jackpots.isEnabled() && math.progressiveJackpot().enabled()) {
+            features.add(progressiveJackpots(math, jackpots));
         }
         if (math.wildFeatures().active()) {
             features.add(wilds(math.wildFeatures()));
@@ -165,10 +170,47 @@ final class GameFeatureFactory {
                 .toList();
         RespinJackpot top = math.respins().jackpots().stream()
                 .max(Comparator.comparingInt(RespinJackpot::minCoins)).orElseThrow();
-        return new GameFeature("JACKPOTS", "Jackpot Tiers", "💎",
+        // Named for its mechanic, not just "Jackpot Tiers". These are fixed multiples of the stake that
+        // this game pays out of its own return; the progressive card below is pooled money every game
+        // feeds. A game can advertise both at once, and two cards both called jackpots - sharing three
+        // tier names between them - would leave a player unable to tell which prize they were chasing.
+        // No longer a headline, and the demotion is the point rather than a way to fit under a cap.
+        // Hold & Spin is already headlined above and these tiers are its detail, not a second signature
+        // mechanic. More to the point, with a pooled progressive on the platform the biggest prize on
+        // this game is no longer a fixed multiple of the stake - leading with one would put the smaller
+        // claim first.
+        return new GameFeature("JACKPOTS", "Hold & Spin Jackpots", "💎",
                 "Hold enough coins when the feature settles and the round pays a jackpot on top of "
                         + "everything the coins themselves are worth. Fill every cell and the "
-                        + top.tier() + " lands.",
+                        + top.tier() + " lands. Paid as a multiple of your stake, by this game.",
+                facts, false);
+    }
+
+    /**
+     * The shared progressive pools (§2).
+     *
+     * <p>Present exactly when the game's {@code progressiveJackpot} block switches contribution on, so
+     * the lobby cannot advertise a pool this game does not feed - the same biconditional cascades and
+     * Hold &amp; Spin already have, and the reason the block lives in the math config rather than in a
+     * marketing list.
+     *
+     * <p>The seeds and the split come from platform config because the pools are shared; only the rate
+     * is the game's own. Both are quoted, because "you are feeding a jackpot" is a claim a player is
+     * entitled to see the size of.
+     */
+    private static GameFeature progressiveJackpots(SlotMathDefinition math, JackpotProperties jackpots) {
+        BigDecimal rate = math.progressiveJackpot().rateOr(jackpots.getDefaultContributionRate());
+        List<String> facts = new ArrayList<>();
+        for (JackpotTier tier : JackpotTier.values()) {
+            facts.add(tier.label() + " - seeds at " + money(jackpots.tier(tier).getSeed())
+                    + ", takes " + percent(jackpots.tier(tier).getShare()) + " of every contribution");
+        }
+        facts.add("This game contributes " + percent(rate) + " of each stake");
+        facts.add("Shared across every slot on the platform, so the pools climb whoever is playing");
+        facts.add("Held in Postgres, not a cache - the pool is money owed to whoever wins it");
+        return new GameFeature("PROGRESSIVE_JACKPOTS", "Progressive Jackpots", "🏆",
+                "Four pooled prizes that grow with every spin on every game, and reset to their seed "
+                        + "when they land. Nothing is deducted from your stake or your return.",
                 facts, true);
     }
 
@@ -382,6 +424,20 @@ final class GameFeatureFactory {
             return String.format(Locale.ROOT, "%,d", stripped.toBigIntegerExact());
         }
         return stripped.toPlainString();
+    }
+
+    /**
+     * "10.00", "10,000.00" - a seed is an amount of money and has to read as one. No currency
+     * symbol: the pools run per currency, and this card describes the mechanic rather than any
+     * one currency's copy of it.
+     */
+    private static String money(BigDecimal value) {
+        return String.format(Locale.ROOT, "%,.2f", value);
+    }
+
+    /** "1%", "1.5%" - a rate is read as a percentage, not as 0.0100. */
+    private static String percent(BigDecimal fraction) {
+        return plain(fraction.multiply(BigDecimal.valueOf(100))) + "%";
     }
 
     private static String count(int value) {

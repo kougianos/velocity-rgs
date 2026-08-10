@@ -20,3 +20,20 @@ rgs:
   # that are measuring something else.
   rg:
     enabled: false
+
+  # Progressive jackpots stay ON - contribution is part of the spin path and tests
+  # assert on it - but the random award is switched off by making the odds
+  # unreachable. The shipped odds are demo-tight (Mini is 1 in 100), so with them
+  # live any test that spins a few dozen rounds would occasionally win a jackpot,
+  # credit a wallet and perturb a balance assertion in a test that is measuring
+  # something else entirely. Same reasoning as rg.enabled below, same fix.
+  #
+  # This costs no coverage: every award test forces its win through
+  # JackpotService.forceNextWin, which bypasses the roll, and the roll itself is
+  # covered directly by JackpotAwardRollTest.
+  jackpot:
+    tiers:
+      MINI:  { award-one-in-n: 1000000000 }
+      MINOR: { award-one-in-n: 1000000000 }
+      MAJOR: { award-one-in-n: 1000000000 }
+      MEGA:  { award-one-in-n: 1000000000 }

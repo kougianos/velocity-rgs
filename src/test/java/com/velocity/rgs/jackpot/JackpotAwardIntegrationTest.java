@@ -49,6 +49,7 @@ class JackpotAwardIntegrationTest {
     @Autowired private JackpotService jackpotService;
     @Autowired private JackpotPoolRepository poolRepository;
     @Autowired private JackpotWinRepository winRepository;
+    @Autowired private JackpotProperties properties;
     @Autowired private WalletTransactionRepository walletTransactionRepository;
     @Autowired private org.springframework.transaction.support.TransactionTemplate transactionTemplate;
 
@@ -77,11 +78,17 @@ class JackpotAwardIntegrationTest {
         assertThat(win.get("tier").asText()).isEqualTo("MINI");
         assertThat(win.get("amount").decimalValue()).isGreaterThan(BigDecimal.ZERO);
 
-        // The pool fell back to its floor. Not asserted as "equals seed exactly" because the same spin
-        // also contributed, so the pool is seed plus this spin's own contribution.
+        // The pool is back at its floor, plus at most the sub-cent remainder the payout could not
+        // cover. Deliberately NOT asserted as "less than it was before": a spin contributes before it
+        // awards, so the pool ends at seed + carried, and carried can land on exactly the figure the
+        // pool started at. That is not a bug and a test that forbade it would be wrong, not unlucky.
+        BigDecimal oneMinorUnit = new BigDecimal("0.01");
         assertThat(amount(JackpotTier.MINI))
                 .isGreaterThanOrEqualTo(seed)
-                .isLessThan(poolBefore);
+                .isLessThan(seed.add(oneMinorUnit));
+        assertThat(win.get("amount").decimalValue())
+                .as("the prize was the pool as it stood, which was well above the floor")
+                .isGreaterThan(poolBefore);
 
         List<JackpotWin> wins = winRepository.findByPlayerIdOrderByWonAtDesc(player);
         assertThat(wins).hasSize(1);
@@ -227,7 +234,13 @@ class JackpotAwardIntegrationTest {
                 .isLessThan(before);
     }
 
-    /** An ordinary spin reports no win, so the client tests for a jackpot by its presence. */
+    /**
+     * An ordinary spin reports no win, so the client tests for a jackpot by the field's presence.
+     *
+     * <p>Deterministic because the suite's award odds are unreachable (see application-test.yml). With
+     * the shipped odds live this assertion would be a 1-in-80 coin flip, which is how it first failed
+     * on CI rather than locally.
+     */
     @Test
     void anOrdinarySpinCarriesNoAward() throws Exception {
         String player = player();
@@ -236,6 +249,32 @@ class JackpotAwardIntegrationTest {
 
         assertThat(body.has("jackpotWin")).isFalse();
         assertThat(body.get("jackpot")).as("it still contributed, though").isNotNull();
+    }
+
+    /**
+     * Guards the arrangement the rest of this class depends on.
+     *
+     * <p>Two things at once. The odds must be unreachable, or any test in the suite that spins can win
+     * a jackpot, credit a wallet and break an assertion in a test measuring something else - which is
+     * exactly how {@code anOrdinarySpinCarriesNoAward} first failed on CI and not locally.
+     *
+     * <p>And the seeds and shares must have survived: the test profile overrides only
+     * {@code award-one-in-n} per tier, relying on Spring's map binding to merge that leaf over the
+     * shipped values rather than replacing the tier wholesale. If that ever stopped merging, the
+     * remaining values would be null and this says so directly instead of leaving a confusing
+     * startup failure.
+     */
+    @Test
+    void theSuiteCannotAwardAJackpotByChance() {
+        for (JackpotTier tier : JackpotTier.values()) {
+            assertThat(properties.tier(tier).getAwardOneInN())
+                    .as("%s odds must be unreachable in the test profile", tier)
+                    .isGreaterThan(1_000_000);
+            assertThat(properties.tier(tier).getSeed())
+                    .as("%s seed survived the profile override", tier).isNotNull();
+            assertThat(properties.tier(tier).getShare())
+                    .as("%s share survived the profile override", tier).isNotNull();
+        }
     }
 
     // ---------------------------------------------------------------- helpers

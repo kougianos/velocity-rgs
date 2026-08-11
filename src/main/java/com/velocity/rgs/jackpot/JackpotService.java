@@ -30,10 +30,14 @@ import java.util.Map;
 /**
  * Reads and grows the progressive pools (§2).
  *
- * <p>Postgres is the source on every read, with no cache in front of it. The lobby ticker gets a Redis
- * read cache later and this is the seam it goes behind - in front of a value that is already correct,
- * never as the place the value lives. "Why not just keep the pool in Redis" has one answer: the pool is
- * money owed to a player who has not won it yet, and a cache is a thing that is allowed to evict.
+ * <p><b>Postgres is the pool of record; Redis caches only the rendered view.</b> Every path that moves
+ * money - contribute, award - reads and writes Postgres directly. The single cached read is
+ * {@link #pools}, which serves the public lobby ticker: a page every visitor polls, against the four
+ * most contended rows in the schema.
+ *
+ * <p>"Why not just keep the pool in Redis" has one answer. A pool is money owed to a player who has not
+ * won it yet, and Redis is allowed to evict. A cached <em>picture</em> of the pools may be a second
+ * stale; the pools themselves may not be anything but exact.
  */
 @Slf4j
 @Service
@@ -47,6 +51,7 @@ public class JackpotService {
     private final JackpotPoolRepository poolRepository;
     private final JackpotWinRepository winRepository;
     private final JackpotProperties properties;
+    private final JackpotPoolCache poolCache;
 
     /** Player -> tier armed by the demo control, consumed by that player's next contributing spin. */
     private final Map<String, JackpotTier> forcedWins = new ConcurrentHashMap<>();
@@ -62,7 +67,16 @@ public class JackpotService {
      */
     @Transactional(readOnly = true)
     public List<JackpotPoolView> pools(String currency) {
-        return readPools(currency);
+        // Read-through cache, and only here. Every other caller in this class reads Postgres directly:
+        // the cache exists for the public ticker, which is polled by every visitor, and nothing that
+        // moves money is allowed to make a decision from it.
+        List<JackpotPoolView> cached = poolCache.get(currency);
+        if (cached != null) {
+            return cached;
+        }
+        List<JackpotPoolView> fresh = readPools(currency);
+        poolCache.put(currency, fresh);
+        return fresh;
     }
 
     // ---------------------------------------------------------------- contribute
@@ -227,6 +241,10 @@ public class JackpotService {
                 .wonAt(now)
                 .build());
 
+        // The pool just dropped by its whole value. A ticker showing the old figure for even a second
+        // after that is advertising a prize somebody has already been paid.
+        poolCache.evict(currency);
+
         log.info("JACKPOT {} won player={} round={} paid={} {} - pool reset to {} (carried {})",
                 tier, playerId, roundId, won.toPlainString(), currency,
                 resetTo.toPlainString(), carried.toPlainString());
@@ -270,15 +288,19 @@ public class JackpotService {
                 .toList();
     }
 
-    private static JackpotPoolView toView(JackpotPool pool, String currency) {
+    private JackpotPoolView toView(JackpotPool pool, String currency) {
         JackpotTier tier = pool.tier();
-        return new JackpotPoolView(
-                tier,
-                tier.label(),
-                currency,
-                scaled(pool.getAmount(), currency),
-                scaled(pool.getSeedAmount(), currency),
-                scaled(pool.grownBy(), currency));
+        BigDecimal amount = scaled(pool.getAmount(), currency);
+        BigDecimal seed = scaled(pool.getSeedAmount(), currency);
+        BigDecimal grown = scaled(pool.grownBy(), currency);
+
+        return winRepository.findFirstByTierAndCurrencyOrderByWonAtDesc(tier, currency)
+                .map(win -> new JackpotPoolView(tier, tier.label(), currency, amount, seed, grown,
+                        JackpotPoolView.maskPlayer(win.getPlayerId()),
+                        win.getWonAt(),
+                        scaled(win.getAmount(), currency)))
+                .orElseGet(() -> JackpotPoolView.neverWon(tier, tier.label(), currency,
+                        amount, seed, grown));
     }
 
     /**

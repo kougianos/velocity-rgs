@@ -9,6 +9,7 @@ import com.velocity.rgs.jackpot.domain.JackpotTier;
 import com.velocity.rgs.jackpot.domain.JackpotWin;
 import com.velocity.rgs.jackpot.persistence.JackpotPoolRepository;
 import com.velocity.rgs.jackpot.persistence.JackpotWinRepository;
+import com.velocity.rgs.slot.math.config.ProgressiveJackpotConfig;
 import com.velocity.rgs.testsupport.JwtTestFactory;
 import com.velocity.rgs.testsupport.RgsIntegrationTest;
 import com.velocity.rgs.wallet.domain.WalletTransactionType;
@@ -63,8 +64,11 @@ class JackpotAwardIntegrationTest {
     void winningAPoolPaysItOutAndResetsItToSeed() throws Exception {
         String player = player();
         String sessionId = init(player);
-        // Grow the Mini above its seed first, so "reset to seed" is a visible drop rather than a no-op.
-        spin(player, sessionId, "5.00");
+        // Grown through the service, not a warm-up spin: a spin can trigger a feature and leave the
+        // session out of base game, making the next spin an illegal transition. One spin per player is
+        // the only shape that does not depend on what the reels happened to do.
+        jackpotService.contribute(new ProgressiveJackpotConfig(true, null),
+                CURRENCY, new BigDecimal("50.00"));
 
         BigDecimal poolBefore = amount(JackpotTier.MINI);
         BigDecimal seed = seed(JackpotTier.MINI);
@@ -216,7 +220,11 @@ class JackpotAwardIntegrationTest {
     void aWinningResponseReportsThePoolAlreadyReset() throws Exception {
         String player = player();
         String sessionId = init(player);
-        spin(player, sessionId, "5.00");
+        // One spin only, for the same reason as above: a warm-up spin can leave the session in a
+        // feature, and the winning spin would then be a free spin - which costs nothing, contributes
+        // nothing, and carries no jackpot object at all.
+        jackpotService.contribute(new ProgressiveJackpotConfig(true, null),
+                CURRENCY, new BigDecimal("50.00"));
 
         BigDecimal before = amount(JackpotTier.MINI);
         jackpotService.forceNextWin(player, JackpotTier.MINI);
@@ -275,6 +283,52 @@ class JackpotAwardIntegrationTest {
             assertThat(properties.tier(tier).getShare())
                     .as("%s share survived the profile override", tier).isNotNull();
         }
+    }
+
+    /**
+     * The winning round is identifiable in round history, and only that round.
+     *
+     * <p>The jackpot travels as its own fields rather than being folded into {@code totalWin}: the
+     * round's win is what the reels paid, and a progressive is pooled money credited on a separate
+     * transaction. Adding them together would make the round claim a payout the game never produced -
+     * and would quietly break the reconciliation split that keeps the two explainable.
+     */
+    @Test
+    void theWinningRoundIsBadgedInHistory() throws Exception {
+        String player = player();
+        String sessionId = init(player);
+        jackpotService.forceNextWin(player, JackpotTier.MINOR);
+        spin(player, sessionId, "1.00");
+
+        JackpotWin win = winRepository.findByPlayerIdOrderByWonAtDesc(player).get(0);
+
+        MvcResult res = mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
+                        .get("/api/v1/admin/rounds/" + player)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + JwtTestFactory.adminToken(player)))
+                .andReturn();
+        assertThat(res.getResponse().getStatus()).isEqualTo(200);
+
+        JsonNode rounds = mapper.readTree(res.getResponse().getContentAsString());
+        assertThat(rounds).isNotEmpty();
+
+        int badged = 0;
+        for (JsonNode round : rounds) {
+            if (round.get("roundId").asText().equals(win.getRoundId())) {
+                badged++;
+                assertThat(round.get("jackpotTier").asText()).isEqualTo("MINOR");
+                assertThat(round.get("jackpotAmount").decimalValue())
+                        .isEqualByComparingTo(win.getAmount());
+                assertThat(round.get("totalWin").decimalValue())
+                        .as("the jackpot is not folded into what the reels paid")
+                        .isNotEqualTo(win.getAmount());
+            } else {
+                assertThat(round.has("jackpotTier"))
+                        .as("round %s did not win a jackpot and must not claim one",
+                                round.get("roundId").asText())
+                        .isFalse();
+            }
+        }
+        assertThat(badged).as("exactly the winning round carries the badge").isEqualTo(1);
     }
 
     // ---------------------------------------------------------------- helpers

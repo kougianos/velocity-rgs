@@ -2237,6 +2237,29 @@ body.history-page .toast.error { border-left-color: var(--danger); }
 .vx-jp-grown { font-size: 11.5px; color: color-mix(in srgb, var(--jp) 78%, var(--vx-text)); }
 /* A pool still at its seed states the seed instead, which is the honest version of "nothing yet". */
 .vx-jp-grown.is-idle { color: var(--vx-faint); }
+/* Who took it last. Muted: it is provenance, not the headline - the figure above is the headline. */
+.vx-jp-won { font-size: 11.5px; color: var(--vx-faint); }
+.vx-jp-sub { display: block; min-height: 15px; }
+
+/* A pool that just dropped was won by somebody. One flash, then it starts climbing again. */
+.vx-jp-tile.is-won { animation: vx-jp-won-flash 1600ms ease-out; }
+@keyframes vx-jp-won-flash {
+  0%   { border-color: color-mix(in srgb, var(--jp) 90%, transparent);
+         background: color-mix(in srgb, var(--jp) 26%, transparent);
+         transform: scale(1.015); }
+  40%  { border-color: color-mix(in srgb, var(--jp) 60%, transparent);
+         background: color-mix(in srgb, var(--jp) 14%, transparent);
+         transform: scale(1); }
+  100% { border-color: color-mix(in srgb, var(--jp) 26%, transparent);
+         background: color-mix(in srgb, var(--jp) 7%, rgba(255, 255, 255, 0.02));
+         transform: scale(1); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .vx-jp-tile.is-won { animation: none; }
+}
+
+/* The ticker's figure is tabular already (.vx-num); this stops the tile resizing as digits change. */
+.vx-jp-amt { font-variant-numeric: tabular-nums; }
 
 @media (max-width: 860px) {
   .vx-jp-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -2826,6 +2849,84 @@ body.history-page .toast.error { border-left-color: var(--danger); }
 }
 @media (max-width: 560px) {
   .jp-cells { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+/* ---- jackpot row in round history (history.html, §2) ---- */
+.badge-jackpot {
+  color: var(--vx-gold);
+  background: color-mix(in srgb, var(--vx-gold) 14%, transparent);
+  border: 1px solid color-mix(in srgb, var(--vx-gold) 34%, transparent);
+  white-space: nowrap;
+}
+/* The row itself is marked, not just the cell: a jackpot is the one line in a history anyone scans
+   for, and it should be findable without reading the Outcome column. */
+.history-table tr.row-jackpot {
+  background: color-mix(in srgb, var(--vx-gold) 7%, transparent);
+}
+.history-table tr.row-jackpot td { border-color: color-mix(in srgb, var(--vx-gold) 22%, transparent); }
+
+/* ---- reconciliation findings page (audit.html, §2) ---- */
+.au-note { font-size: 13px; color: var(--vx-faint); }
+.au-note code { font-family: var(--vx-mono); color: var(--vx-dim); }
+.au-controls {
+  display: grid; grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px; margin: 18px 0;
+}
+.au-ctl {
+  padding: 18px; border-radius: 14px;
+  border: 1px solid var(--vx-hair); background: var(--vx-graphite);
+}
+.au-ctl-warn { border-color: color-mix(in srgb, var(--vx-gold) 30%, transparent); }
+.au-ctl h2 {
+  font-family: var(--vx-display); font-weight: 800; text-transform: uppercase;
+  font-size: 14px; margin: 0 0 6px;
+}
+.au-ctl p { font-size: 13px; line-height: 1.55; color: var(--vx-dim); margin: 0 0 14px; }
+.au-ctl code { font-family: var(--vx-mono); font-size: 12px; color: var(--vx-text); }
+
+.au-empty {
+  padding: 26px; border-radius: 14px; text-align: center;
+  border: 1px solid color-mix(in srgb, var(--vx-emerald) 26%, transparent);
+  background: color-mix(in srgb, var(--vx-emerald) 6%, transparent);
+}
+.au-empty h2 {
+  font-family: var(--vx-display); font-weight: 800; text-transform: uppercase;
+  font-size: 16px; margin: 0 0 8px; color: var(--vx-emerald);
+}
+.au-empty p { font-size: 13.5px; line-height: 1.6; color: var(--vx-dim); margin: 0 auto; max-width: 62ch; }
+
+.au-results h2 {
+  font-family: var(--vx-display); font-weight: 800; text-transform: uppercase;
+  font-size: 15px; margin: 0 0 12px;
+}
+/* The table can outgrow a narrow window; it scrolls inside its own box rather than the page. */
+.au-table-wrap {
+  overflow-x: auto; border: 1px solid var(--vx-hair); border-radius: 12px;
+  background: var(--vx-graphite);
+}
+.au-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+.au-table th {
+  text-align: left; padding: 10px 12px; white-space: nowrap;
+  font-size: 9.5px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--vx-faint);
+  border-bottom: 1px solid var(--vx-hair);
+}
+.au-table td { padding: 10px 12px; border-bottom: 1px solid var(--vx-hair); color: var(--vx-dim); }
+.au-table tr:last-child td { border-bottom: none; }
+.au-table code { font-family: var(--vx-mono); font-size: 11.5px; color: var(--vx-text); }
+.au-delta { color: var(--danger); font-weight: 600; }
+.au-badge {
+  display: inline-block; padding: 3px 8px; border-radius: 999px; white-space: nowrap;
+  font-size: 9.5px; letter-spacing: 0.1em; text-transform: uppercase; font-weight: 600;
+}
+.au-badge.is-credit {
+  color: var(--vx-gold); background: color-mix(in srgb, var(--vx-gold) 12%, transparent);
+}
+.au-badge.is-debit {
+  color: var(--vx-frost); background: color-mix(in srgb, var(--vx-frost) 12%, transparent);
+}
+
+@media (max-width: 720px) {
+  .au-controls { grid-template-columns: 1fr; }
 }
 
 /* ---- jackpot win + exactly-once demo panel (game.html, §2) ---- */

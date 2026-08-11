@@ -197,10 +197,17 @@ alongside the live `amount`, so the table alone says what the prize is worth and
 below. A `CHECK (amount >= seed_amount)` makes the floor the database's business rather than a rule the
 application is trusted to remember.
 
-**Postgres is the pool of record, and Redis will never be.** The ticker gets a Redis read cache later,
-in front of a value that is already correct - not as the place the value lives. The reason is the whole
-design in one line: a pool is money owed to a player who has not won it yet, and a cache is a thing that
-is allowed to evict.
+**Postgres is the pool of record, and Redis never is.** `JackpotPoolCache` sits in front of the public
+ticker read only - it holds a *rendered view* of the pools, with a two-second TTL. Every path that moves
+money reads Postgres directly.
+
+The distinction is the whole design. A pool is money owed to a player who has not won it yet; Redis is
+allowed to evict, and money that can be evicted is not money. A cached *picture* may be a second stale,
+because a jackpot figure that is a second behind is a display detail and one that is gone is a
+liability. That is also why the cache is evicted on an **award** but not on a contribution: a
+contribution moves a figure by a fraction of a cent and can wait out the TTL, while an award drops the
+pool by its entire value, and showing the old number afterwards would be advertising a prize already
+paid to somebody else.
 
 `GET /api/v1/jackpots` is anonymous, like the catalog and for the same reason - the lobby draws the
 strip before anyone signs in, the figures are advertised publicly by design, and the response carries no
@@ -258,7 +265,20 @@ afterwards. Driven by the response rather than a poll on purpose: a poll can onl
 different a moment later, which is a much weaker thing to have watched than a figure that moves on the
 click.
 
-Still to come with the ticker: count-up interpolation between updates and the "last won by" line.
+The strip is a **live ticker**: it re-polls every four seconds and counts between the old figure and the
+new one rather than snapping. Snapping would be equally honest and would read as a glitch - a jackpot
+that jumps looks broken, one that climbs looks like money accruing, which is what is actually happening.
+A pool that goes *down* is a different event entirely and is not animated past: it flashes, because
+somebody won it.
+
+Each tier carries a "last won by … 3m ago" line, with the player id **masked**. `/api/v1/jackpots` is
+anonymous, so anything on that view is published to whoever loads the lobby. A ticker needs to say the
+prize is real and winnable; it does not need to name anyone.
+
+Four seconds of polling against a two-second cache costs the database nothing regardless of how many
+lobbies are open - which is the entire reason the cache exists. Polling rather than streaming because
+the pools are shared: what a visitor watches is every *other* player's spins, so there is no
+per-visitor event to push.
 
 ### Paying one out, exactly once
 
@@ -286,6 +306,25 @@ award, forever - the kind of leak that is invisible until someone sums the ledge
 `JACKPOT_WIN` is its own wallet transaction type so reconciliation can match a payout to its
 `jackpot_win` row rather than seeing an unexplained credit the size of a whole pool.
 
+### Reconciling a payout
+
+The hourly job compares the game-engine view against the wallet ledger. A progressive breaks that
+comparison unless it is taught about: the credit lands on its own transaction and is **not** part of the
+round's `total_win`, so the ledger holds money the game view never expected. Adding `JACKPOT_WIN` to the
+credit types was necessary and not sufficient - it made the payout count as actual credit with no
+matching expectation, which is worse than ignoring it. `expected credit` now includes
+`sum(jackpot_win.amount)` for the bucket, and the audit row is what explains the payout.
+
+The expectation is matched against **what was paid**, not what the pool held. Those differ by the
+sub-cent remainder the wallet cannot represent, so reconciling against the pool figure would raise a
+finding on every award for a fraction of a cent.
+
+Findings are surfaced at [`/audit.html`](src/main/resources/static/audit.html), with a control to run a
+window on demand rather than waiting for the cron. The page also carries a deliberate spoiler: a button
+that credits money with no round behind it. **An empty findings report and a broken findings report look
+identical**, so proving the report can catch something is what makes "no findings" mean anything -
+`JackpotReconciliationIntegrationTest` asserts both halves for the same reason.
+
 ### Showing it works
 
 The Mega is 1 in 10,000 spins, which is right for a jackpot and useless for a demonstration. The game
@@ -293,6 +332,11 @@ page carries a demo panel (demo mode only) that arms the next spin to win a chos
 that exact spin under its own `Idempotency-Key` and prints the replayed response beside the balance
 before and after. Only the dice are rigged: the CAS, the audit row, the credit and the reset a viewer
 watches are the production path.
+
+The winning round is badged in Round History, and the jackpot travels as its own fields rather than
+being folded into the round's `totalWin`. The round's win is what the reels paid; a progressive is
+pooled money credited on a separate transaction. Adding them together would make the round claim a
+payout the game never produced, and would break the very split that lets reconciliation explain both.
 
 ---
 

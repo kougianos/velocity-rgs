@@ -115,11 +115,14 @@ function fmtMoney(value, currency) {
 /**
  * The progressive jackpot strip (§2).
  *
- * Every figure is the pool row in Postgres, read through /api/v1/jackpots - nothing here is a decorative
- * number, which is the only reason it is worth putting on the page at all.
+ * Every figure is a pool row in Postgres, read through /api/v1/jackpots. Nothing here is decorative,
+ * which is the only reason it is worth putting at the top of the page.
  *
- * Flat values for now. The count-up interpolation, the flash on a win and the "last won by" line arrive
- * with the ticker task, once there are contributions making the pools actually move.
+ * The strip is a live ticker: it re-reads every few seconds and counts between the old figure and the
+ * new one rather than snapping. Snapping would be honest and would read as a glitch - a jackpot that
+ * jumps looks broken, and one that climbs looks like money accruing, which is what is actually
+ * happening. A pool that goes DOWN was won by somebody, and gets said so out loud instead of being
+ * animated past.
  *
  * Returns null when the server runs no pools in this currency, so a deployment without jackpots simply
  * has no strip rather than an empty frame captioned "Progressive Jackpots".
@@ -131,28 +134,139 @@ function renderJackpotStrip(pools) {
   sec.className = "vx-jp";
   sec.setAttribute("aria-label", "Progressive jackpots");
 
-  const tiles = pools.map((p) => {
-    // Shown only once a pool has actually been played for. On a fresh install every tier sits exactly at
-    // its seed, and "+0.00 since seed" on all four reads as a broken strip rather than an honest one.
-    const grown = Number(p.grownBy ?? 0);
-    const since = grown > 0
-      ? `<span class="vx-jp-grown">+${fmtMoney(grown, p.currency)} since seed</span>`
-      : `<span class="vx-jp-grown is-idle">seeds at ${fmtMoney(p.seed, p.currency)}</span>`;
-    return `
-      <li class="vx-jp-tile" data-tier="${esc(p.tier)}">
+  const tiles = pools.map((p) => `
+      <li class="vx-jp-tile" data-tier="${esc(p.tier)}" data-amount="${esc(p.amount)}">
         <span class="vx-jp-tier">${esc(p.label)}</span>
         <span class="vx-jp-amt vx-num">${fmtMoney(p.amount, p.currency)}</span>
-        ${since}
-      </li>`;
-  }).join("");
+        <span class="vx-jp-sub">${subLine(p)}</span>
+      </li>`).join("");
 
   sec.innerHTML = `
     <div class="vx-jp-head">
       <span class="vx-lab">Progressive · shared across every slot</span>
-      <span class="vx-jp-note">Pooled in Postgres, contributed to on every spin</span>
+      <span class="vx-jp-note">Live from Postgres. Redis caches this view for a second or two, never
+        the pool itself.</span>
     </div>
     <ul class="vx-jp-grid">${tiles}</ul>`;
+
+  startJackpotTicker();
   return sec;
+}
+
+/**
+ * The line under each figure: who took it last, or how far it has climbed if nobody has.
+ *
+ * A pool nobody has ever won states its seed instead of "+0.00 since seed", which on a fresh install
+ * would read as four broken tiles rather than four honest ones.
+ */
+function subLine(p) {
+  if (p.lastWonAt) {
+    return `<span class="vx-jp-won">Last won by ${esc(p.lastWonBy || "a player")} ${
+      esc(agoLabel(p.lastWonAt))}</span>`;
+  }
+  const grown = Number(p.grownBy ?? 0);
+  return grown > 0
+    ? `<span class="vx-jp-grown">+${fmtMoney(grown, p.currency)} since seed</span>`
+    : `<span class="vx-jp-grown is-idle">seeds at ${fmtMoney(p.seed, p.currency)}</span>`;
+}
+
+/** "just now", "3m ago", "2h ago", "5d ago" - coarse on purpose; a jackpot is not a stopwatch. */
+function agoLabel(iso) {
+  const seconds = Math.max(0, (Date.now() - new Date(iso).getTime()) / 1000);
+  if (seconds < 60) return "just now";
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  return `${Math.floor(hours / 24)}d ago`;
+}
+
+/* ---- the ticker ---- */
+
+const JP_POLL_MS = 4000;
+const JP_COUNT_MS = 900;
+
+let jpTimer = null;
+
+/**
+ * Polls the pools and hands each tile its new figure.
+ *
+ * Polling rather than streaming: the pools are shared, so what a visitor is watching is every other
+ * player's spins, and there is no per-visitor event to push. A four-second poll against a two-second
+ * Redis cache costs the database nothing regardless of how many people have the lobby open - which is
+ * the entire reason that cache exists.
+ */
+function startJackpotTicker() {
+  if (jpTimer) return;
+  jpTimer = setInterval(async () => {
+    if (document.hidden) return;   // a background tab is not watching anything
+    const pools = await fetchJackpots();
+    for (const p of pools) {
+      updateJackpotTile(p);
+    }
+  }, JP_POLL_MS);
+}
+
+function updateJackpotTile(pool) {
+  const tile = document.querySelector(`.vx-jp-tile[data-tier="${pool.tier}"]`);
+  if (!tile) return;
+
+  const previous = Number(tile.dataset.amount ?? 0);
+  const next = Number(pool.amount ?? 0);
+  tile.dataset.amount = String(next);
+
+  const sub = tile.querySelector(".vx-jp-sub");
+  if (sub) sub.innerHTML = subLine(pool);
+
+  if (next === previous) return;
+
+  if (next < previous) {
+    // The pool fell. That is not a rounding wobble - somebody won it - so it is announced rather than
+    // counted down to, which would read as the prize quietly shrinking.
+    tile.querySelector(".vx-jp-amt").textContent = fmtMoney(next, pool.currency);
+    tile.classList.remove("is-won");
+    void tile.offsetWidth;
+    tile.classList.add("is-won");
+    return;
+  }
+  countUp(tile.querySelector(".vx-jp-amt"), previous, next, pool.currency);
+}
+
+/**
+ * Counts one figure up to another over a fixed duration.
+ *
+ * Eased out so the number decelerates into its final value instead of stopping dead, and cancelled if a
+ * newer update lands mid-flight - otherwise two overlapping animations fight over the same element and
+ * the figure jitters between them.
+ */
+function countUp(el, from, to, currency) {
+  if (!el) return;
+  // Two cases where the figure is set outright instead of animated, and the second is not cosmetic:
+  // requestAnimationFrame is paused in a hidden tab, so an animation started there would never run its
+  // final step and the tile would sit on the OLD value until the tab was looked at again. Nobody is
+  // watching a hidden tab, but it must still hold the right number when they come back.
+  const hidden = document.hidden;
+  const reducedMotion = window.matchMedia
+    && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  if (hidden || reducedMotion) {
+    el.textContent = fmtMoney(to, currency);
+    return;
+  }
+  if (el._jpFrame) cancelAnimationFrame(el._jpFrame);
+
+  const started = performance.now();
+  const step = (now) => {
+    const t = Math.min(1, (now - started) / JP_COUNT_MS);
+    const eased = 1 - Math.pow(1 - t, 3);
+    el.textContent = fmtMoney(from + (to - from) * eased, currency);
+    if (t < 1) {
+      el._jpFrame = requestAnimationFrame(step);
+    } else {
+      el._jpFrame = null;
+      el.textContent = fmtMoney(to, currency);
+    }
+  };
+  el._jpFrame = requestAnimationFrame(step);
 }
 
 /**

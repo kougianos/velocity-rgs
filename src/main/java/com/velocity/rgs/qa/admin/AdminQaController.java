@@ -7,6 +7,8 @@ import com.velocity.rgs.blackjack.domain.BlackjackRound;
 import com.velocity.rgs.blackjack.persistence.BlackjackRoundRepository;
 import com.velocity.rgs.common.money.Money;
 import com.velocity.rgs.config.PlayerContext;
+import com.velocity.rgs.jackpot.domain.JackpotWin;
+import com.velocity.rgs.jackpot.persistence.JackpotWinRepository;
 import com.velocity.rgs.roulette.domain.RouletteRound;
 import com.velocity.rgs.roulette.persistence.RouletteRoundRepository;
 import com.velocity.rgs.slot.domain.GameRound;
@@ -38,6 +40,7 @@ import java.time.Instant;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 /**
@@ -66,6 +69,7 @@ public class AdminQaController {
     private final GameRoundRepository gameRoundRepository;
     private final RouletteRoundRepository rouletteRoundRepository;
     private final BlackjackRoundRepository blackjackRoundRepository;
+    private final JackpotWinRepository jackpotWinRepository;
     private final ObjectMapper objectMapper;
 
     // ------------------------------------------------------------------ wallet/balance
@@ -144,9 +148,19 @@ public class AdminQaController {
                 .stream().map(RoundSummary::fromRoulette);
         Stream<RoundSummary> blackjackRounds = blackjackRoundRepository.findByPlayerIdOrderByCreatedAtDesc(playerId)
                 .stream().map(RoundSummary::fromBlackjack);
+        // One lookup for the player's jackpots, then attached by round id. A per-row query would be
+        // 200 round trips to decorate the handful of rounds that won anything.
+        Map<String, JackpotWin> jackpotsByRound = jackpotWinRepository
+                .findByPlayerIdOrderByWonAtDesc(playerId).stream()
+                .collect(Collectors.toMap(JackpotWin::getRoundId, w -> w, (a, b) -> a));
+
         List<RoundSummary> rounds = Stream.concat(Stream.concat(slotRounds, rouletteRounds), blackjackRounds)
                 .sorted(Comparator.comparing(RoundSummary::createdAt).reversed())
                 .limit(200)
+                .map(r -> {
+                    JackpotWin win = jackpotsByRound.get(r.roundId());
+                    return win == null ? r : r.withJackpot(win);
+                })
                 .toList();
         log.info("ADMIN listRounds admin={} playerId={} count={}",
                 playerContext.getPlayerId(), playerId, rounds.size());
@@ -241,6 +255,16 @@ public class AdminQaController {
         }
     }
 
+    /**
+     * @param jackpotTier   the progressive this round landed, or null - which is almost every round.
+     *                      Carried on the round rather than fetched per-row so the history page needs
+     *                      one call, and so a jackpot cannot appear in the list without the round that
+     *                      won it
+     * @param jackpotAmount what that jackpot paid. Deliberately separate from {@code totalWin}: the
+     *                      round's win is what the reels paid, the jackpot is pooled money credited on
+     *                      its own transaction, and adding them together would make the round look like
+     *                      it had a payout the game never produced
+     */
     public record RoundSummary(
             String roundId,
             String gameId,
@@ -249,28 +273,36 @@ public class AdminQaController {
             BigDecimal totalWin,
             String currency,
             boolean powerBetActive,
-            Instant createdAt
+            Instant createdAt,
+            String jackpotTier,
+            BigDecimal jackpotAmount
     ) {
+
+        /** Same round, with the jackpot it won attached. */
+        RoundSummary withJackpot(JackpotWin win) {
+            return new RoundSummary(roundId, gameId, stateContext, betAmount, totalWin, currency,
+                    powerBetActive, createdAt, win.getTier().name(), win.getAmount());
+        }
         static RoundSummary from(GameRound r) {
             return new RoundSummary(
                     r.getRoundId(), r.getGameId(),
                     r.getStateContext() != null ? r.getStateContext().name() : null,
                     r.getBetAmount(), r.getTotalWin(), r.getCurrency(),
-                    r.isPowerBetActive(), r.getCreatedAt());
+                    r.isPowerBetActive(), r.getCreatedAt(), null, null);
         }
 
         static RoundSummary fromRoulette(RouletteRound r) {
             return new RoundSummary(
                     r.getRoundId(), r.getGameId(), "ROULETTE",
                     r.getTotalBet(), r.getTotalWin(), r.getCurrency(),
-                    false, r.getCreatedAt());
+                    false, r.getCreatedAt(), null, null);
         }
 
         static RoundSummary fromBlackjack(BlackjackRound r) {
             return new RoundSummary(
                     r.getRoundId(), r.getGameId(), "BLACKJACK",
                     r.getTotalBet(), r.getTotalWin(), r.getCurrency(),
-                    false, r.getCreatedAt());
+                    false, r.getCreatedAt(), null, null);
         }
     }
 

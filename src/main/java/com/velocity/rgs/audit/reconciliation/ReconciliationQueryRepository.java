@@ -1,5 +1,6 @@
 package com.velocity.rgs.audit.reconciliation;
 
+import com.velocity.rgs.jackpot.domain.JackpotWin;
 import com.velocity.rgs.slot.domain.FeaturePurchaseEvent;
 import com.velocity.rgs.slot.domain.GameRound;
 import com.velocity.rgs.wallet.domain.WalletTransaction;
@@ -46,6 +47,27 @@ public class ReconciliationQueryRepository {
                         " where g.createdAt >= :start and g.createdAt < :end" +
                         " and g.winTransactionId is not null" +
                         " group by g.playerId, g.currency",
+                ReconciliationAggregate.class)
+                .setParameter("start", bucketStart)
+                .setParameter("end", bucketEnd)
+                .getResultList();
+    }
+
+    /**
+     * Jackpots awarded in the bucket, per player (§2).
+     *
+     * <p>This is the <em>expected</em> side of a jackpot payout. A progressive is credited on its own
+     * transaction and is not part of the round's {@code total_win} - the round paid what the reels paid
+     * - so without this the ledger would show a credit the game view had no expectation for, and every
+     * jackpot would raise a discrepancy the moment it was won. The audit row is what explains it.
+     */
+    public List<ReconciliationAggregate> sumJackpotWins(Instant bucketStart, Instant bucketEnd) {
+        return entityManager.createQuery(
+                "select new com.velocity.rgs.audit.reconciliation.ReconciliationAggregate(" +
+                        " w.playerId, w.currency, sum(w.amount))" +
+                        " from " + JackpotWin.class.getName() + " w" +
+                        " where w.wonAt >= :start and w.wonAt < :end" +
+                        " group by w.playerId, w.currency",
                 ReconciliationAggregate.class)
                 .setParameter("start", bucketStart)
                 .setParameter("end", bucketEnd)

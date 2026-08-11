@@ -91,6 +91,11 @@ public class ReconciliationJob {
                 (t, v) -> t.expectedDebit = t.expectedDebit.add(v));
         collect(totals, queryRepository.sumGameRoundWins(bucketStart, bucketEnd),
                 (t, v) -> t.expectedCredit = t.expectedCredit.add(v));
+        // A progressive is credited on its own transaction and is not in the round's total_win, so it
+        // has to be expected from the audit row or every jackpot reads as an unexplained credit the
+        // size of a whole pool. This is the line that makes a win reconcile instead of raising a flag.
+        collect(totals, queryRepository.sumJackpotWins(bucketStart, bucketEnd),
+                (t, v) -> t.expectedCredit = t.expectedCredit.add(v));
         collect(totals, queryRepository.sumWalletTransactionsByTypes(bucketStart, bucketEnd, DEBIT_TYPES),
                 (t, v) -> t.actualDebit = t.actualDebit.add(v));
         collect(totals, queryRepository.sumWalletTransactionsByTypes(bucketStart, bucketEnd, CREDIT_TYPES),

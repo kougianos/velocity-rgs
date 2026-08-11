@@ -42,6 +42,11 @@ function fmtTime(iso) {
 }
 
 /** Human-friendly label for the persisted state context (BASE_GAME, FREE_SPINS_LOOP, …). */
+/** "MEGA" -> "Mega". The tier is an enum on the wire and a word on the page. */
+function titleCaseTier(tier) {
+  return String(tier || "").charAt(0) + String(tier || "").slice(1).toLowerCase();
+}
+
 function stateLabel(state) {
   if (!state) return "-";
   return state.replace(/_/g, " ").toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
@@ -115,17 +120,30 @@ function renderTable(rounds, games) {
   const rows = rounds.map((r) => {
     const win = Number(r.totalWin || 0);
     const bet = Number(r.betAmount || 0);
-    const net = win - bet;
-    const outcome = win > 0
-      ? `<span class="badge badge-win">Win</span>`
-      : `<span class="badge badge-loss">Loss</span>`;
+    const jackpotWon = Number(r.jackpotAmount || 0);
+    // Net counts the jackpot; the Win column does not. The two answer different questions and both
+    // answers have to be right: Win is what the reels paid, Net is what the round did to the balance.
+    // Leaving the jackpot out of Net would show a round that paid a four-figure prize as a small loss.
+    const net = win + jackpotWon - bet;
+    const outcome = r.jackpotTier
+      ? `<span class="badge badge-jackpot">Jackpot</span>`
+      : win > 0
+        ? `<span class="badge badge-win">Win</span>`
+        : `<span class="badge badge-loss">Loss</span>`;
     const game = games[r.gameId] || { title: r.gameId, logo: "🎰" };
     const power = r.powerBetActive ? `<span class="badge badge-power">Power</span>` : "";
+    // A jackpot is not part of the round's win - it is pooled money paid on its own transaction - so it
+    // gets its own badge and its own figure rather than being folded into the Win column, which would
+    // claim the reels produced a payout they did not.
+    const jackpot = r.jackpotTier
+      ? `<span class="badge badge-jackpot" title="Progressive jackpot, credited separately">🏆 ${
+          titleCaseTier(r.jackpotTier)} ${fmt(r.jackpotAmount)}</span>`
+      : "";
     return `
-      <tr class="${win > 0 ? "row-win" : "row-loss"}">
+      <tr class="${r.jackpotTier ? "row-jackpot" : win > 0 ? "row-win" : "row-loss"}">
         <td class="col-time">${fmtTime(r.createdAt)}</td>
         <td><span class="game-logo">${game.logo || "🎰"}</span> ${game.title || r.gameId}</td>
-        <td>${stateLabel(r.stateContext)} ${power}</td>
+        <td>${stateLabel(r.stateContext)} ${power} ${jackpot}</td>
         <td class="num">${fmt(bet)}</td>
         <td class="num win-cell">${fmt(win)}</td>
         <td class="num ${net >= 0 ? "pos" : "neg"}">${net >= 0 ? "+" : "−"}${fmt(Math.abs(net))}</td>

@@ -52,7 +52,9 @@ class JackpotAwardRollTest {
             tiers.put(tier, t);
         }
         props.setTiers(tiers);
-        return new JackpotService(null, null, props);
+        // Repositories and cache are null: rollAward touches none of them, and passing nulls says
+        // so more plainly than a mock that would need explaining.
+        return new JackpotService(null, null, props, null);
     }
 
     private static Map<JackpotTier, Integer> allOdds(int n) {

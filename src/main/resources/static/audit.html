@@ -2,9 +2,8 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <!-- Pinch-zoom left enabled (no maximum-scale / user-scalable=no) for accessibility. -->
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Velocity - Responsible Gaming</title>
+  <title>Velocity - Reconciliation</title>
   <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
   <link rel="preload" href="/fonts/archivo-expanded.woff2" as="font" type="font/woff2" crossorigin />
   <link rel="preload" href="/fonts/geist-mono.woff2" as="font" type="font/woff2" crossorigin />
@@ -20,19 +19,19 @@
       <nav class="vx-nav" aria-label="Primary">
         <a href="/">Lobby</a>
         <a href="/history.html">History</a>
-        <a href="/rg.html" class="on" aria-current="page">Responsible Gaming</a>
-        <a href="/audit.html">Reconciliation</a>
+        <a href="/rg.html">Responsible Gaming</a>
+        <a href="/audit.html" class="on" aria-current="page">Reconciliation</a>
       </nav>
       <span class="vx-build" title="Environment">Demo build</span>
     </div>
   </header>
 
-  <main class="rg-main" id="rgRoot">
-    <p class="rg-loading" role="status">Loading your limits…</p>
+  <main class="rg-main" id="auditRoot">
+    <p class="rg-loading" role="status">Loading findings…</p>
   </main>
 
   <div id="toast" class="toast hidden" role="status" aria-live="polite"></div>
 
-  <script src="/rg.js"></script>
+  <script src="/audit.js"></script>
 </body>
 </html>

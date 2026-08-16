@@ -17,6 +17,14 @@
 
 * { box-sizing: border-box; }
 
+/* No page in this app scrolls sideways. Every component that can outgrow a phone owns its own
+   scroll container - the nav tab strip, the RTP simulator table, the reconciliation table - so this
+   is the backstop for the one that gets missed, not the mechanism.
+   `clip` and not `hidden`: `hidden` turns the viewport into a scroll container, which would break
+   the history table's `position: sticky` header. `clip` clips without scrolling, leaves sticky
+   alone, and leaves pinch-zoom panning (deliberately kept enabled for the roulette table) intact. */
+html { overflow-x: clip; }
+
 body {
   margin: 0;
   font-family: "Segoe UI", Roboto, system-ui, sans-serif;
@@ -549,6 +557,12 @@ input[type="range"].bet-slider {
 .sim-report th { color: var(--text-dim); font-weight: 600; font-size: 10px; text-transform: uppercase; }
 /* numeric columns (Spins, Total Bet, Total Win, RTP) - right-align with tabular figures */
 .sim-report th:not(:first-child), .sim-report td:not(:first-child) { text-align: right; font-variant-numeric: tabular-nums; }
+/* The channel name is the only column allowed to give ground - BONUS_BUY_FREE_SPINS is 20 characters
+   of nowrap that used to set the width of the whole table. It wraps instead (a table cell treats
+   max-width as a hint, so capping it does nothing); `anywhere` because the enum's underscores are
+   not break opportunities. The figures stay on one line, since a wrapped number is a misread one. */
+.sim-report th:first-child, .sim-report td:first-child { white-space: normal; overflow-wrap: anywhere; }
+.sim-foot { color: var(--text-dim); margin: 8px 0 0; }
 .sim-report .rtp { color: var(--gold); font-weight: 700; }
 .sim-report .row-overall td { border-top: 2px solid var(--border); border-bottom: none; }
 
@@ -833,7 +847,11 @@ body[data-game="inferno-riches"] .sym-12 { background: linear-gradient(135deg, #
 .stat-card-value.pos { color: var(--primary-hi); }
 .stat-card-value.neg { color: var(--danger); }
 
-.history-panel { padding: 0; overflow: hidden; }
+/* The nine-column ledger needs ~1050px. Under 760px it becomes cards (see below); between the two
+   it stays a table and scrolls inside this box - `auto` rather than the `hidden` that used to be
+   here, which clipped the Audit column and its Replay/Share buttons clean off with no way to reach
+   them on a laptop or a landscape tablet. Same treatment as .au-table-wrap and .sim-report. */
+.history-panel { padding: 0; overflow-x: auto; }
 .history-loading, .history-empty, .history-error { padding: 22px; color: var(--text-dim); font-size: 14px; margin: 0; }
 .history-error { color: var(--danger); }
 .history-empty a, .history-error a { color: var(--accent); }
@@ -886,6 +904,134 @@ body[data-game="inferno-riches"] .sym-12 { background: linear-gradient(135deg, #
 .badge-win { background: rgba(63, 185, 80, 0.16); color: var(--primary-hi); border: 1px solid rgba(63, 185, 80, 0.4); }
 .badge-loss { background: rgba(248, 81, 73, 0.14); color: var(--danger); border: 1px solid rgba(248, 81, 73, 0.38); }
 .badge-power { background: rgba(240, 136, 62, 0.16); color: var(--accent); border: 1px solid rgba(240, 136, 62, 0.4); margin-left: 6px; }
+
+/* =========================================================================
+ * Round history on narrow screens - one card per round.
+ *
+ * Nine nowrap columns stop fitting somewhere under ~760px. The ledger used to
+ * respond by amputating columns (Time, Context, Net, Round Id were all set to
+ * display:none on a phone), which is the wrong trade for this page in
+ * particular: a round history missing what the round did to the balance and
+ * which round it was is not the record the page exists to show.
+ *
+ * So the same table is re-laid-out as cards and every field survives, each one
+ * announced by the data-label history.js writes onto it. The table ELEMENTS are
+ * re-displayed rather than the rows re-rendered, because the replay and share
+ * code addresses rows as `tr[data-replay-for]` and expects the table to still be
+ * there underneath. One DOM, two layouts, no JS branch.
+ * ======================================================================= */
+@media (max-width: 760px) {
+  /* The panel was the card; now each row is, so it stops drawing its own chrome. `overflow: hidden`
+     goes with it - it was clipping the audit buttons at the narrow end. */
+  body.history-page .history-panel {
+    padding: 0; background: none; border: 0; box-shadow: none; overflow: visible;
+  }
+  body.history-page .history-table { display: block; width: 100%; font-size: 13px; }
+  body.history-page .history-table thead { display: none; }
+  body.history-page .history-table tbody { display: block; }
+
+  body.history-page .history-table tbody tr:not(.replay-row) {
+    display: grid;
+    /* The name takes the room it can get; the outcome badge takes what it needs. */
+    grid-template-columns: minmax(0, 1fr) auto;
+    margin-bottom: 10px; padding: 13px 15px;
+    border: 1px solid var(--border); border-radius: 12px;
+    background: var(--bg-panel);
+  }
+  /* Hover was a row-tracking affordance for a table; on a stack of cards it just flickers. */
+  body.history-page .history-table tbody tr:hover { background: var(--bg-panel); }
+
+  /* The win/loss stripe moves from the first cell to the edge of the card. Declared after the
+     hover rule they tie with, so a jackpot card keeps its gold tint under the cursor. */
+  body.history-page .history-table tbody tr.row-win { box-shadow: inset 3px 0 0 var(--primary-hi); }
+  body.history-page .history-table tbody tr.row-loss { box-shadow: inset 3px 0 0 var(--danger); }
+  body.history-page .history-table tbody tr.row-jackpot {
+    box-shadow: inset 3px 0 0 var(--vx-gold);
+    background: color-mix(in srgb, var(--vx-gold) 7%, var(--bg-panel));
+  }
+  body.history-page .history-table td:first-child { box-shadow: none; }
+
+  body.history-page .history-table td {
+    display: block; padding: 0; border-bottom: 0; white-space: normal;
+  }
+
+  /* --- card head: which game, how it went, and when --- */
+  body.history-page .history-table .col-game {
+    grid-column: 1; grid-row: 1;
+    font-size: 14.5px; font-weight: 600;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  body.history-page .history-table .col-outcome {
+    grid-column: 2; grid-row: 1; justify-self: end; padding-left: 10px;
+  }
+  body.history-page .history-table .col-time {
+    grid-column: 1 / -1; grid-row: 2;
+    margin-top: 3px; font-size: 11.5px; color: var(--text-dim);
+  }
+
+  /* --- the figures, as labelled rows --- */
+  body.history-page .history-table .col-bet { grid-row: 3; }
+  body.history-page .history-table .col-win { grid-row: 4; }
+  body.history-page .history-table .col-net { grid-row: 5; }
+  body.history-page .history-table .col-context { grid-row: 6; }
+  body.history-page .history-table .col-round { grid-row: 7; }
+  body.history-page .history-table .col-bet,
+  body.history-page .history-table .col-win,
+  body.history-page .history-table .col-net,
+  body.history-page .history-table .col-context,
+  body.history-page .history-table .col-round {
+    grid-column: 1 / -1;
+    display: flex; align-items: baseline; justify-content: space-between; gap: 14px;
+    padding: 7px 0; border-top: 1px solid var(--border);
+    text-align: right;
+  }
+  body.history-page .history-table .col-bet::before,
+  body.history-page .history-table .col-win::before,
+  body.history-page .history-table .col-net::before,
+  body.history-page .history-table .col-context::before,
+  body.history-page .history-table .col-round::before {
+    content: attr(data-label);
+    flex: 0 0 auto;
+    font-size: 10.5px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.6px;
+    color: var(--text-dim);
+  }
+  body.history-page .history-table .col-bet, body.history-page .history-table .col-win,
+  body.history-page .history-table .col-net { font-size: 14px; font-weight: 600; }
+  /* The round id is the one value long enough to need truncating. The cell drops the desktop
+     table's 130px cap and its mono styling (which the ::before label would otherwise inherit); the
+     span inside takes them instead. The full string stays in the cell's title either way. */
+  body.history-page .history-table .col-round {
+    max-width: none; font-family: inherit; font-size: 13px; color: var(--text);
+  }
+  body.history-page .history-table .col-round > span {
+    min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    font-family: "Cascadia Code", Consolas, monospace; font-size: 11.5px; color: var(--text-dim);
+  }
+
+  /* --- audit actions --- */
+  body.history-page .history-table .col-audit {
+    grid-column: 1 / -1; grid-row: 8;
+    display: flex; gap: 8px; margin-top: 12px; padding-top: 12px;
+    border-top: 1px solid var(--border);
+  }
+  body.history-page .history-table .col-audit .btn {
+    flex: 1 1 0; min-width: 0; min-height: 42px; padding: 9px 10px; font-size: 12.5px;
+  }
+
+  /* --- an opened replay/share panel joins the card it belongs to --- */
+  body.history-page .history-table tbody tr:not(.replay-row):has(+ .replay-row:not(.hidden)) {
+    margin-bottom: 0; border-bottom-left-radius: 0; border-bottom-right-radius: 0;
+  }
+  body.history-page .history-table tr.replay-row:not(.hidden) {
+    display: block; margin-bottom: 10px; overflow: hidden;
+    border: 1px solid var(--border); border-top: 0; border-radius: 0 0 12px 12px;
+    background: var(--bg-panel);
+  }
+  body.history-page .history-table tr.replay-row > td { display: block; }
+  /* The proof link and its Open button stack rather than squeezing a 36-char URL next to a button. */
+  body.history-page .share-url { flex-direction: column; }
+  body.history-page .share-url .btn { justify-content: center; text-align: center; }
+}
 
 /* =========================================================================
  * Roulette game page
@@ -1106,13 +1252,20 @@ body[data-theme="blackjack"] {
 .bj-message { margin-top: 12px; font-size: 13.5px; color: var(--text-dim); min-height: 18px; }
 
 /* =========================================================================
- * MOBILE - the single breakpoint.
+ * MOBILE - the phone breakpoint.
  *
- * Above 500px the layout is fully fluid (flex/auto-fit grids handle every width
- * intrinsically). Below 500px we switch into a dedicated mobile design: compact
- * top bar, single-column controls, full-width primary buttons, smaller card/cell
- * art, and trimmed tables - sized so nothing overflows or scrolls horizontally.
- * This is the ONLY media query in the stylesheet; keep new responsive rules here.
+ * Above 500px most of the layout is fluid (flex/auto-fit grids handle every
+ * width intrinsically). Below 500px we switch into a dedicated mobile design:
+ * compact top bar, single-column controls, full-width primary buttons, smaller
+ * card/cell art - sized so nothing overflows or scrolls horizontally.
+ *
+ * This is the general-purpose block, and the default home for a new responsive
+ * rule. A handful of components reach their own limit at a width that has
+ * nothing to do with a phone, and those carry a breakpoint next to the
+ * component instead of here, so the number sits with the thing that produced
+ * it: the primary nav at 820px (where brand + tabs + build chip stop sharing a
+ * line) and the round-history ledger at 760px (where nine columns stop
+ * fitting). Both are commented at the point of use.
  * ======================================================================= */
 @media (max-width: 500px) {
   /* ----- Top bar ----- */
@@ -1248,26 +1401,35 @@ body[data-theme="blackjack"] {
   .bj-actions .btn-spin { flex: 1 1 100%; }
   .bj-actions .btn:not(.btn-spin) { flex: 1 1 auto; }
 
-  /* ----- History ----- */
+  /* ----- History -----
+     The ledger itself is one card per round well before this width; see "Round history on narrow
+     screens" up in the history section. Only the page shell is trimmed here. */
   .history { padding: 20px 14px 40px; }
   .history-title { font-size: 22px; }
-  .history-table { font-size: 12px; }
-  .history-table th, .history-table td { padding: 9px 8px; }
-  /* Drop secondary columns (Time, Context, Net, Round Id) so the essentials -
-     Game / Bet / Win / Outcome - fit without horizontal scrolling. */
-  .history-table th:nth-child(1), .history-table td:nth-child(1),
-  .history-table th:nth-child(3), .history-table td:nth-child(3),
-  .history-table th:nth-child(6), .history-table td:nth-child(6),
-  .history-table th:nth-child(8), .history-table td:nth-child(8) { display: none; }
+  .history-head { margin-bottom: 16px; }
+  .history-actions .btn { min-height: 44px; }
+  .history-summary { gap: 8px; margin-bottom: 18px; }
+  .stat-card { padding: 11px 13px; gap: 4px; }
+  .stat-card-label { font-size: 9.5px; letter-spacing: 0.4px; }
+  .stat-card-value { font-size: 15px; }
 
   /* ----- Velocity mobile -----
      These are scoped with the page's body class (e.g. body.lobby-page .vx-hero)
      so they out-specify the unscoped base .vx-* rules that are declared LATER in
      the file - without that, source order would let the base rules win here. */
 
-  /* Chrome (lobby + history share .vx-top): nav drops to its own centered row. */
-  .vx-top .vx-top-inner { flex-wrap: wrap; gap: 12px; padding: 14px 16px; }
-  .vx-top .vx-nav { order: 3; flex: 1 1 100%; justify-content: center; }
+  /* Chrome (lobby + history share .vx-top). The tabs already have their own row and their own
+     scroll container from the base rules; what they get here is smaller type, so most phones fit
+     all four without scrolling at all, and an edge fade so a strip that DOES scroll reads as
+     continuing rather than as a label someone clipped. The negative margin lets it scroll from
+     screen edge to screen edge while its content keeps the header's 16px inset. */
+  .vx-top .vx-top-inner { gap: 12px; padding: 14px 16px; }
+  .vx-top .vx-nav {
+    margin-inline: -16px; padding-inline: 16px;
+    -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 16px, #000 calc(100% - 16px), transparent 100%);
+    mask-image: linear-gradient(90deg, transparent 0, #000 16px, #000 calc(100% - 16px), transparent 100%);
+  }
+  .vx-top .vx-nav a { font-size: 11px; letter-spacing: 0.05em; padding: 7px 11px; }
 
   /* Lobby hero: force a single column so the stage never sits off-screen right. */
   body.lobby-page .vx-main { padding: 0 16px 40px; }
@@ -1352,18 +1514,6 @@ body[data-theme="blackjack"] {
      panel instead of forcing the page wide. */
   body.vx-game .topbar-inner { padding: 10px 14px; }
   body.vx-game .sim-report { overflow-x: auto; }
-
-  /* History ledger: table-layout:fixed pins the table to its container width
-     (width:100%) no matter the data, so the 4 kept columns (Game / Bet / Win /
-     Outcome) are always fully visible and never overflow/clip. Numeric + outcome
-     columns get fixed widths; Game takes the remainder and truncates with an
-     ellipsis. Runs at 11px to keep big win amounts inside their column. */
-  body.history-page .history-table { table-layout: fixed; width: 100%; font-size: 11px; }
-  body.history-page .history-table th, body.history-page .history-table td { padding: 8px 6px; }
-  body.history-page .history-table th:nth-child(4), body.history-page .history-table td:nth-child(4) { width: 58px; }
-  body.history-page .history-table th:nth-child(5), body.history-page .history-table td:nth-child(5) { width: 84px; }
-  body.history-page .history-table th:nth-child(7), body.history-page .history-table td:nth-child(7) { width: 62px; }
-  body.history-page .history-table th:nth-child(2), body.history-page .history-table td:nth-child(2) { overflow: hidden; text-overflow: ellipsis; }
 
   /* ----- Responsible Gaming panel (rg.html) -----
      Same scoping rule as the lobby block above: every .rg-* base rule is declared far later in the
@@ -1518,7 +1668,7 @@ body.rg-page ::selection { background: rgba(255, 46, 126, 0.30); }
 /* ---- top chrome ---- */
 .vx-top { border-bottom: 1px solid var(--vx-hair); }
 .vx-top-inner {
-  display: flex; align-items: center; gap: 22px;
+  display: flex; align-items: center; gap: 22px; flex-wrap: wrap;
   max-width: 1240px; margin: 0 auto; padding: 18px 24px;
 }
 .vx-brand { display: flex; align-items: center; gap: 12px; flex: 1 1 auto; min-width: 0; text-decoration: none; color: var(--vx-text); }
@@ -1536,14 +1686,38 @@ body.rg-page ::selection { background: rgba(255, 46, 126, 0.30); }
 @keyframes vx-sweep { 0%, 72% { transform: translateX(-120%); } 88%, 100% { transform: translateX(120%); } }
 .vx-wordmark { font-family: var(--vx-display); font-weight: 800; font-size: 19px; letter-spacing: 0.16em; text-transform: uppercase; }
 .vx-wordmark b { color: var(--vx-plasma); font-weight: 800; }
-.vx-nav { display: flex; gap: 6px; }
+/* The tab strip carries its own overflow rather than handing it to the document. `min-width: 0`
+   lets it shrink past its content inside the flex row, and `overflow-x: auto` puts the excess into
+   the strip - without the pair, the four tabs measured ~430px against a 375px phone and pushed the
+   whole page sideways, which is how "Reconciliation" ended up off the right edge of the lobby.
+   Breakpoint-free: the strip narrows, then drops to its own row (§ below), then scrolls, purely on
+   the width available to it. */
+.vx-nav {
+  display: flex; gap: 6px; flex-wrap: nowrap;
+  min-width: 0; overflow-x: auto; overscroll-behavior-x: contain;
+  scrollbar-width: none;              /* Firefox */
+  -ms-overflow-style: none;           /* legacy Edge */
+}
+.vx-nav::-webkit-scrollbar { display: none; }
 .vx-nav a {
+  flex: 0 0 auto; white-space: nowrap;
   font-family: var(--vx-mono); font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase;
   color: var(--vx-dim); text-decoration: none; padding: 7px 13px; border-radius: 999px;
   border: 1px solid transparent; transition: color 0.15s, background 0.15s;
 }
 .vx-nav a:hover { color: var(--vx-text); background: var(--vx-slate); }
 .vx-nav a.on { color: var(--vx-text); border-color: var(--vx-hair2); background: var(--vx-slate); }
+
+/* Below the width where brand + tabs + build chip fit on one line, the tabs take a row of their
+   own. Without this they merely wrap in source order, which strands the build chip alone on the
+   second row and reads like a mistake. 820px is where the three measure out, not a device size. */
+@media (max-width: 820px) {
+  .vx-top .vx-nav {
+    order: 3; flex: 1 1 100%;
+    justify-content: center;
+    justify-content: safe center;     /* keeps the first tab reachable once the strip scrolls */
+  }
+}
 .vx-build {
   font-family: var(--vx-mono); font-size: 10.5px; letter-spacing: 0.12em; text-transform: uppercase;
   color: var(--vx-dim); padding: 6px 11px; border-radius: 7px;

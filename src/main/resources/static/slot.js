@@ -988,15 +988,25 @@ async function runSimulation() {
 
 function renderSimReport(report) {
   const channels = report.channels || {};
+  // Spins and money are shown short (100k, 25.7k) because a 100,000-spin run at a five-figure stake
+  // produces columns that collide in the tools panel. The exact figure rides along in the title, so
+  // the readout stays skimmable without becoming approximate.
+  // One column carries both counts and money, so the exact form follows the value: a spin count is
+  // whole and reads "200,000", a turnover keeps its cents.
+  const exact = (value) => {
+    const n = Number(value ?? 0);
+    return Number.isInteger(n) ? n.toLocaleString() : fmt(n);
+  };
+  const num = (value) => `<td title="${exact(value)}">${fmtCompact(value)}</td>`;
   const row = (name, ch, strong = false) => {
     if (!ch) return "";
     const label = strong ? `<strong>${name}</strong>` : name;
     return `
     <tr${strong ? ' class="row-overall"' : ""}>
       <td>${label}</td>
-      <td>${Number(ch.spins || 0).toLocaleString()}</td>
-      <td>${fmt(ch.totalBet)}</td>
-      <td>${fmt(ch.totalWin)}</td>
+      ${num(ch.spins || 0)}
+      ${num(ch.totalBet)}
+      ${num(ch.totalWin)}
       <td class="rtp">${fmt(ch.rtpPercent)}%</td>
     </tr>`;
   };
@@ -1015,8 +1025,10 @@ function renderSimReport(report) {
         ${row("Overall", report.overall, true)}
       </tbody>
     </table>
-    <p style="color:var(--text-dim);margin-top:8px">
-      ${report.elapsedMillis} ms · FS triggers: ${report.freeSpinTriggers ?? 0} · pick entries: ${report.pickEntries ?? 0}
+    <p class="sim-foot">
+      ${report.elapsedMillis} ms · FS triggers: <span title="${exact(report.freeSpinTriggers ?? 0)}">${
+        fmtCompact(report.freeSpinTriggers ?? 0)}</span> · pick entries: <span title="${
+        exact(report.pickEntries ?? 0)}">${fmtCompact(report.pickEntries ?? 0)}</span>
     </p>`;
 }
 

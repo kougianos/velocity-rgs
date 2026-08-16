@@ -139,16 +139,21 @@ function renderTable(rounds, games) {
       ? `<span class="badge badge-jackpot" title="Progressive jackpot, credited separately">🏆 ${
           titleCaseTier(r.jackpotTier)} ${fmt(r.jackpotAmount)}</span>`
       : "";
+    // Every cell carries its column class and a data-label. Below ~760px the stylesheet re-lays the
+    // same table out as one card per round, and the label is what each figure is announced by once
+    // the header row is gone - see "Round history on narrow screens" in styles.css.
     return `
       <tr class="${r.jackpotTier ? "row-jackpot" : win > 0 ? "row-win" : "row-loss"}">
-        <td class="col-time">${fmtTime(r.createdAt)}</td>
-        <td><span class="game-logo">${game.logo || "🎰"}</span> ${game.title || r.gameId}</td>
-        <td>${stateLabel(r.stateContext)} ${power} ${jackpot}</td>
-        <td class="num">${fmt(bet)}</td>
-        <td class="num win-cell">${fmt(win)}</td>
-        <td class="num ${net >= 0 ? "pos" : "neg"}">${net >= 0 ? "+" : "−"}${fmt(Math.abs(net))}</td>
-        <td>${outcome}</td>
-        <td class="col-round" title="${r.roundId}">${r.roundId}</td>
+        <td class="col-time" data-label="Time">${fmtTime(r.createdAt)}</td>
+        <td class="col-game" data-label="Game">
+          <span class="game-logo">${game.logo || "🎰"}</span> ${game.title || r.gameId}</td>
+        <td class="col-context" data-label="Context">${stateLabel(r.stateContext)} ${power} ${jackpot}</td>
+        <td class="col-bet num" data-label="Bet">${fmt(bet)}</td>
+        <td class="col-win num win-cell" data-label="Win">${fmt(win)}</td>
+        <td class="col-net num ${net >= 0 ? "pos" : "neg"}" data-label="Net">${
+          net >= 0 ? "+" : "−"}${fmt(Math.abs(net))}</td>
+        <td class="col-outcome" data-label="Outcome">${outcome}</td>
+        <td class="col-round" data-label="Round id" title="${r.roundId}"><span>${r.roundId}</span></td>
         <td class="col-audit">
           <button class="btn btn-ghost btn-replay" data-round="${r.roundId}">Replay</button>
           <button class="btn btn-ghost btn-share" data-round="${r.roundId}"

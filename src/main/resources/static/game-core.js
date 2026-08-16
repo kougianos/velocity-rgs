@@ -62,6 +62,37 @@ function fmt(value) {
   return n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
+/**
+ * Short form for readouts where the magnitude is the point and the cents are not: 1000 -> "1k",
+ * 25700 -> "25.7k", 1000000 -> "1m".
+ *
+ * Under a thousand the figure is printed in full, but with trailing zeros dropped (0.07 -> "0.07",
+ * 675 -> "675", not "675.00"). The same column carries both money and spin counts, and padding a
+ * count out to two decimals is exactly the noise this function exists to remove.
+ *
+ * This is for display density only - the RTP simulator's columns collide once a six-figure bet
+ * total shows every zero. Callers that use it are expected to carry the exact value in a title,
+ * so the precise number is always one hover/long-press away and nothing is actually lost.
+ */
+function fmtCompact(value) {
+  const n = Number(value ?? 0);
+  if (!Number.isFinite(n)) return fmt(value);
+  if (Math.abs(n) < 1000) return n.toLocaleString(undefined, { maximumFractionDigits: 2 });
+
+  // Climb a unit at a time, testing the ROUNDED figure rather than the raw one: 999,950 rounds to
+  // 1000.0k, which has to become "1m" instead of a four-digit "1000k" that defeats the purpose.
+  const units = ["k", "m", "b", "t"];
+  const round1 = (x) => Math.round(x * 10) / 10;
+  let scaled = n / 1000;
+  let unit = 0;
+  while (unit < units.length - 1 && Math.abs(round1(scaled)) >= 1000) {
+    scaled /= 1000;
+    unit++;
+  }
+  // maximumFractionDigits:1 drops the decimal when it says nothing - "100k", not "100.0k".
+  return round1(scaled).toLocaleString(undefined, { maximumFractionDigits: 1 }) + units[unit];
+}
+
 /* ----------------------------------------------------------------- toast / log */
 
 let _toastTimer = null;

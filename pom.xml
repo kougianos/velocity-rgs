@@ -305,8 +305,7 @@
                 <skip.openapi.gen>false</skip.openapi.gen>
             </properties>
         </profile>
-        <!-- Runs the slow statistical GUARDS (RTP convergence assertions). This is what the nightly
-             CI job runs; every test it selects asserts something and can fail. Usage: mvn -Prtp test -->
+
         <profile>
             <id>rtp</id>
             <properties>
@@ -314,16 +313,7 @@
                 <test.excludedGroups>calibration</test.excludedGroups>
             </properties>
         </profile>
-        <!-- Runs the slow CALIBRATION design aids only. These assert nothing - they print the
-             measured constants you feed back into the game JSON, then re-verify with -Prtp.
-             Deliberately kept out of CI: they cannot fail, so they carry no signal.
-             Usage: mvn -Pcalibrate test [-Dtest=GameRtpCalibrationHarness] -->
-        <!-- Same guards, short horizon: a pre-commit sanity check, NOT a substitute for -Prtp.
-             At 200k spins sampling sigma is ~6x the full-horizon value (~0.7-0.9pp), so the tolerance
-             widens to 3pp to stay ~3.5 sigma clear of flake. That is wide enough to miss real drift of
-             a few tenths of a point, and narrow enough to catch the errors worth catching in seconds:
-             a mis-set freeSpinsWinMultiplier or a broken evaluator lands tens of points out, not
-             tenths. Usage: mvn -Psmoke test -->
+
         <profile>
             <id>smoke</id>
             <properties>
